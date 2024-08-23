@@ -37,7 +37,7 @@ requests
 scikit-learn
 scipy
 shapely
-sqlalchemy[mypy]<2
+sqlalchemy[mypy]
 statsmodels
 tables
 uvicorn>=0.17.2
