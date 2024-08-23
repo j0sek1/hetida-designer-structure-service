@@ -41,7 +41,9 @@ def temporary_prefilled_sqlite_ts_db(temporary_sqlite_file_path_ts_db):
             "metric": ["a", "b", "a", "c"],
         }
     )
-    engine = create_engine("sqlite+pysqlite:///" + temporary_sqlite_file_path_ts_db, echo=True)
+    engine = create_engine(
+        "sqlite+pysqlite:///" + temporary_sqlite_file_path_ts_db, echo=True, future=True
+    )
 
     ts_df.to_sql(
         "ro_ts_table",  # ts table name

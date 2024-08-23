@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_table_names(uri: str) -> list[str]:
-    engine = create_engine(uri)
+    engine = create_engine(uri, future=True)
     inspection = inspect(engine)
     return inspection.get_table_names()
 

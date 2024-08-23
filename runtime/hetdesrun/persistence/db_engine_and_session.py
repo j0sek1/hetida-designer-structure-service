@@ -54,7 +54,7 @@ def get_db_engine(override_db_url: SecretStr | str | URL | None = None) -> Engin
     return engine
 
 
-Session = sessionmaker(get_db_engine())
+Session = sessionmaker(bind=get_db_engine(), future=True)
 
 
 def get_session() -> sessionmaker[SQLAlchemySession]:

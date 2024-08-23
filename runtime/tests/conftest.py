@@ -35,7 +35,7 @@ def clean_test_db_engine(test_db_engine: Engine) -> Engine:
 def mocked_clean_test_db_session(clean_test_db_engine):
     with mock.patch(
         "hetdesrun.persistence.db_engine_and_session.Session",
-        sessionmaker(clean_test_db_engine),
+        sessionmaker(clean_test_db_engine, future=True),
     ) as _fixture:
         yield _fixture
 

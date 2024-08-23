@@ -107,7 +107,7 @@ class SQLAdapterDBConfig(BaseModel):
 
     @cached_property
     def engine(self) -> Engine:
-        return create_engine(self.connection_url, **self.create_engine_kwargs)  # type: ignore
+        return create_engine(self.connection_url, **self.create_engine_kwargs, future=True)  # type: ignore
 
     class Config:
         arbitrary_types_allowed = True
