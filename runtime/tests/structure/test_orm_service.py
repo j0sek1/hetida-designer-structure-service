@@ -283,7 +283,7 @@ def test_load_structure_from_json_file(db_test_structure_file_path):
 
 def test_load_structure_from_invalid_json_file():
     # Use a non-existent file path to simulate a failure in loading JSON
-    with pytest.raises(Exception):
+    with pytest.raises(FileNotFoundError):
         load_structure_from_json_file("non_existent_file.json")
 
 
@@ -615,7 +615,7 @@ def test_sort_thing_nodes_from_db(mocked_clean_test_db_session):
             stakeholder_key="GW",
             parent_node_id=uuid.uuid4(),  # Ensure this UUID does not match any existing node
             element_type_id=uuid.uuid4(),
-            element_type_external_id="Hochbehaelter_Typ",  # Provide the required element_type_external_id
+            element_type_external_id="Hochbehaelter_Typ",  # Required element_type_external_id
             meta_data={},
         )
 
@@ -626,7 +626,8 @@ def test_sort_thing_nodes_from_db(mocked_clean_test_db_session):
             thing_nodes_in_db, existing_thing_nodes
         )
 
-        # Verify that the orphan node is not placed in any level (since it doesn't have a valid parent in the set)
+        # Verify that the orphan node is not placed in any level
+        # (since it doesn't have a valid parent in the set)
         orphan_in_levels = any(
             orphan_node in level_nodes for level_nodes in sorted_nodes_by_level_with_orphan.values()
         )
@@ -725,9 +726,10 @@ def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
             .all()
         )
 
-        assert (
-            len(missing_source_associations) == 0
-        ), "Missing Source should not create any associations because it doesn't exist in the database."
+        assert len(missing_source_associations) == 0, (
+            "Missing Source should not create any associations"
+            " because it doesn't exist in the database."
+        )
 
         # Verify that the "Missing Source" was indeed skipped in processing
         missing_source_in_db = (
@@ -741,12 +743,10 @@ def test_fetch_existing_records_exception_handling(mocked_clean_test_db_session)
         # This is a dummy class that does not correspond to any database model
         pass
 
-    with pytest.raises(
-        SQLAlchemyError
-    ):  # Adjusted to catch SQLAlchemyError or any derived exception
-        with mocked_clean_test_db_session() as session:
-            # Attempt to fetch records using an invalid model class, which should raise an exception
-            fetch_existing_records(session, InvalidModel)
+    with pytest.raises(SQLAlchemyError), mocked_clean_test_db_session() as session:
+        # Attempt to fetch records using an invalid model class,
+        # which should raise an exception
+        fetch_existing_records(session, InvalidModel)
 
 
 def test_update_existing_elements_exception_handling(mocked_clean_test_db_session):
@@ -756,7 +756,7 @@ def test_update_existing_elements_exception_handling(mocked_clean_test_db_sessio
 
     existing_elements = {}
 
-    with pytest.raises(SQLAlchemyError):  # Adjust to catch the appropriate exception type
-        with mocked_clean_test_db_session() as session:
-            # Attempt to update elements using an invalid model class, which should raise an exception
-            update_existing_elements(session, InvalidModel, existing_elements)
+    with pytest.raises(SQLAlchemyError), mocked_clean_test_db_session() as session:
+        # Attempt to update elements using an invalid model class,
+        # which should raise an exception
+        update_existing_elements(session, InvalidModel, existing_elements)
