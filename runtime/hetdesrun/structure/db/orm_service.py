@@ -247,7 +247,7 @@ def fill_source_sink_associations_db(
         len(existing_thing_nodes),
     )
 
-    existing_sources = {
+    existing_sources: dict[str, SourceOrm | SinkOrm] = {
         src.stakeholder_key + src.external_id: src for src in session.query(SourceOrm).all()
     }
     logger.debug(
@@ -255,7 +255,7 @@ def fill_source_sink_associations_db(
         len(existing_sources),
     )
 
-    existing_sinks = {
+    existing_sinks: dict[str, SourceOrm | SinkOrm] = {
         snk.stakeholder_key + snk.external_id: snk for snk in session.query(SinkOrm).all()
     }
     logger.debug(
@@ -265,7 +265,7 @@ def fill_source_sink_associations_db(
 
     def process_db_associations(
         entities: list[Source | Sink],
-        existing_entities: dict[str, Source | Sink],
+        existing_entities: dict[str, SourceOrm | SinkOrm],
         assoc_table: Table,
         entity_key: str,
     ) -> None:
@@ -541,7 +541,9 @@ def update_or_create_sources_or_sinks(
                 db_item.sink_id = item.sink_id
             db_item.meta_data = item.meta_data
             db_item.preset_filters = item.preset_filters
-            db_item.passthrough_filters = item.passthrough_filters
+            db_item.passthrough_filters = (
+                [f.dict() for f in item.passthrough_filters] if item.passthrough_filters else None
+            )
             db_item.thing_node_external_ids = item.thing_node_external_ids
         else:
             logger.debug("Creating new item with key %s.", key)
@@ -552,14 +554,19 @@ def update_or_create_sources_or_sinks(
 def orm_delete_structure(session: SQLAlchemySession) -> None:
     logger.debug("Deleting all structure data from the database.")
     try:
-        # List of all ORM classes to delete
-        tables = [
+        # Ignore type mypy error messages that arise from the __table__ assignment
+        thingnode_table: Table = ThingNodeOrm.__table__  # type: ignore
+        source_table: Table = SourceOrm.__table__  # type: ignore
+        sink_table: Table = SinkOrm.__table__  # type: ignore
+        elementtype_table: Table = ElementTypeOrm.__table__  # type: ignore
+
+        tables: list[Table] = [
             thingnode_source_association,
             thingnode_sink_association,
-            ThingNodeOrm,
-            SourceOrm,
-            SinkOrm,
-            ElementTypeOrm,
+            thingnode_table,
+            source_table,
+            sink_table,
+            elementtype_table,
         ]
 
         # Delete all records in each table
