@@ -577,12 +577,12 @@ class TransformationRevision(BaseModel):
                 else orm_model.component_code,
                 io_interface=orm_model.io_interface,
                 test_wiring=orm_model.test_wiring,
-                released_timestamp=orm_model.released_timestamp.replace(
+                released_timestamp=orm_model.released_timestamp.replace(    # type: ignore
                     tzinfo=datetime.timezone.utc
                 )
                 if orm_model.released_timestamp is not None
                 else None,
-                disabled_timestamp=orm_model.disabled_timestamp.replace(
+                disabled_timestamp=orm_model.disabled_timestamp.replace(    # type: ignore
                     tzinfo=datetime.timezone.utc
                 )
                 if orm_model.disabled_timestamp is not None
