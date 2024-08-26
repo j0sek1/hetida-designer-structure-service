@@ -21,7 +21,7 @@ kaleido
 keras
 libcst
 numba!=0.56.2 # due to setuptools dependency resolution problems
-numpy
+numpy<2.1,>=1.22  # Ensures compatibility with numba and other dependencies.
 odfpy
 openpyxl
 ortools
@@ -37,7 +37,7 @@ requests
 scikit-learn
 scipy
 shapely
-sqlalchemy[mypy]
+sqlalchemy[mypy]>=2.0,<3
 statsmodels
 tables
 uvicorn>=0.17.2
