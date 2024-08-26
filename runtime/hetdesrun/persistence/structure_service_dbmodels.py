@@ -13,12 +13,26 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy_utils import UUIDType
 
+metadata = MetaData()
+
 
 class Base(DeclarativeBase):
-    pass
+    metadata = metadata
 
 
-metadata = MetaData()
+thingnode_source_association = Table(
+    "thingnode_source_association",
+    metadata,
+    Column("thing_node_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
+    Column("source_id", UUIDType(binary=False), ForeignKey("source.id"), primary_key=True),
+)
+
+thingnode_sink_association = Table(
+    "thingnode_sink_association",
+    metadata,
+    Column("thing_node_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
+    Column("sink_id", UUIDType(binary=False), ForeignKey("sink.id"), primary_key=True),
+)
 
 
 class ElementTypeOrm(Base):
@@ -116,7 +130,7 @@ class SourceOrm(Base):
     thing_node_external_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
-        "ThingNodeOrm", secondary="thingnode_source_association"
+        "ThingNodeOrm", secondary=thingnode_source_association
     )
 
     __table_args__ = (
@@ -161,7 +175,7 @@ class SinkOrm(Base):
     thing_node_external_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
-        "ThingNodeOrm", secondary="thingnode_sink_association"
+        "ThingNodeOrm", secondary=thingnode_sink_association
     )
 
     __table_args__ = (
@@ -184,18 +198,3 @@ class SinkOrm(Base):
             f"passthrough_filters={self.passthrough_filters}, "
             f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
         )
-
-
-thingnode_source_association = Table(
-    "thingnode_source_association",
-    metadata,
-    Column("thing_node_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
-    Column("source_id", UUIDType(binary=False), ForeignKey("source.id"), primary_key=True),
-)
-
-thingnode_sink_association = Table(
-    "thingnode_sink_association",
-    metadata,
-    Column("thing_node_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
-    Column("sink_id", UUIDType(binary=False), ForeignKey("sink.id"), primary_key=True),
-)
