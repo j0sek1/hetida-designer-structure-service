@@ -1,8 +1,6 @@
 #!/usr/bin/env/bash
 # retry several times
 
-export SQLALCHEMY_WARN_20=1
-
 retry() {
     local max_num_retries=$1
     shift
