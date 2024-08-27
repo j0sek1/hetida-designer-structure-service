@@ -1,3 +1,4 @@
+from typing import Annotated
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -15,11 +16,33 @@ from sqlalchemy_utils import UUIDType
 
 metadata = MetaData()
 
+# Reusable types defined for cleaner and consistent ORM setup in SQLAlchemy 2.0
+UUID_PK = Annotated[
+    UUIDType, mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
+]
+UUID_PK_FK = Annotated[
+    UUIDType, mapped_column(UUIDType(binary=False), ForeignKey("element_type.id"), nullable=False)
+]
+
+OptionalUUID_PK_FK = Annotated[
+    UUIDType | None,
+    mapped_column(UUIDType(binary=False), ForeignKey("thing_node.id"), nullable=True),
+]
+Str255 = Annotated[str, mapped_column(String(255), nullable=False)]
+Str255Unique = Annotated[str, mapped_column(String(255), nullable=False, unique=True)]
+Str36 = Annotated[str, mapped_column(String(36), nullable=False)]
+Str1024 = Annotated[str, mapped_column(String(1024), nullable=True)]
+OptionalStr1024 = Annotated[str | None, mapped_column(String(1024), nullable=True)]
+OptionalJSON = Annotated[dict | None, mapped_column(JSON, nullable=True)]
+JSONDict = Annotated[dict, mapped_column(JSON, nullable=False)]
+BoolDefaultTrue = Annotated[bool, mapped_column(Boolean, default=True)]
+
 
 class Base(DeclarativeBase):
     metadata = metadata
 
 
+# Association tables for many-to-many relationship
 thingnode_source_association = Table(
     "thingnode_source_association",
     metadata,
@@ -37,16 +60,11 @@ thingnode_sink_association = Table(
 
 class ElementTypeOrm(Base):
     __tablename__ = "element_type"
-    id: Mapped[UUIDType] = mapped_column(
-        UUIDType(binary=False),
-        primary_key=True,
-        nullable=False,
-        default=uuid4,
-    )
-    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
-    name: Mapped[str] = mapped_column(String(255), index=True, nullable=False, unique=True)
-    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    id: Mapped[UUID_PK]
+    external_id: Mapped[Str255]
+    stakeholder_key: Mapped[Str36]
+    name: Mapped[Str255Unique]
+    description: Mapped[OptionalStr1024]
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
         "ThingNodeOrm", back_populates="element_type"
     )
@@ -71,20 +89,16 @@ class ElementTypeOrm(Base):
 
 class ThingNodeOrm(Base):
     __tablename__ = "thing_node"
-    id: Mapped[UUIDType] = mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
-    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
-    name: Mapped[str] = mapped_column(String(255), index=True, nullable=False, unique=True)
-    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
-    parent_node_id: Mapped[UUIDType | None] = mapped_column(
-        UUIDType(binary=False), ForeignKey("thing_node.id"), nullable=True
-    )
+    id: Mapped[UUID_PK]
+    external_id: Mapped[Str255]
+    stakeholder_key: Mapped[Str36]
+    name: Mapped[Str255Unique]
+    description: Mapped[OptionalStr1024]
+    parent_node_id: Mapped[OptionalUUID_PK_FK]
     parent_external_node_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    element_type_id: Mapped[UUIDType] = mapped_column(
-        UUIDType(binary=False), ForeignKey("element_type.id"), nullable=False
-    )
-    element_type_external_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    element_type_id: Mapped[UUID_PK_FK]
+    element_type_external_id: Mapped[Str255]
+    meta_data: Mapped[OptionalJSON]
     element_type: Mapped["ElementTypeOrm"] = relationship(
         "ElementTypeOrm", back_populates="thing_nodes", uselist=False
     )
@@ -113,21 +127,21 @@ class ThingNodeOrm(Base):
 
 class SourceOrm(Base):
     __tablename__ = "source"
-    id: Mapped[UUIDType] = mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
-    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    type: Mapped[str] = mapped_column(String(255), nullable=False)
-    visible: Mapped[bool] = mapped_column(Boolean, default=True)
-    display_path: Mapped[str] = mapped_column(String(255), nullable=False)
-    adapter_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    ref_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    ref_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    preset_filters: Mapped[dict] = mapped_column(JSON, nullable=False)
-    passthrough_filters: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
-    thing_node_external_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    id: Mapped[UUID_PK]
+    external_id: Mapped[Str255]
+    stakeholder_key: Mapped[Str36]
+    name: Mapped[Str255Unique]
+    type: Mapped[Str255]
+    visible: Mapped[BoolDefaultTrue]
+    display_path: Mapped[Str255]
+    adapter_key: Mapped[Str255]
+    source_id: Mapped[Str255]
+    ref_key: Mapped[OptionalStr1024]
+    ref_id: Mapped[Str255]
+    meta_data: Mapped[OptionalJSON]
+    preset_filters: Mapped[JSONDict]
+    passthrough_filters: Mapped[OptionalJSON]
+    thing_node_external_ids: Mapped[OptionalJSON]
 
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
         "ThingNodeOrm", secondary=thingnode_source_association
@@ -158,21 +172,21 @@ class SourceOrm(Base):
 class SinkOrm(Base):
     __tablename__ = "sink"
 
-    id: Mapped[UUIDType] = mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
-    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    type: Mapped[str] = mapped_column(String(255), nullable=False)
-    visible: Mapped[bool] = mapped_column(Boolean, default=True)
-    display_path: Mapped[str] = mapped_column(String(255), nullable=False)
-    adapter_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    sink_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    ref_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    ref_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    preset_filters: Mapped[dict] = mapped_column(JSON, nullable=False)
-    passthrough_filters: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
-    thing_node_external_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    id: Mapped[UUID_PK]
+    external_id: Mapped[Str255]
+    stakeholder_key: Mapped[Str36]
+    name: Mapped[Str255Unique]
+    type: Mapped[Str255]
+    visible: Mapped[BoolDefaultTrue]
+    display_path: Mapped[Str255]
+    adapter_key: Mapped[Str255]
+    sink_id: Mapped[Str255]
+    ref_key: Mapped[OptionalStr1024]
+    ref_id: Mapped[Str255]
+    meta_data: Mapped[OptionalJSON]
+    preset_filters: Mapped[JSONDict]
+    passthrough_filters: Mapped[OptionalJSON]
+    thing_node_external_ids: Mapped[OptionalJSON]
 
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
         "ThingNodeOrm", secondary=thingnode_sink_association
