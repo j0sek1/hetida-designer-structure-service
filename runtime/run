@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Set environment variable to enable SQLAlchemy 2.0 warnings
+export SQLALCHEMY_WARN_20=1
+
 usage() {
     echo "$0 [COMMAND] [ARGS]"
     echo ""
