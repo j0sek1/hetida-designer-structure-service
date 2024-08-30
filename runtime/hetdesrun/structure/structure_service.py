@@ -1,4 +1,5 @@
 import logging
+from typing import Annotated
 from uuid import UUID
 
 from hetdesrun.persistence.db_engine_and_session import get_session
@@ -18,10 +19,27 @@ from hetdesrun.structure.models import CompleteStructure, Sink, Source, ThingNod
 
 logger = logging.getLogger(__name__)
 
+# Reusable type definitions for clearer and more consistent typing
+# across the codebase. These types improve maintainability, reduce redundancy,
+# and make it easier to adapt to new requirements in SQLAlchemy 2.0.
+# Additionally, these types allow for built-in validations, such as
+# enforcing constraints on values (e.g., min/max lengths).
+
+UUID_Annotated = Annotated[UUID, ...]
+UUIDList_Annotated = Annotated[list[UUID], ...]
+OptionalUUID_Annotated = Annotated[UUID | None, ...]
+ThingNodeList = Annotated[list[ThingNode], ...]
+SourceList = Annotated[list[Source], ...]
+SinkList = Annotated[list[Sink], ...]
+UUIDSinkDict = Annotated[dict[UUID, Sink], ...]
+UUIDSourceDict = Annotated[dict[UUID, Source], ...]
+UUIDThingNodeDict = Annotated[dict[UUID, ThingNode], ...]
+ChildrenTuple = Annotated[tuple[ThingNodeList, SourceList, SinkList], ...]
+
 
 def get_children(
-    parent_id: UUID | None,
-) -> tuple[list[ThingNode], list[Source], list[Sink]]:
+    parent_id: OptionalUUID_Annotated,
+) -> ChildrenTuple:
     """Wrapper function to retrieve the child nodes, sources,
     and sinks associated with a given parent node from the database.
     """
@@ -31,7 +49,7 @@ def get_children(
     return children
 
 
-def get_single_thingnode_from_db(tn_id: UUID) -> ThingNode:
+def get_single_thingnode_from_db(tn_id: UUID_Annotated) -> ThingNode:
     logger.debug("Fetching single ThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
         thing_node = session.query(ThingNodeOrm).filter(ThingNodeOrm.id == tn_id).one_or_none()
@@ -43,7 +61,7 @@ def get_single_thingnode_from_db(tn_id: UUID) -> ThingNode:
     raise DBNotFoundError(f"No ThingNode found for ID {tn_id}")
 
 
-def get_all_thing_nodes_from_db() -> list[ThingNode]:
+def get_all_thing_nodes_from_db() -> ThingNodeList:
     logger.debug("Fetching all ThingNodes from the database.")
     with get_session()() as session:
         thing_nodes = session.query(ThingNodeOrm).all()
@@ -52,14 +70,14 @@ def get_all_thing_nodes_from_db() -> list[ThingNode]:
     return [ThingNode.from_orm_model(thing_node) for thing_node in thing_nodes]
 
 
-def get_collection_of_thingnodes_from_db(tn_ids: list[UUID]) -> dict[UUID, ThingNode]:
+def get_collection_of_thingnodes_from_db(tn_ids: UUIDList_Annotated) -> UUIDThingNodeDict:
     logger.debug("Fetching collection of ThingNodes with IDs: %s", tn_ids)
     thingnodes = {tn_id: get_single_thingnode_from_db(tn_id) for tn_id in tn_ids}
     logger.debug("Successfully fetched collection of ThingNodes.")
     return thingnodes
 
 
-def get_single_source_from_db(src_id: UUID) -> Source:
+def get_single_source_from_db(src_id: UUID_Annotated) -> Source:
     logger.debug("Fetching single Source from database with ID: %s", src_id)
     with get_session()() as session:
         source = session.query(SourceOrm).filter(SourceOrm.id == src_id).one_or_none()
@@ -71,7 +89,7 @@ def get_single_source_from_db(src_id: UUID) -> Source:
     raise DBNotFoundError(f"No Source found for ID {src_id}")
 
 
-def get_all_sources_from_db() -> list[Source]:
+def get_all_sources_from_db() -> SourceList:
     logger.debug("Fetching all Sources from the database.")
     with get_session()() as session:
         sources = session.query(SourceOrm).all()
@@ -80,7 +98,7 @@ def get_all_sources_from_db() -> list[Source]:
     return [Source.from_orm_model(source) for source in sources]
 
 
-def get_collection_of_sources_from_db(src_ids: list[UUID]) -> dict[UUID, Source]:
+def get_collection_of_sources_from_db(src_ids: UUIDList_Annotated) -> UUIDSourceDict:
     logger.debug("Fetching collection of Sources with IDs: %s", src_ids)
     sources = {src_id: get_single_source_from_db(src_id) for src_id in src_ids}
 
@@ -88,7 +106,7 @@ def get_collection_of_sources_from_db(src_ids: list[UUID]) -> dict[UUID, Source]
     return sources
 
 
-def get_single_sink_from_db(sink_id: UUID) -> Sink:
+def get_single_sink_from_db(sink_id: UUID_Annotated) -> Sink:
     logger.debug("Fetching single Sink from database with ID: %s", sink_id)
     with get_session()() as session:
         sink = session.query(SinkOrm).filter(SinkOrm.id == sink_id).one_or_none()
@@ -100,7 +118,7 @@ def get_single_sink_from_db(sink_id: UUID) -> Sink:
     raise DBNotFoundError(f"No Sink found for ID {sink_id}")
 
 
-def get_all_sinks_from_db() -> list[Sink]:
+def get_all_sinks_from_db() -> SinkList:
     logger.debug("Fetching all Sinks from the database.")
     with get_session()() as session:
         sinks = session.query(SinkOrm).all()
@@ -109,7 +127,7 @@ def get_all_sinks_from_db() -> list[Sink]:
     return [Sink.from_orm_model(sink) for sink in sinks]
 
 
-def get_collection_of_sinks_from_db(sink_ids: list[UUID]) -> dict[UUID, Sink]:
+def get_collection_of_sinks_from_db(sink_ids: UUIDList_Annotated) -> UUIDSinkDict:
     logger.debug("Fetching collection of Sinks with IDs: %s", sink_ids)
 
     sinks = {sink_id: get_single_sink_from_db(sink_id) for sink_id in sink_ids}
