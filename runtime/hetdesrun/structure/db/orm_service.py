@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Annotated
 from collections import defaultdict, deque
 from collections.abc import Sequence
 from typing import Any
@@ -26,28 +27,82 @@ from hetdesrun.structure.models import (
 
 logger = logging.getLogger(__name__)
 
+
+
+# Reusable type definitions for clearer and more consistent typing
+# across the codebase. These types improve maintainability, reduce redundancy,
+# and make it easier to adapt to new requirements in SQLAlchemy 2.0.
+# Additionally, these types allow for built-in validations, such as
+# enforcing constraints on values (e.g., min/max lengths).
+
+# General UUID and String Types
+UUID_Annotated = Annotated[UUID, ...]
+OptionalUUID_Annotated = Annotated[UUID | None, ...]
+AnnotatedStr = Annotated[str, ...]
+
+# SQLAlchemy Session Type
+SQLAlchemySessionAnnotated = Annotated[SQLAlchemySession, ...]
+
+# CompleteStructure Type
+CompleteStructureAnnotated = Annotated[CompleteStructure, ...]
+
+# ORM Model Lists
+ElementTypeOrmList = Annotated[list[ElementTypeOrm], ...]
+ThingNodeOrmList = Annotated[list[ThingNodeOrm], ...]
+SourceOrmList = Annotated[list[SourceOrm], ...]
+SinkOrmList = Annotated[list[SinkOrm], ...]
+
+# ORM Model Dictionaries
+ElementTypeOrmDict = Annotated[dict[str, ElementTypeOrm], ...]
+ThingNodeOrmDict = Annotated[dict[str, ThingNodeOrm], ...]
+SourceSinkDict = Annotated[dict[str, SourceOrm | SinkOrm], ...]
+
+# ThingNode Lists and Dictionaries
+ThingNodeList = Annotated[list[ThingNode], ...]
+UUIDThingNodeDict = Annotated[dict[UUID, ThingNode], ...]
+LevelThingNodeDict = Annotated[dict[int, ThingNodeList], ...]
+DictUUIDThingNodeList = Annotated[dict[UUID, list[ThingNode]], ...]
+
+# Source and Sink Types
+SourceList = Annotated[list[Source], ...]
+SinkList = Annotated[list[Sink], ...]
+UUIDSinkDict = Annotated[dict[UUID, Sink], ...]
+UUIDSourceDict = Annotated[dict[UUID, Source], ...]
+SourceOrSinkList = Annotated[list[Source | Sink], ...]
+DictStrSourceOrSinkOrm = Annotated[dict[str, SourceOrm | SinkOrm], ...]
+
+# Children Tuple Type
+ChildrenTupleAnnotated = Annotated[tuple[list[ThingNode], list[Source], list[Sink]], ...]
+
+# Miscellaneous Types
+DictStrAny = Annotated[dict[str, Any], ...]
+TableAnnotated = Annotated[Table, ...]
+SourceOrSinkSequence = Annotated[Sequence[Source | Sink], ...]
+BoolAnnotated = Annotated[bool, ...]
+
+
 # Fetch Functions
 
 
-def fetch_all_element_types(session: SQLAlchemySession) -> list[ElementTypeOrm]:
+def fetch_all_element_types(session: SQLAlchemySession) -> ElementTypeOrmList:
     element_types = session.query(ElementTypeOrm).all()
     logger.debug("Fetched %d element types from the database.", len(element_types))
     return element_types
 
 
-def fetch_all_thing_nodes(session: SQLAlchemySession) -> list[ThingNodeOrm]:
+def fetch_all_thing_nodes(session: SQLAlchemySession) -> ThingNodeOrmList:
     thing_nodes = session.query(ThingNodeOrm).all()
     logger.debug("Fetched %d thing nodes from the database", len(thing_nodes))
     return thing_nodes
 
 
-def fetch_all_sources(session: SQLAlchemySession) -> list[SourceOrm]:
+def fetch_all_sources(session: SQLAlchemySession) -> SourceOrmList:
     sources = session.query(SourceOrm).all()
     logger.debug("Fetched %d sources from the database.", len(sources))
     return sources
 
 
-def fetch_all_sinks(session: SQLAlchemySession) -> list[SinkOrm]:
+def fetch_all_sinks(session: SQLAlchemySession) -> SinkOrmList:
     sinks = session.query(SinkOrm).all()
     logger.debug("Fetched %d sinks from the database.", len(sinks))
     return sinks
@@ -55,8 +110,8 @@ def fetch_all_sinks(session: SQLAlchemySession) -> list[SinkOrm]:
 
 # Structure Services
 def load_structure_from_json_file(
-    file_path: str,
-) -> CompleteStructure:
+    file_path: AnnotatedStr,
+) -> CompleteStructureAnnotated:
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
         with open(file_path) as file:
@@ -71,8 +126,8 @@ def load_structure_from_json_file(
 
 
 def sort_thing_nodes_from_db(
-    thing_nodes: list[ThingNode], existing_thing_nodes: dict[str, ThingNodeOrm]
-) -> dict[int, list[ThingNode]]:
+    thing_nodes: ThingNodeList, existing_thing_nodes: dict[str, ThingNodeOrm]
+) -> dict[int, ThingNodeList]:
     """
     This function sorts a list of ThingNodes into hierarchical levels using
     existing ThingNode data fetched from the database. It ensures that the
@@ -152,7 +207,7 @@ def sort_thing_nodes_from_db(
 
 
 def fill_all_thingnode_element_type_ids_from_db(
-    thing_nodes: list[ThingNode], existing_element_types: dict[str, ElementTypeOrm]
+    thing_nodes: ThingNodeList, existing_element_types: ElementTypeOrmDict
 ) -> None:
     """
     This function fills the element_type_id for each ThingNode using element types
@@ -176,7 +231,7 @@ def fill_all_thingnode_element_type_ids_from_db(
 
 
 def fill_all_thingnode_parent_uuids_from_db(
-    thing_nodes: list[ThingNode], existing_thing_nodes: dict[str, ThingNodeOrm]
+    thing_nodes: ThingNodeList, existing_thing_nodes: dict[str, ThingNodeOrm]
 ) -> None:
     """
     This function assigns parent_node_id for each ThingNode using parent nodes
@@ -221,7 +276,7 @@ def fill_all_thingnode_parent_uuids_from_db(
 
 
 def fill_source_sink_associations_db(
-    complete_structure: CompleteStructure, session: SQLAlchemySession
+    complete_structure: CompleteStructureAnnotated, session: SQLAlchemySession
 ) -> None:
     """
     Establishes associations between ThingNodes and their corresponding Sources and Sinks
@@ -267,7 +322,7 @@ def fill_source_sink_associations_db(
         entities: list[Source | Sink],
         existing_entities: dict[str, SourceOrm | SinkOrm],
         assoc_table: Table,
-        entity_key: str,
+        entity_key: AnnotatedStr,
     ) -> None:
         logger.debug("Processing associations for %d entities.", len(entities))
         for entity in entities:
@@ -343,14 +398,14 @@ def fill_source_sink_associations_db(
     )
 
 
-def update_structure_from_file(file_path: str) -> CompleteStructure:
+def update_structure_from_file(file_path: AnnotatedStr) -> CompleteStructureAnnotated:
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
     complete_structure = load_structure_from_json_file(file_path)
     logger.debug("Successfully loaded structure from JSON file.")
     return orm_update_structure(complete_structure)
 
 
-def orm_update_structure(complete_structure: CompleteStructure) -> CompleteStructure:
+def orm_update_structure(complete_structure: CompleteStructureAnnotated) -> CompleteStructureAnnotated:
     """
     This function updates or inserts the given complete structure into the database.
     """
@@ -430,7 +485,7 @@ def fetch_existing_records(session: SQLAlchemySession, model_class: Any) -> dict
 
 def update_or_create_element_types(
     elements: list[ElementType],
-    existing_elements: dict[str, ElementTypeOrm],
+    existing_elements: ElementTypeOrmDict,
     session: SQLAlchemySession,
 ) -> None:
     logger.debug("Updating or creating %d element types.", len(elements))
@@ -477,8 +532,8 @@ def update_existing_elements(
 
 
 def sort_and_flatten_thing_nodes(
-    thing_nodes: list[ThingNode], existing_thing_nodes: dict[str, ThingNodeOrm]
-) -> list[ThingNode]:
+    thing_nodes: ThingNodeList, existing_thing_nodes: dict[str, ThingNodeOrm]
+) -> ThingNodeList:
     logger.debug("Sorting and flattening thing nodes.")
     sorted_nodes_by_level = sort_thing_nodes_from_db(thing_nodes, existing_thing_nodes)
     flattened_nodes = [node for nodes in sorted_nodes_by_level.values() for node in nodes]
@@ -489,7 +544,7 @@ def sort_and_flatten_thing_nodes(
 
 
 def update_or_create_thing_nodes(
-    thing_nodes: list[ThingNode],
+    thing_nodes: ThingNodeList,
     existing_thing_nodes: dict[str, ThingNodeOrm],
     session: SQLAlchemySession,
 ) -> None:
@@ -542,9 +597,9 @@ def update_or_create_sources_or_sinks(
             db_item.meta_data = item.meta_data
             db_item.preset_filters = item.preset_filters
             db_item.passthrough_filters = (
-                [f.dict() for f in item.passthrough_filters] if item.passthrough_filters else None
+                [f.dict() for f in item.passthrough_filters] if item.passthrough_filters else None  # type: ignore
             )
-            db_item.thing_node_external_ids = item.thing_node_external_ids
+            db_item.thing_node_external_ids = item.thing_node_external_ids  # type: ignore
         else:
             logger.debug("Creating new item with key %s.", key)
             new_item = item.to_orm_model()
@@ -597,8 +652,8 @@ def orm_is_database_empty() -> bool:
 
 
 def orm_get_children(
-    parent_id: UUID | None,
-) -> tuple[list[ThingNode], list[Source], list[Sink]]:
+    parent_id: OptionalUUID_Annotated,
+) -> tuple[ThingNodeList, list[Source], list[Sink]]:
     """
     Retrieves the child nodes, sources, and sinks associated with a given parent
     node from the database.
