@@ -4,7 +4,7 @@ from copy import deepcopy
 from uuid import UUID
 
 from pydantic import StrictInt, StrictStr
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.component.code import update_code
@@ -481,7 +481,9 @@ def get_multiple_transformation_revisions(
 
 def nof_db_entries() -> int:
     with get_session()() as session, session.begin():
-        nof_rows: int = session.query(TransformationRevisionDBModel.id).count()
+        nof_rows: int = session.scalar(
+            select(func.count()).select_from(TransformationRevisionDBModel.id)
+        )
         logger.info("DB contains %s rows", str(nof_rows))
 
     return nof_rows

@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Table, delete
+from sqlalchemy import Table, delete, select
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
@@ -30,25 +30,25 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_all_element_types(session: SQLAlchemySession) -> list[ElementTypeOrm]:
-    element_types = session.query(ElementTypeOrm).all()
+    element_types = session.execute(select(ElementTypeOrm)).scalars().all()
     logger.debug("Fetched %d element types from the database.", len(element_types))
     return element_types
 
 
 def fetch_all_thing_nodes(session: SQLAlchemySession) -> list[ThingNodeOrm]:
-    thing_nodes = session.query(ThingNodeOrm).all()
+    thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
     logger.debug("Fetched %d thing nodes from the database", len(thing_nodes))
     return thing_nodes
 
 
 def fetch_all_sources(session: SQLAlchemySession) -> list[SourceOrm]:
-    sources = session.query(SourceOrm).all()
+    sources = session.execute(select(SourceOrm)).scalars().all()
     logger.debug("Fetched %d sources from the database.", len(sources))
     return sources
 
 
 def fetch_all_sinks(session: SQLAlchemySession) -> list[SinkOrm]:
-    sinks = session.query(SinkOrm).all()
+    sinks = session.execute(select(SinkOrm)).scalars().all()
     logger.debug("Fetched %d sinks from the database.", len(sinks))
     return sinks
 
@@ -240,7 +240,8 @@ def fill_source_sink_associations_db(
     )
 
     existing_thing_nodes = {
-        tn.stakeholder_key + tn.external_id: tn for tn in session.query(ThingNodeOrm).all()
+        tn.stakeholder_key + tn.external_id: tn
+        for tn in session.execute(select(ThingNodeOrm)).scalars().all()
     }
     logger.debug(
         "Fetched %d existing ThingNodes from the database.",
@@ -248,7 +249,8 @@ def fill_source_sink_associations_db(
     )
 
     existing_sources: dict[str, SourceOrm | SinkOrm] = {
-        src.stakeholder_key + src.external_id: src for src in session.query(SourceOrm).all()
+        src.stakeholder_key + src.external_id: src
+        for src in session.execute(select(SourceOrm)).scalars().all()
     }
     logger.debug(
         "Fetched %d existing Sources from the database.",
@@ -256,7 +258,8 @@ def fill_source_sink_associations_db(
     )
 
     existing_sinks: dict[str, SourceOrm | SinkOrm] = {
-        snk.stakeholder_key + snk.external_id: snk for snk in session.query(SinkOrm).all()
+        snk.stakeholder_key + snk.external_id: snk
+        for snk in session.execute(select(SinkOrm)).scalars().all()
     }
     logger.debug(
         "Fetched %d existing Sinks from the database.",
@@ -301,6 +304,11 @@ def fill_source_sink_associations_db(
                     .filter_by(thing_node_id=thing_node_id, **{entity_key: entity_id})
                     .first()
                 )
+                association_exists = session.scalars(
+                    select(assoc_table)
+                    .filter_by(thing_node_id=thing_node_id, **{entity_key: entity_id})
+                    .limit(1)
+                ).first()
                 if association_exists:
                     logger.debug(
                         "Association already exists between ThingNode id %s and %s id %s.",

@@ -1,6 +1,8 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy import select
+
 from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
     SinkOrm,
@@ -35,7 +37,9 @@ def get_children(
 def get_single_thingnode_from_db(tn_id: UUID) -> ThingNode:
     logger.debug("Fetching single ThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
-        thing_node = session.query(ThingNodeOrm).filter(ThingNodeOrm.id == tn_id).one_or_none()
+        thing_node = session.execute(
+            select(ThingNodeOrm).where(ThingNodeOrm.id == tn_id)
+        ).scalar_one_or_none()
         if thing_node:
             logger.debug("ThingNode with ID %s found.", tn_id)
             return ThingNode.from_orm_model(thing_node)
@@ -47,7 +51,7 @@ def get_single_thingnode_from_db(tn_id: UUID) -> ThingNode:
 def get_all_thing_nodes_from_db() -> list[ThingNode]:
     logger.debug("Fetching all ThingNodes from the database.")
     with get_session()() as session:
-        thing_nodes = session.query(ThingNodeOrm).all()
+        thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
 
     logger.debug("Successfully fetched %d ThingNodes from the database.", len(thing_nodes))
     return [ThingNode.from_orm_model(thing_node) for thing_node in thing_nodes]
@@ -63,7 +67,9 @@ def get_collection_of_thingnodes_from_db(tn_ids: list[UUID]) -> dict[UUID, Thing
 def get_single_source_from_db(src_id: UUID) -> Source:
     logger.debug("Fetching single Source from database with ID: %s", src_id)
     with get_session()() as session:
-        source = session.query(SourceOrm).filter(SourceOrm.id == src_id).one_or_none()
+        source = session.execute(
+            select(SourceOrm).filter(SourceOrm.id == src_id)
+        ).scalar_one_or_none()
         if source:
             logger.debug("Source with ID %s found.", src_id)
             return Source.from_orm_model(source)
@@ -75,8 +81,7 @@ def get_single_source_from_db(src_id: UUID) -> Source:
 def get_all_sources_from_db() -> list[Source]:
     logger.debug("Fetching all Sources from the database.")
     with get_session()() as session:
-        sources = session.query(SourceOrm).all()
-
+        sources = session.execute(select(SourceOrm)).scalars().all()
     logger.debug("Successfully fetched %d sources from the database.", len(sources))
     return [Source.from_orm_model(source) for source in sources]
 
@@ -92,7 +97,7 @@ def get_collection_of_sources_from_db(src_ids: list[UUID]) -> dict[UUID, Source]
 def get_single_sink_from_db(sink_id: UUID) -> Sink:
     logger.debug("Fetching single Sink from database with ID: %s", sink_id)
     with get_session()() as session:
-        sink = session.query(SinkOrm).filter(SinkOrm.id == sink_id).one_or_none()
+        sink = session.execute(select(SinkOrm).filter(SinkOrm.id == sink_id)).scalar_one_or_none()
         if sink:
             logger.debug("Sink with ID %s found.", sink_id)
             return Sink.from_orm_model(sink)
@@ -104,7 +109,7 @@ def get_single_sink_from_db(sink_id: UUID) -> Sink:
 def get_all_sinks_from_db() -> list[Sink]:
     logger.debug("Fetching all Sinks from the database.")
     with get_session()() as session:
-        sinks = session.query(SinkOrm).all()
+        sinks = session.execute(select(SinkOrm)).scalars().all()
 
     logger.debug("Successfully fetched %d sinks from the database.", len(sinks))
     return [Sink.from_orm_model(sink) for sink in sinks]

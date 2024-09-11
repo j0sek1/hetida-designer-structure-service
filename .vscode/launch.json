@@ -1,14 +1,17 @@
 {
     "configurations": [
         {
-            "type": "java",
-            "name": "Spring Boot-HetidaDesignerBackendApplication<backend>",
+            "type": "debugpy",
+            "name": "Launch designer tests with python debugger",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "console": "internalConsole",
-            "mainClass": "org.hetida.designer.backend.HetidaDesignerBackendApplication",
-            "projectName": "backend",
-            "args": "--spring.profiles.active=local",  
+            "module": "pytest",
+            "args": [
+                "tests",
+                "-k",
+                "test_fetch_all_element_types"
+            ],
+            "cwd": "${workspaceFolder}/runtime",
+            "console": "integratedTerminal"
         }
     ]
 }
