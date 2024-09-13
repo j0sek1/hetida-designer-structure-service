@@ -35,6 +35,8 @@ Str1024 = Annotated[str, mapped_column(String(1024), nullable=True)]
 OptionalStr255 = Annotated[str | None, mapped_column(String(255), nullable=True)]
 OptionalStr1024 = Annotated[str | None, mapped_column(String(1024), nullable=True)]
 OptionalJSON = Annotated[dict | None, mapped_column(JSON, nullable=True)]
+OptionalJSONList = Annotated[list[dict] | None, mapped_column(JSON, nullable=True)]
+OptionalJSONListStr = Annotated[list[str] | None, mapped_column(JSON, nullable=True)]
 JSONDict = Annotated[dict, mapped_column(JSON, nullable=False)]
 BoolDefaultTrue = Annotated[bool, mapped_column(Boolean, default=True)]
 
@@ -141,8 +143,8 @@ class SourceOrm(Base):
     ref_id: Mapped[Str255]
     meta_data: Mapped[OptionalJSON]
     preset_filters: Mapped[JSONDict]
-    passthrough_filters: Mapped[OptionalJSON]
-    thing_node_external_ids: Mapped[OptionalJSON]
+    passthrough_filters: Mapped[OptionalJSONList]
+    thing_node_external_ids: Mapped[OptionalJSONListStr]
 
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
         "ThingNodeOrm", secondary=thingnode_source_association
@@ -186,8 +188,8 @@ class SinkOrm(Base):
     ref_id: Mapped[Str255]
     meta_data: Mapped[OptionalJSON]
     preset_filters: Mapped[JSONDict]
-    passthrough_filters: Mapped[OptionalJSON]
-    thing_node_external_ids: Mapped[OptionalJSON]
+    passthrough_filters: Mapped[OptionalJSONList]
+    thing_node_external_ids: Mapped[OptionalJSONListStr]
 
     thing_nodes: Mapped[list["ThingNodeOrm"]] = relationship(
         "ThingNodeOrm", secondary=thingnode_sink_association
