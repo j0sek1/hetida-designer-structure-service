@@ -3,7 +3,7 @@ import uuid
 from sqlite3 import Connection as SQLite3Connection
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import event, func, select
 from sqlalchemy.future.engine import Engine
 
 from hetdesrun.persistence.db_engine_and_session import get_session
@@ -271,7 +271,7 @@ def test_update_structure(mocked_clean_test_db_session):
 def test_get_single_thingnode_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch an existing ThingNode ID
-        existing_tn = session.query(ThingNodeOrm).first()
+        existing_tn = session.execute(select(ThingNodeOrm)).scalar()
         assert existing_tn is not None, "No ThingNode found in the test database."
 
         # Test retrieving the ThingNode by ID
@@ -289,14 +289,17 @@ def test_get_all_thing_nodes_from_db(mocked_clean_test_db_session):
     # Open a session to interact with the database
     with mocked_clean_test_db_session() as session:
         # Ensure the database is not empty and contains ThingNodes
-        assert session.query(ThingNodeOrm).count() > 0, "Expected non-empty ThingNodes table"
+        assert (
+            session.execute(select(func.count()).select_from(ThingNodeOrm)).scalar_one() > 0
+        ), "Expected non-empty ThingNodes table"
 
         # Fetch all ThingNodes using the function
         thing_nodes = get_all_thing_nodes_from_db()
 
         # Verify that the number of ThingNodes fetched matches the number in the database
         assert (
-            len(thing_nodes) == session.query(ThingNodeOrm).count()
+            len(thing_nodes)
+            == session.execute(select(func.count()).select_from(ThingNodeOrm)).scalar_one()
         ), "Mismatch between number of ThingNodes fetched and number in the database"
 
         # Check that specific ThingNodes exist and have expected properties
@@ -321,7 +324,7 @@ def test_get_all_thing_nodes_from_db(mocked_clean_test_db_session):
 def test_get_collection_of_thingnodes_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch a list of existing ThingNode IDs
-        existing_tns = session.query(ThingNodeOrm).limit(3).all()
+        existing_tns = session.execute(select(ThingNodeOrm).limit(3)).scalars().all()
         assert len(existing_tns) == 3, "Expected at least 3 ThingNodes in the test database."
         existing_tn_ids = [tn.id for tn in existing_tns]
 
@@ -343,7 +346,7 @@ def test_get_collection_of_thingnodes_from_db(mocked_clean_test_db_session):
 def test_get_single_source_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch an existing Source ID from the database
-        existing_source = session.query(SourceOrm).first()
+        existing_source = session.execute(select(SourceOrm)).scalar()
         assert existing_source is not None, "Expected at least one Source in the test database."
         existing_source_id = existing_source.id
 
@@ -361,7 +364,7 @@ def test_get_single_source_from_db(mocked_clean_test_db_session):
 def test_get_all_sources_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sources directly from the database using the ORM for comparison
-        expected_sources = session.query(SourceOrm).all()
+        expected_sources = session.execute(select(SourceOrm)).scalars().all()
 
     # Use the get_all_sources_from_db function to fetch all sources
     fetched_sources = get_all_sources_from_db()
@@ -385,7 +388,7 @@ def test_get_all_sources_from_db(mocked_clean_test_db_session):
 def test_get_collection_of_sources_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some specific sources directly from the database
-        expected_sources = session.query(SourceOrm).limit(2).all()
+        expected_sources = session.execute(select(SourceOrm).limit(2)).scalars().all()
         expected_source_ids = [source.id for source in expected_sources]
 
     # Use the get_collection_of_sources_from_db function to fetch the sources
@@ -417,7 +420,7 @@ def test_get_collection_of_sources_from_db(mocked_clean_test_db_session):
 def test_get_single_sink_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch a specific sink directly from the database
-        expected_sink = session.query(SinkOrm).first()
+        expected_sink = session.execute(select(SinkOrm)).scalar()
         assert expected_sink is not None, "No sinks found in the test database."
 
     # Use the get_single_sink_from_db function to fetch the sink
@@ -444,7 +447,7 @@ def test_get_single_sink_from_db(mocked_clean_test_db_session):
 def test_get_all_sinks_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sinks directly from the database
-        expected_sinks = session.query(SinkOrm).all()
+        expected_sinks = session.execute(select(SinkOrm)).scalars().all()
         assert len(expected_sinks) > 0, "No sinks found in the test database."
 
     # Use the get_all_sinks_from_db function to fetch all sinks
@@ -472,7 +475,7 @@ def test_get_all_sinks_from_db(mocked_clean_test_db_session):
 def test_get_collection_of_sinks_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some sinks directly from the database
-        sinks_in_db = session.query(SinkOrm).limit(2).all()
+        sinks_in_db = session.execute(select(SinkOrm).limit(2)).scalars().all()
         sink_ids = [sink.id for sink in sinks_in_db]
         assert len(sink_ids) > 0, "No sinks found in the test database."
 

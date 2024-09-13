@@ -4,7 +4,7 @@ from sqlite3 import Connection as SQLite3Connection
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import event
+from sqlalchemy import event, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future.engine import Engine
 
@@ -297,22 +297,22 @@ def test_load_structure_from_invalid_json_file():
 def test_delete_structure(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Verify that the database is initially populated
-        assert session.query(ElementTypeOrm).count() > 0
-        assert session.query(ThingNodeOrm).count() > 0
-        assert session.query(SourceOrm).count() > 0
-        assert session.query(SinkOrm).count() > 0
-        assert session.query(thingnode_source_association).count() > 0
-        assert session.query(thingnode_sink_association).count() > 0
+        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) > 0
+        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) > 0
+        assert session.scalar(select(func.count()).select_from(SourceOrm)) > 0
+        assert session.scalar(select(func.count()).select_from(SinkOrm)) > 0
+        assert session.scalar(select(func.count()).select_from(thingnode_source_association)) > 0
+        assert session.scalar(select(func.count()).select_from(thingnode_sink_association)) > 0
 
         orm_delete_structure(session)
 
         # Verify that all tables are empty after purging
-        assert session.query(ElementTypeOrm).count() == 0
-        assert session.query(ThingNodeOrm).count() == 0
-        assert session.query(SourceOrm).count() == 0
-        assert session.query(SinkOrm).count() == 0
-        assert session.query(thingnode_source_association).count() == 0
-        assert session.query(thingnode_sink_association).count() == 0
+        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(SourceOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(SinkOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(thingnode_source_association)) == 0
+        assert session.scalar(select(func.count()).select_from(thingnode_sink_association)) == 0
 
 
 @pytest.mark.usefixtures("_db_test_structure")
@@ -339,10 +339,10 @@ def test_update_structure_with_new_elements():
 
 def verify_initial_structure(session):
     # Fetch all initial elements from the database
-    initial_element_types = session.query(ElementTypeOrm).all()
-    initial_thing_nodes = session.query(ThingNodeOrm).all()
-    initial_sources = session.query(SourceOrm).all()
-    initial_sinks = session.query(SinkOrm).all()
+    initial_element_types = session.execute(select(ElementTypeOrm)).scalars().all()
+    initial_thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
+    initial_sources = session.execute(select(SourceOrm)).scalars().all()
+    initial_sinks = session.execute(select(SinkOrm)).scalars().all()
 
     # Verify that the initial structure contains the correct number of elements
     assert len(initial_element_types) == 3, "Expected 3 Element Types in the initial structure"
@@ -351,17 +351,17 @@ def verify_initial_structure(session):
     assert len(initial_sinks) == 3, "Expected 3 Sinks in the initial structure"
 
     # Verify specific attributes of the ThingNodes before the update
-    initial_tn = (
-        session.query(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank1").one()
-    )
+    initial_tn = session.execute(
+        select(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank1")
+    ).scalar_one()
     assert (
         initial_tn.meta_data["capacity"] == "5000"
     ), "Initial capacity of Storage Tank 1 should be 5000"
     assert initial_tn.meta_data["description"] == "Water storage capacity for Storage Tank 1"
 
-    initial_tn2 = (
-        session.query(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank2").one()
-    )
+    initial_tn2 = session.execute(
+        select(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank2")
+    ).scalar_one()
     assert (
         initial_tn2.meta_data["capacity"] == "6000"
     ), "Initial capacity of Storage Tank 2 should be 6000"
@@ -370,10 +370,10 @@ def verify_initial_structure(session):
 
 def verify_updated_structure(session):
     # Fetch all elements from the database after the update
-    final_element_types = session.query(ElementTypeOrm).all()
-    final_thing_nodes = session.query(ThingNodeOrm).all()
-    final_sources = session.query(SourceOrm).all()
-    final_sinks = session.query(SinkOrm).all()
+    final_element_types = session.execute(select(ElementTypeOrm)).scalars().all()
+    final_thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
+    final_sources = session.execute(select(SourceOrm)).scalars().all()
+    final_sinks = session.execute(select(SinkOrm)).scalars().all()
 
     # Verify that the structure now contains the updated number of elements
     assert len(final_element_types) == 4, "Expected 4 Element Types after the update"
@@ -432,8 +432,8 @@ def verify_new_elements_and_nodes(session, final_element_types, final_thing_node
 
 def verify_associations(session):
     # Fetch all associations between ThingNodes and Sources/Sinks from the database
-    source_associations = session.query(thingnode_source_association).all()
-    sink_associations = session.query(thingnode_sink_association).all()
+    source_associations = session.execute(select(thingnode_source_association)).all()
+    sink_associations = session.execute(select(thingnode_sink_association)).all()
 
     # Define the expected associations between ThingNodes and Sources
     expected_source_associations = [
@@ -466,29 +466,27 @@ def verify_associations(session):
 
     # Verify that each expected Source association exists in the database
     for tn_external_id, source_external_id in expected_source_associations:
-        tn_id = (
-            session.query(ThingNodeOrm.id)
-            .filter(ThingNodeOrm.external_id == tn_external_id)
-            .one()[0]
-        )
-        source_id = (
-            session.query(SourceOrm.id).filter(SourceOrm.external_id == source_external_id).one()[0]
-        )
+        tn_id = session.execute(
+            select(ThingNodeOrm.id).where(ThingNodeOrm.external_id == tn_external_id)
+        ).scalar_one()
+        source_id = session.execute(
+            select(SourceOrm.id).where(SourceOrm.external_id == source_external_id)
+        ).scalar_one()
         assert (tn_id, source_id) in [
             (assoc.thing_node_id, assoc.source_id) for assoc in source_associations
         ], (
             f"Expected association between ThingNode {tn_external_id}"
-            " and Source {source_external_id} not found"
+            f" and Source {source_external_id} not found"
         )
 
     # Verify that each expected Sink association exists in the database
     for tn_external_id, sink_external_id in expected_sink_associations:
-        tn_id = (
-            session.query(ThingNodeOrm.id)
-            .filter(ThingNodeOrm.external_id == tn_external_id)
-            .one()[0]
-        )
-        sink_id = session.query(SinkOrm.id).filter(SinkOrm.external_id == sink_external_id).one()[0]
+        tn_id = session.execute(
+            select(ThingNodeOrm.id).where(ThingNodeOrm.external_id == tn_external_id)
+        ).scalar_one()
+        sink_id = session.execute(
+            select(SinkOrm.id).where(SinkOrm.external_id == sink_external_id)
+        ).scalar_one()
         assert (tn_id, sink_id) in [
             (assoc.thing_node_id, assoc.sink_id) for assoc in sink_associations
         ], (
@@ -508,48 +506,46 @@ def test_update_structure_from_file():
 
     # Ensure the database is empty at the beginning
     with get_session()() as session:
-        assert session.query(ElementTypeOrm).count() == 0
-        assert session.query(ThingNodeOrm).count() == 0
-        assert session.query(SourceOrm).count() == 0
-        assert session.query(SinkOrm).count() == 0
+        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(SourceOrm)) == 0
+        assert session.scalar(select(func.count()).select_from(SinkOrm)) == 0
 
     # Load structure from the file and update the database
     update_structure_from_file(file_path)
 
     # Verify that the structure was correctly inserted
     with get_session()() as session:
-        assert session.query(ElementTypeOrm).count() == 3
-        assert session.query(ThingNodeOrm).count() == 7
-        assert session.query(SourceOrm).count() == 3
-        assert session.query(SinkOrm).count() == 3
+        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 3
+        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 7
+        assert session.scalar(select(func.count()).select_from(SourceOrm)) == 3
+        assert session.scalar(select(func.count()).select_from(SinkOrm)) == 3
 
         # Example check for a specific ElementType
-        waterworks_type = (
-            session.query(ElementTypeOrm).filter_by(external_id="Waterworks_Type").one()
-        )
+        waterworks_type = session.execute(
+            select(ElementTypeOrm).filter_by(external_id="Waterworks_Type")
+        ).scalar_one()
         assert waterworks_type.name == "Waterworks"
         assert waterworks_type.description == "Element type for waterworks"
 
         # Example check for a specific ThingNode
-        waterworks1 = session.query(ThingNodeOrm).filter_by(external_id="Waterworks1").one()
+        waterworks1 = session.execute(
+            select(ThingNodeOrm).filter_by(external_id="Waterworks1")
+        ).scalar_one()
         assert waterworks1.name == "Waterworks 1"
         assert waterworks1.meta_data["location"] == "Main Site"
 
         # Example check for a specific Source
-        source = (
-            session.query(SourceOrm)
-            .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
-            .one()
-        )
+        source = session.execute(
+            select(SourceOrm).filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
+        ).scalar_one()
         assert source.name == "Energy usage of the pump system in Storage Tank"
         assert source.meta_data["1010001"]["unit"] == "kW/h"
 
         # Example check for a specific Sink
-        sink = (
-            session.query(SinkOrm)
-            .filter_by(external_id="AnomalyScore_EnergyUsage_PumpSystem_StorageTank")
-            .one()
-        )
+        sink = session.execute(
+            select(SinkOrm).filter_by(external_id="AnomalyScore_EnergyUsage_PumpSystem_StorageTank")
+        ).scalar_one()
         assert sink.name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
 
 
@@ -575,35 +571,63 @@ def test_update_structure_no_elements_deleted():
     # Verify structure after update
     with get_session()() as session:
         # Check the number of elements after update
-        assert session.query(ElementTypeOrm).count() == len(initial_structure.element_types)
-        assert session.query(ThingNodeOrm).count() == len(initial_structure.thing_nodes)
-        assert session.query(SourceOrm).count() == len(initial_structure.sources)
-        assert session.query(SinkOrm).count() == len(initial_structure.sinks)
+        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == len(
+            initial_structure.element_types
+        )
+        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == len(
+            initial_structure.thing_nodes
+        )
+        assert session.scalar(select(func.count()).select_from(SourceOrm)) == len(
+            initial_structure.sources
+        )
+        assert session.scalar(select(func.count()).select_from(SinkOrm)) == len(
+            initial_structure.sinks
+        )
 
         # Verify specific elements from the initial structure are still present
         # Element Types
         for element_type in initial_structure.element_types:
             assert (
-                session.query(ElementTypeOrm)
-                .filter_by(external_id=element_type.external_id)
-                .count()
+                session.execute(
+                    select(func.count())
+                    .select_from(ElementTypeOrm)
+                    .filter_by(external_id=element_type.external_id)
+                ).scalar_one()
                 == 1
             )
 
         # Thing Nodes
         for thing_node in initial_structure.thing_nodes:
             assert (
-                session.query(ThingNodeOrm).filter_by(external_id=thing_node.external_id).count()
+                session.execute(
+                    select(func.count())
+                    .select_from(ThingNodeOrm)
+                    .filter_by(external_id=thing_node.external_id)
+                ).scalar_one()
                 == 1
             )
 
         # Sources
         for source in initial_structure.sources:
-            assert session.query(SourceOrm).filter_by(external_id=source.external_id).count() == 1
+            assert (
+                session.execute(
+                    select(func.count())
+                    .select_from(SourceOrm)
+                    .filter_by(external_id=source.external_id)
+                ).scalar_one()
+                == 1
+            )
 
         # Sinks
         for sink in initial_structure.sinks:
-            assert session.query(SinkOrm).filter_by(external_id=sink.external_id).count() == 1
+            assert (
+                session.execute(
+                    select(func.count())
+                    .select_from(SinkOrm)
+                    .filter_by(external_id=sink.external_id)
+                ).scalar_one()
+                == 1
+            )
 
 
 @pytest.mark.usefixtures("_db_empty_database")
@@ -750,36 +774,33 @@ def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
         fill_source_sink_associations_db(complete_structure, session)
 
         # Check that the Orphan Source and Sink were skipped during association processing
-        orphan_source_in_db = (
-            session.query(SourceOrm).filter_by(external_id="Orphan_Source").one_or_none()
-        )
-        orphan_sink_in_db = (
-            session.query(SinkOrm).filter_by(external_id="Orphan_Sink").one_or_none()
-        )
+        orphan_source_in_db = session.execute(
+            select(SourceOrm).filter_by(external_id="Orphan_Source")
+        ).scalar_one_or_none()
+        orphan_sink_in_db = session.execute(
+            select(SinkOrm).filter_by(external_id="Orphan_Sink")
+        ).scalar_one_or_none()
 
         assert orphan_source_in_db is not None, "Orphan Source should exist in the database."
         assert orphan_sink_in_db is not None, "Orphan Sink should exist in the database."
 
         # Verify that no associations exist for the Orphan Source and Sink
-        orphan_source_associations = (
-            session.query(thingnode_source_association)
-            .filter_by(source_id=orphan_source_in_db.id)
-            .all()
-        )
-        orphan_sink_associations = (
-            session.query(thingnode_sink_association).filter_by(sink_id=orphan_sink_in_db.id).all()
-        )
+        orphan_source_associations = session.execute(
+            select(thingnode_source_association).filter_by(source_id=orphan_source_in_db.id)
+        ).all()
+        orphan_sink_associations = session.execute(
+            select(thingnode_sink_association).filter_by(sink_id=orphan_sink_in_db.id)
+        ).all()
 
         assert len(orphan_source_associations) == 0, "Orphan Source should have no associations."
         assert len(orphan_sink_associations) == 0, "Orphan Sink should have no associations."
 
         # Verify that the "Missing Source" was not associated due to it not existing in the database
-        missing_source_associations = (
-            session.query(thingnode_source_association)
+        missing_source_associations = session.execute(
+            select(thingnode_source_association)
             .join(SourceOrm, thingnode_source_association.c.source_id == SourceOrm.id)
             .filter(SourceOrm.external_id == "Missing_Source")
-            .all()
-        )
+        ).all()
 
         assert len(missing_source_associations) == 0, (
             "Missing Source should not create any associations"
@@ -787,9 +808,9 @@ def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
         )
 
         # Verify that the "Missing Source" was indeed skipped in processing
-        missing_source_in_db = (
-            session.query(SourceOrm).filter_by(external_id="Missing_Source").one_or_none()
-        )
+        missing_source_in_db = session.execute(
+            select(SourceOrm).filter_by(external_id="Missing_Source")
+        ).scalar_one_or_none()
         assert missing_source_in_db is None, "Missing Source should not exist in the database."
 
 
