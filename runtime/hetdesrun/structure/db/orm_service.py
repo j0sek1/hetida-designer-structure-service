@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # Fetch Functions
 
 
-def fetch_all_element_types(session: SQLAlchemySession) -> list[ElementTypeOrm]:
+def fetch_all_element_types(session: SQLAlchemySession) -> Sequence[ElementTypeOrm]:
     try:
         element_types = session.execute(select(ElementTypeOrm)).scalars().all()
         logger.debug("Fetched %d element types from the database.", len(element_types))
@@ -47,7 +47,7 @@ def fetch_all_element_types(session: SQLAlchemySession) -> list[ElementTypeOrm]:
         raise DBFetchError(msg) from e
 
 
-def fetch_all_thing_nodes(session: SQLAlchemySession) -> list[ThingNodeOrm]:
+def fetch_all_thing_nodes(session: SQLAlchemySession) -> Sequence[ThingNodeOrm]:
     try:
         thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
         logger.debug("Fetched %d thing nodes from the database", len(thing_nodes))
@@ -58,7 +58,7 @@ def fetch_all_thing_nodes(session: SQLAlchemySession) -> list[ThingNodeOrm]:
         raise DBFetchError(msg) from e
 
 
-def fetch_all_sources(session: SQLAlchemySession) -> list[SourceOrm]:
+def fetch_all_sources(session: SQLAlchemySession) -> Sequence[SourceOrm]:
     try:
         sources = session.execute(select(SourceOrm)).scalars().all()
         logger.debug("Fetched %d sources from the database.", len(sources))
@@ -69,7 +69,7 @@ def fetch_all_sources(session: SQLAlchemySession) -> list[SourceOrm]:
         raise DBFetchError(msg) from e
 
 
-def fetch_all_sinks(session: SQLAlchemySession) -> list[SinkOrm]:
+def fetch_all_sinks(session: SQLAlchemySession) -> Sequence[SinkOrm]:
     try:
         sinks = session.execute(select(SinkOrm)).scalars().all()
         logger.debug("Fetched %d sinks from the database.", len(sinks))
@@ -268,7 +268,7 @@ def fill_source_sink_associations_db(
     try:
         existing_thing_nodes = {
             tn.stakeholder_key + tn.external_id: tn
-        for tn in session.execute(select(ThingNodeOrm)).scalars().all()
+            for tn in session.execute(select(ThingNodeOrm)).scalars().all()
         }
         logger.debug(
             "Fetched %d existing ThingNodes from the database.",
@@ -277,7 +277,7 @@ def fill_source_sink_associations_db(
 
         existing_sources: dict[str, SourceOrm | SinkOrm] = {
             src.stakeholder_key + src.external_id: src
-        for src in session.execute(select(SourceOrm)).scalars().all()
+            for src in session.execute(select(SourceOrm)).scalars().all()
         }
         logger.debug(
             "Fetched %d existing Sources from the database.",
@@ -286,7 +286,7 @@ def fill_source_sink_associations_db(
 
         existing_sinks: dict[str, SourceOrm | SinkOrm] = {
             snk.stakeholder_key + snk.external_id: snk
-        for snk in session.execute(select(SinkOrm)).scalars().all()
+            for snk in session.execute(select(SinkOrm)).scalars().all()
         }
         logger.debug(
             "Fetched %d existing Sinks from the database.",
@@ -326,17 +326,12 @@ def fill_source_sink_associations_db(
                         )
                         continue
                     entity_id = db_entity.id
-                    association_exists = (
-                        session.query(assoc_table)
-                        .filter_by(thing_node_id=thing_node_id, **{entity_key: entity_id})
-                        .first()
-                    )
                     association_exists = session.scalars(
-                    select(assoc_table)
-                    .filter_by(thing_node_id=thing_node_id, **{entity_key: entity_id})
-                    .limit(1)
-                ).first()
-                if association_exists:
+                        select(assoc_table)
+                        .filter_by(thing_node_id=thing_node_id, **{entity_key: entity_id})
+                        .limit(1)
+                    ).first()
+                    if association_exists:
                         logger.debug(
                             "Association already exists between ThingNode id %s and %s id %s.",
                             thing_node_id,
@@ -473,7 +468,7 @@ def fetch_existing_records(session: SQLAlchemySession, model_class: Any) -> dict
     logger.debug("Fetching all records for model class %s from the database.", model_class.__name__)
     try:
         # Fetch all records of the given model class from the database
-        records = session.query(model_class).all()
+        records = session.execute(select(model_class)).scalars().all()
         logger.debug("Fetched %d records for model class %s.", len(records), model_class.__name__)
         # Create a dictionary mapping stakeholder_key + external_id to the record
         return {rec.stakeholder_key + rec.external_id: rec for rec in records}
@@ -532,7 +527,8 @@ def update_existing_elements(
     try:
         # Query the database for all records of the specified model class
         new_elements = {
-            el.stakeholder_key + el.external_id: el for el in session.query(model_class).all()
+            el.stakeholder_key + el.external_id: el
+            for el in session.execute(select(model_class)).scalars().all()
         }
         # Update the existing_elements dictionary with the new elements from the database
         existing_elements.update(new_elements)
@@ -624,8 +620,10 @@ def update_or_create_sources_or_sinks(
                 db_item.meta_data = item.meta_data
                 db_item.preset_filters = item.preset_filters
                 db_item.passthrough_filters = (
-                [f.dict() for f in item.passthrough_filters] if item.passthrough_filters else None
-            )
+                    [f.dict() for f in item.passthrough_filters]
+                    if item.passthrough_filters
+                    else None
+                )
                 db_item.thing_node_external_ids = item.thing_node_external_ids
             else:
                 logger.debug("Creating new item with key %s.", key)
@@ -710,7 +708,9 @@ def orm_get_children(
         if parent_id is None:
             logger.debug("No parent_id provided, fetching root nodes.")
             root_nodes = (
-                session.query(ThingNodeOrm).filter(ThingNodeOrm.parent_node_id.is_(None)).all()
+                session.execute(select(ThingNodeOrm).where(ThingNodeOrm.parent_node_id.is_(None)))
+                .scalars()
+                .all()
             )
             logger.debug("Fetched %d root nodes.", len(root_nodes))
 
@@ -722,27 +722,37 @@ def orm_get_children(
 
         logger.debug("Fetching child nodes for parent_id: %s", parent_id)
         child_nodes = (
-            session.query(ThingNodeOrm).filter(ThingNodeOrm.parent_node_id == parent_id).all()
+            session.execute(select(ThingNodeOrm).where(ThingNodeOrm.parent_node_id == parent_id))
+            .scalars()
+            .all()
         )
         logger.debug("Fetched %d child nodes.", len(child_nodes))
 
         logger.debug("Fetching sources for parent_id: %s", parent_id)
         sources = (
-            session.query(SourceOrm)
-            .join(
-                thingnode_source_association,
-                thingnode_source_association.c.source_id == SourceOrm.id,
+            session.execute(
+                select(SourceOrm)
+                .join(
+                    thingnode_source_association,
+                    thingnode_source_association.c.source_id == SourceOrm.id,
+                )
+                .where(thingnode_source_association.c.thing_node_id == parent_id)
             )
-            .filter(thingnode_source_association.c.thing_node_id == parent_id)
+            .scalars()
             .all()
         )
         logger.debug("Fetched %d sources.", len(sources))
 
         logger.debug("Fetching sinks for parent_id: %s", parent_id)
         sinks = (
-            session.query(SinkOrm)
-            .join(thingnode_sink_association, thingnode_sink_association.c.sink_id == SinkOrm.id)
-            .filter(thingnode_sink_association.c.thing_node_id == parent_id)
+            session.execute(
+                select(SinkOrm)
+                .join(
+                    thingnode_sink_association, thingnode_sink_association.c.sink_id == SinkOrm.id
+                )
+                .where(thingnode_sink_association.c.thing_node_id == parent_id)
+            )
+            .scalars()
             .all()
         )
         logger.debug("Fetched %d sinks.", len(sinks))
