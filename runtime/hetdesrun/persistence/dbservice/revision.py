@@ -481,9 +481,9 @@ def get_multiple_transformation_revisions(
 
 def nof_db_entries() -> int:
     with get_session()() as session, session.begin():
-        nof_rows: int = session.scalar(
-            select(func.count()).select_from(TransformationRevisionDBModel.id)
-        )
+        nof_rows = (
+            session.scalar(select(func.count()).select_from(TransformationRevisionDBModel.id)) or 0
+        )  # Fallback to 0 if None is returned
         logger.info("DB contains %s rows", str(nof_rows))
 
     return nof_rows
