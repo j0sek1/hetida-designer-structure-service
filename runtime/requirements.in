@@ -1,6 +1,7 @@
 -c requirements-base.txt
 SQLAlchemy-Utils
 aiokafka[snappy]
+aiosqlite
 alembic
 asyncpg
 asyncstdlib
@@ -22,7 +23,7 @@ kaleido
 keras
 libcst
 numba!=0.56.2 # due to setuptools dependency resolution problems
-numpy<2.1,>=1.22  # Ensures compatibility with numba and other dependencies.
+numpy<2.1,>=1.22 # Ensures compatibility with numba and other dependencies.
 odfpy
 openpyxl
 ortools
@@ -32,6 +33,7 @@ plotly==5.15.0
 psycopg2
 pyarrow
 pydantic[dotenv]>=1.8.2,<2
+pytest-asyncio
 python-jose[cryptography]
 regex!=2022.3.15 # bug in combination with dateparser "bad escape..."
 requests
