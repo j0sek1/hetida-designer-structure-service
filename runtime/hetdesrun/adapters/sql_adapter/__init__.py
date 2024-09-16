@@ -16,7 +16,7 @@ async def load_data(
     adapter_key: str,  # noqa: ARG001
 ) -> dict[str, Any]:
     return {
-        wf_input_name: load_table_from_provided_source_id(
+        wf_input_name: await load_table_from_provided_source_id(
             str(
                 filtered_source.ref_key
                 if filtered_source.ref_key is not None
@@ -47,5 +47,5 @@ async def send_data(
             filtered_sink.ref_key if filtered_sink.ref_key is not None else filtered_sink.ref_id
         )
 
-        write_table_to_provided_sink_id(data, str(id_to_use))
+        await write_table_to_provided_sink_id(data, str(id_to_use))
     return {}
