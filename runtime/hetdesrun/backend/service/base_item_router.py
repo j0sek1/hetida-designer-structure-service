@@ -65,7 +65,7 @@ async def get_all_transformation_revisions(
     logger.info("get all transformation revisions with %s", repr(params))
 
     try:
-        transformation_revision_list = get_multiple_transformation_revisions(params)
+        transformation_revision_list = await get_multiple_transformation_revisions(params)
     except DBIntegrityError as e:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
