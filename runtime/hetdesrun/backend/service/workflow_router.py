@@ -115,7 +115,7 @@ async def get_all_workflow_revisions() -> list[WorkflowRevisionFrontendDto]:
 
     logger.info("get all workflows")
 
-    transformation_revision_list = get_multiple_transformation_revisions(
+    transformation_revision_list = await get_multiple_transformation_revisions(
         FilterParams(type=Type.WORKFLOW, include_dependencies=False)
     )
 
