@@ -322,7 +322,7 @@ async def get_all_transformation_revisions(
     logger.info("get all transformation revisions with %s", repr(filter_params))
 
     try:
-        transformation_revision_list = get_multiple_transformation_revisions(filter_params)
+        transformation_revision_list = await get_multiple_transformation_revisions(filter_params)
     except DBIntegrityError as err:
         msg = f"At least one entry in the DB is no valid transformation revision:\n{str(err)}"
         logger.error(msg)
