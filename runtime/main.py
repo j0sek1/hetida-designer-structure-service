@@ -39,7 +39,7 @@ def detect_in_memory_db() -> bool:
 
     backend_name = engine.url.get_backend_name()
 
-    # driver_name = engine.url.get_driver_name()  # pysqlite
+    # driver_name = engine.url.get_driver_name()  # aiosqlite
     database = engine.url.database  # ":memory:"
 
     if backend_name.lower() == "sqlite" and (
