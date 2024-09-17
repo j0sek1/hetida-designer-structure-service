@@ -2,8 +2,7 @@ import logging
 from collections.abc import Iterable
 
 from pydantic import ValidationError
-from sqlalchemy import inspect
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import create_engine, inspect
 
 from hetdesrun.adapters.exceptions import AdapterHandlingException
 from hetdesrun.adapters.generic_rest.external_types import ExternalType
@@ -24,17 +23,10 @@ from hetdesrun.adapters.sql_adapter.utils import get_configured_dbs_by_key
 logger = logging.getLogger(__name__)
 
 
-async def get_table_names(uri: str) -> list[str]:
-    engine = create_async_engine(uri, future=True)
-    async with engine.connect() as conn:
-
-        def get_table_names_sync(connection):
-            inspection = inspect(connection)
-            return inspection.get_table_names()
-
-        table_names = await conn.run_sync(get_table_names_sync)
-    await engine.dispose()  # Schließe die Engine
-    return table_names
+def get_table_names(uri: str) -> list[str]:
+    engine = create_engine(uri, future=True)
+    inspection = inspect(engine)
+    return inspection.get_table_names()
 
 
 def is_allowed_dataframe_source_table(table_name: str, db_config: SQLAdapterDBConfig) -> bool:
@@ -45,16 +37,15 @@ def is_allowed_dataframe_source_table(table_name: str, db_config: SQLAdapterDBCo
     )
 
 
-async def get_allowed_dataframe_source_tables(db_config: SQLAdapterDBConfig) -> list[str]:
-    table_names = await get_table_names(db_config.connection_url)
+def get_allowed_dataframe_source_tables(db_config: SQLAdapterDBConfig) -> list[str]:
     return [
         table_name
-        for table_name in table_names
+        for table_name in get_table_names(db_config.connection_url)
         if is_allowed_dataframe_source_table(table_name, db_config)
     ]
 
 
-async def get_sources_of_db(db_config: SQLAdapterDBConfig) -> list[SQLAdapterStructureSource]:
+def get_sources_of_db(db_config: SQLAdapterDBConfig) -> list[SQLAdapterStructureSource]:
     return (
         [
             # query source
@@ -80,7 +71,7 @@ async def get_sources_of_db(db_config: SQLAdapterDBConfig) -> list[SQLAdapterStr
                 name="Table " + table_name,
                 path=db_config.key + "|" + db_config.name + "/table/" + table_name,
             )
-            for table_name in await get_allowed_dataframe_source_tables(db_config)
+            for table_name in get_allowed_dataframe_source_tables(db_config)
         ]
         + [
             SQLAdapterStructureSource(
@@ -102,12 +93,12 @@ async def get_sources_of_db(db_config: SQLAdapterDBConfig) -> list[SQLAdapterStr
     )
 
 
-async def get_all_db_sources(
+def get_all_db_sources(
     db_configs: Iterable[SQLAdapterDBConfig],
 ) -> list[SQLAdapterStructureSource]:
     sources = []
     for db_config in db_configs:
-        sources.extend(await get_sources_of_db(db_config))
+        sources.extend(get_sources_of_db(db_config))
     return sources
 
 
@@ -181,7 +172,7 @@ def filter_sql_sinks(
     ]
 
 
-async def get_structure(parent_id: str | None = None) -> StructureResponse:
+def get_structure(parent_id: str | None = None) -> StructureResponse:
     configured_dbs_by_key = get_configured_dbs_by_key()
 
     if parent_id is None:
@@ -207,7 +198,7 @@ async def get_structure(parent_id: str | None = None) -> StructureResponse:
             id="db/" + parent_id,
             name=configured_dbs_by_key[parent_id].name,
             thingNodes=[],
-            sources=await get_sources_of_db(configured_dbs_by_key[parent_id]),
+            sources=get_sources_of_db(configured_dbs_by_key[parent_id]),
             sinks=get_sinks_of_db(configured_dbs_by_key[parent_id]),
         )
 
@@ -344,10 +335,10 @@ def get_sink_by_id(sink_id: str) -> SQLAdapterStructureSink | None:
     )
 
 
-async def get_sources(filter_str: str | None = None) -> list[SQLAdapterStructureSource]:
+def get_sources(filter_str: str | None = None) -> list[SQLAdapterStructureSource]:
     configured_dbs_by_key = get_configured_dbs_by_key()
 
-    all_sources = await get_all_db_sources(configured_dbs_by_key.values())
+    all_sources = get_all_db_sources(configured_dbs_by_key.values())
 
     if filter_str is None:
         return all_sources
