@@ -3,7 +3,8 @@ from functools import cached_property
 from typing import Any
 
 from pydantic import BaseModel, BaseSettings, Field, validator
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 
 from hetdesrun.models.util import valid_python_identifier
 
@@ -105,8 +106,8 @@ class SQLAdapterDBConfig(BaseModel):
     )
 
     @cached_property
-    def engine(self) -> AsyncEngine:
-        return create_async_engine(self.connection_url, **self.create_engine_kwargs, future=True)  # type: ignore
+    def engine(self) -> Engine:
+        return create_engine(self.connection_url, **self.create_engine_kwargs, future=True)  # type: ignore
 
     class Config:
         arbitrary_types_allowed = True
