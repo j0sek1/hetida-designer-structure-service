@@ -97,10 +97,13 @@ async def write_table_to_provided_sink_id(data: pd.DataFrame, sink_id: str) -> N
 
     engine = db_config.engine
     try:
-        async with engine.begin() as conn:  # transactional / roll back in case of exceptions
-            # Pandas' to_sql() is synchronous, so use run_in_executor() to run it in a thread pool, preventing event loop blocking.
-            # run_in_executor() ensures the event loop stays responsive during long-running operations like to_sql().
-            # get_running_loop() accesses the current event loop and runs to_sql() in a background thread for async compatibility.
+        async with engine.begin():  # transactional / roll back in case of exceptions
+            # Pandas' to_sql() is synchronous, so use run_in_executor() to
+            # run it in a thread pool, preventing event loop blocking.
+            # run_in_executor() ensures the event loop stays responsive
+            # during long-running operations like to_sql().
+            # get_running_loop() accesses the current event loop and runs
+            # to_sql() in a background thread for async compatibility.
             loop = get_running_loop()
             # Using run_in_executor to avoid blocking the event loop
             await loop.run_in_executor(
