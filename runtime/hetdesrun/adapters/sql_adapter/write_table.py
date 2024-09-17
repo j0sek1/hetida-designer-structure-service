@@ -1,5 +1,4 @@
 import logging
-from asyncio import get_running_loop
 
 import pandas as pd
 from pydantic import ValidationError
@@ -66,7 +65,7 @@ def prepare_validate_multitsframe(
     return data_to_send
 
 
-async def write_table_to_provided_sink_id(data: pd.DataFrame, sink_id: str) -> None:
+def write_table_to_provided_sink_id(data: pd.DataFrame, sink_id: str) -> None:
     try:
         write_table = WriteTable.from_sink_id(sink_id)
     except ValidationError as e:  # pragma: no cover
@@ -97,20 +96,13 @@ async def write_table_to_provided_sink_id(data: pd.DataFrame, sink_id: str) -> N
 
     engine = db_config.engine
     try:
-        async with engine.begin() as conn:  # transactional / roll back in case of exceptions
-            # Pandas' to_sql() is synchronous, so use run_in_executor() to run it in a thread pool, preventing event loop blocking.
-            # run_in_executor() ensures the event loop stays responsive during long-running operations like to_sql().
-            # get_running_loop() accesses the current event loop and runs to_sql() in a background thread for async compatibility.
-            loop = get_running_loop()
-            # Using run_in_executor to avoid blocking the event loop
-            await loop.run_in_executor(
-                None,
-                data_to_send.to_sql,
+        with engine.begin():  # transactional / roll back in case of exceptions
+            data_to_send.to_sql(
                 write_table.table_name,
                 engine,
-                "replace",
-                False,
-                "multi",
+                if_exists=write_table.pandas_if_exists_mode,
+                index=False,
+                method="multi",
             )
     except SQLOpsError as e:
         msg = f"Sql adapter pandas to_sql writing error: {str(e)}"
