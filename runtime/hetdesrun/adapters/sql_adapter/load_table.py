@@ -2,7 +2,6 @@ import datetime
 import logging
 
 import pandas as pd
-import sqlalchemy as sa
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.exc import OperationalError as SQLOpsError
 from sqlalchemy.sql import and_, column, select, table
@@ -146,7 +145,7 @@ def prepare_validate_loaded_raw_multitsframe(
     return validated_multi_ts_frame
 
 
-async def load_table_from_provided_source_id(source_id: str, source_filters: dict) -> pd.DataFrame:
+def load_table_from_provided_source_id(source_id: str, source_filters: dict) -> pd.DataFrame:
     configured_dbs_by_key = get_configured_dbs_by_key()
 
     id_split = source_id.split("/", 2)
@@ -169,11 +168,11 @@ async def load_table_from_provided_source_id(source_id: str, source_filters: dic
             )
             logger.info(msg)
             raise AdapterHandlingException(msg)
-        return await load_sql_query(db_config, query)
+        return load_sql_query(db_config, query)
 
     if id_split[1] == "table" and len(id_split) > 2:
         table_name = id_split[2]
-        return await load_sql_table(db_config, table_name)
+        return load_sql_table(db_config, table_name)
 
     if id_split[1] == "ts_table" and len(id_split) > 2:
         ts_table_name = id_split[2]
@@ -199,7 +198,7 @@ async def load_table_from_provided_source_id(source_id: str, source_filters: dic
             ts_table_name, ts_table_config, from_datetime, to_datetime, metrics_list
         )
 
-        multits_frame = await load_sql_query(db_config, statement)
+        multits_frame = load_sql_query(db_config, statement)
 
         validated_multi_ts_frame = prepare_validate_loaded_raw_multitsframe(
             multits_frame,
@@ -217,29 +216,25 @@ async def load_table_from_provided_source_id(source_id: str, source_filters: dic
     raise AdapterHandlingException(msg)
 
 
-async def load_sql_table(db_config: SQLAdapterDBConfig, table_name: str) -> pd.DataFrame:
+def load_sql_table(db_config: SQLAdapterDBConfig, table_name: str) -> pd.DataFrame:
     engine = db_config.engine
     try:
-        async with engine.connect() as conn:
-            result = await conn.execute(sa.text(f"SELECT * FROM {table_name}"))
-            rows = result.fetchall()
-            df = pd.DataFrame(rows, columns=result.keys())
+        with engine.begin():
+            result = pd.read_sql_table(table_name, engine)
     except SQLOpsError as e:
         msg = f"Sql adapter pandas sql reading error: {str(e)}"
         logger.info(msg)
         raise AdapterHandlingException(msg) from e
-    return df
+    return result
 
 
-async def load_sql_query(db_config: SQLAdapterDBConfig, query: Select) -> pd.DataFrame:
+def load_sql_query(db_config: SQLAdapterDBConfig, query: Select) -> pd.DataFrame:
     engine = db_config.engine
     try:
-        async with engine.connect() as conn:
-            result = await conn.execute(sa.text(query))
-            rows = result.fetchall()
-            df = pd.DataFrame(rows, columns=result.keys())
+        with engine.begin():
+            result = pd.read_sql_query(query, engine)
     except SQLOpsError as e:
         msg = f"Sql adapter pandas sql query error: {str(e)}"
         logger.info(msg)
         raise AdapterHandlingException(msg) from e
-    return df
+    return result
