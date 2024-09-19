@@ -154,7 +154,7 @@ class RuntimeConfig(BaseSettings):
     )
 
     sqlalchemy_db_drivername: str = Field(
-        "postgresql+psycopg2", env="HD_DB_DRIVERNAME", example="postgresql+psycopg2"
+        "postgresql+asyncpg", env="HD_DB_DRIVERNAME", example="postgresql+asyncpg"
     )
 
     sqlalchemy_db_user: str = Field("hetida_designer_dbuser", env="HD_DB_USER")
@@ -172,13 +172,33 @@ class RuntimeConfig(BaseSettings):
         ),
         env="HD_DATABASE_URL",
         example=(
-            "postgresql+psycopg2://hetida_designer_dbuser:"
+            "postgresql+asyncpg://hetida_designer_dbuser:"
             "hetida_designer_dbpasswd@hetida-designer-db:5432/hetida_designer_db"
         ),
     )
 
     sqlalchemy_pool_size: int = Field(
         100, description="Database pool size", env="HD_DATABASE_POOL_SIZE", gt=0
+    )
+
+    sqlalchemy_max_overflow: int = Field(
+        10,
+        description="Maximum number of connections to allow in connection pool overflow",
+        env="HD_DATABASE_MAX_OVERFLOW",
+    )
+
+    sqlalchemy_pool_timeout: int = Field(
+        30,
+        description=(
+            "Number of seconds to wait before giving up on getting a connection " "from the pool"
+        ),
+        env="HD_DATABASE_POOL_TIMEOUT",
+    )
+
+    sqlalchemy_pool_recycle: int = Field(
+        1800,
+        description="Number of seconds after which a connection is automatically recycled",
+        env="HD_DATABASE_POOL_RECYCLE",
     )
 
     # HD Keycloak auth
