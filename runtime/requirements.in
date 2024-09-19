@@ -1,5 +1,6 @@
 -c requirements-base.txt
 SQLAlchemy-Utils
+aiofiles
 aiokafka[snappy]
 aiosqlite
 alembic
