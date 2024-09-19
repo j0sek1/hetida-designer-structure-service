@@ -70,9 +70,9 @@ def find_all_nestings(
     return [row[0] for row in result.all()]
 
 
-def delete_own_nestings(session: SQLAlchemySession, workflow_id: UUID) -> None:
+async def delete_own_nestings(session: SQLAlchemySession, workflow_id: UUID) -> None:
     logger.debug("delete nestings of transformation revision %s if existing", str(workflow_id))
-    session.execute(delete(NestingDBModel).where(NestingDBModel.workflow_id == workflow_id))
+    await session.execute(delete(NestingDBModel).where(NestingDBModel.workflow_id == workflow_id))
 
 
 def delete_single_nesting(
@@ -92,12 +92,12 @@ def delete_single_nesting(
     )
 
 
-def update_nesting(
+async def update_nesting(
     session: SQLAlchemySession, workflow_id: UUID, workflow_content: WorkflowContent
 ) -> None:
     logger.debug("update nesting of workflow %s", str(workflow_id))
     # no need to deal with ancestors, workflow draft has none
-    delete_own_nestings(session, workflow_id)
+    await delete_own_nestings(session, workflow_id)
 
     for child in workflow_content.operators:
         add_single_nesting(

@@ -31,7 +31,7 @@ from hetdesrun.utils import State, Type, cache_conditionally
 logger = logging.getLogger(__name__)
 
 
-def add_tr(session: SQLAlchemySession, transformation_revision: TransformationRevision) -> None:
+async def add_tr(session: SQLAlchemySession, transformation_revision: TransformationRevision) -> None:
     try:
         db_model = transformation_revision.to_orm_model()
         session.add(db_model)
@@ -44,27 +44,29 @@ def add_tr(session: SQLAlchemySession, transformation_revision: TransformationRe
         raise DBIntegrityError(msg) from e
 
 
-def store_single_transformation_revision(
+async def store_single_transformation_revision(
     transformation_revision: TransformationRevision,
 ) -> None:
-    with get_session()() as session, session.begin():
-        add_tr(session, transformation_revision)
+    async with get_session()() as session:
+        async with session.begin():
+            await add_tr(session, transformation_revision)
 
-        if transformation_revision.type == Type.WORKFLOW:
-            assert isinstance(  # noqa: S101
-                transformation_revision.content, WorkflowContent
-            )  # hint for mypy
-            update_nesting(session, transformation_revision.id, transformation_revision.content)
+            if transformation_revision.type == Type.WORKFLOW:
+                assert isinstance(  # noqa: S101
+                    transformation_revision.content, WorkflowContent
+                )  # hint for mypy
+                await update_nesting(session, transformation_revision.id, transformation_revision.content)
 
 
-def select_tr_by_id(
+async def select_tr_by_id(
     session: SQLAlchemySession,
     id: UUID,  # noqa: A002
     log_error: bool = True,
 ) -> TransformationRevision:
-    result = session.execute(
+    result = await session.execute(
         select(TransformationRevisionDBModel).where(TransformationRevisionDBModel.id == id)
-    ).scalar_one_or_none()
+    )
+    result = result.scalar_one_or_none()
 
     if result is None:
         msg = f"Found no transformation revision in database with id {id}"
@@ -75,12 +77,13 @@ def select_tr_by_id(
     return TransformationRevision.from_orm_model(result)
 
 
-def read_single_transformation_revision(
+async def read_single_transformation_revision(
     id: UUID,  # noqa: A002
     log_error: bool = True,
 ) -> TransformationRevision:
-    with get_session()() as session, session.begin():
-        return select_tr_by_id(session, id, log_error)
+    async with get_session()() as session:
+        async with session.begin():
+            return await select_tr_by_id(session, id, log_error)
 
 
 @cache_conditionally(lambda trafo: trafo.state != State.DRAFT)
@@ -91,10 +94,10 @@ def read_single_transformation_revision_with_caching(
     return read_single_transformation_revision(id, log_error)
 
 
-def update_tr(session: SQLAlchemySession, transformation_revision: TransformationRevision) -> None:
+async def update_tr(session: SQLAlchemySession, transformation_revision: TransformationRevision) -> None:
     try:
         db_model = transformation_revision.to_orm_model()
-        session.execute(
+        await session.execute(
             update(TransformationRevisionDBModel)
             .where(TransformationRevisionDBModel.id == db_model.id)
             .values(
@@ -125,13 +128,13 @@ def update_tr(session: SQLAlchemySession, transformation_revision: Transformatio
         raise DBIntegrityError(msg) from e
 
 
-def pass_on_deprecation(session: SQLAlchemySession, transformation_id: UUID) -> None:
+async def pass_on_deprecation(session: SQLAlchemySession, transformation_id: UUID) -> None:
     logger.debug("pass on deprecation for transformation revision %s", str(transformation_id))
 
-    sup_nestings = find_all_nestings(session, transformation_id)
+    sup_nestings = await find_all_nestings(session, transformation_id)
 
     for nesting in sup_nestings:
-        transformation_revision = select_tr_by_id(session, nesting.workflow_id)
+        transformation_revision = await select_tr_by_id(session, nesting.workflow_id)
         assert isinstance(  # noqa: S101
             transformation_revision.content, WorkflowContent
         )  # hint for mypy
@@ -139,7 +142,7 @@ def pass_on_deprecation(session: SQLAlchemySession, transformation_id: UUID) -> 
             if operator.id == nesting.via_operator_id:
                 operator.state = State.DISABLED
 
-        update_tr(session, transformation_revision)
+        await update_tr(session, transformation_revision)
 
 
 def tr_same_except_for_wiring_and_docu(
@@ -216,7 +219,7 @@ def contains_deprecated(transformation_id: UUID) -> bool:
     return any(is_disabled)
 
 
-def update_content(
+async def update_content(
     updated_transformation_revision: TransformationRevision,
     existing_transformation_revision: TransformationRevision | None = None,
 ) -> TransformationRevision:
@@ -278,7 +281,7 @@ def if_applicable_release_or_deprecate(
     return updated_transformation_revision
 
 
-def update_or_create_single_transformation_revision(
+async def update_or_create_single_transformation_revision(
     transformation_revision: TransformationRevision,
     allow_overwrite_released: bool = False,
     update_component_code: bool = True,
@@ -292,55 +295,57 @@ def update_or_create_single_transformation_revision(
         keep_only_wirings_with_adapter_ids=keep_only_wirings_with_adapter_ids,
     )
 
-    with get_session()() as session, session.begin():
-        try:
-            existing_transformation_revision = select_tr_by_id(
-                session, transformation_revision.id, log_error=False
-            )
-        except DBNotFoundError:
-            if transformation_revision.type == Type.WORKFLOW or update_component_code:
-                transformation_revision = update_content(transformation_revision)
+    async with get_session()() as session:
+        async with session.begin():
+            try:
+                existing_transformation_revision = await select_tr_by_id(
+                    session, transformation_revision.id, log_error=False
+                )
+            except DBNotFoundError:
+                if transformation_revision.type == Type.WORKFLOW or update_component_code:
+                    transformation_revision = await update_content(transformation_revision)
 
-            add_tr(session, transformation_revision)
-        else:
-            modifiable, msg = is_modifiable(
-                existing_transformation_revision=existing_transformation_revision,
-                updated_transformation_revision=transformation_revision,
-                allow_overwrite_released=allow_overwrite_released,
-            )
-
-            if modifiable is False:
-                raise ModifyForbidden(msg)
-
-            transformation_revision = if_applicable_release_or_deprecate(
-                existing_transformation_revision, transformation_revision
-            )
-
-            if transformation_revision.type == Type.WORKFLOW or update_component_code:
-                transformation_revision = update_content(
-                    transformation_revision, existing_transformation_revision
+                await add_tr(session, transformation_revision)
+            else:
+                modifiable, msg = is_modifiable(
+                    existing_transformation_revision=existing_transformation_revision,
+                    updated_transformation_revision=transformation_revision,
+                    allow_overwrite_released=allow_overwrite_released,
                 )
 
-            update_tr(session, transformation_revision)
+                if modifiable is False:
+                    raise ModifyForbidden(msg)
 
-        if transformation_revision.state == State.DISABLED:
-            pass_on_deprecation(session, transformation_revision.id)
-            return select_tr_by_id(session, transformation_revision.id)
+                transformation_revision = if_applicable_release_or_deprecate(
+                    existing_transformation_revision, transformation_revision
+                )
 
-        if transformation_revision.type == Type.WORKFLOW:
-            assert isinstance(  # noqa: S101
-                transformation_revision.content, WorkflowContent
-            )  # hint for mypy
-            update_nesting(session, transformation_revision.id, transformation_revision.content)
+                if transformation_revision.type == Type.WORKFLOW or update_component_code:
+                    transformation_revision = await update_content(
+                        transformation_revision, existing_transformation_revision
+                    )
 
-        return select_tr_by_id(session, transformation_revision.id)
+                await update_tr(session, transformation_revision)
+
+            if transformation_revision.state == State.DISABLED:
+                await pass_on_deprecation(session, transformation_revision.id)
+                return await select_tr_by_id(session, transformation_revision.id)
+
+            if transformation_revision.type == Type.WORKFLOW:
+                assert isinstance(  # noqa: S101
+                    transformation_revision.content, WorkflowContent
+                )  # hint for mypy
+                await update_nesting(session, transformation_revision.id, transformation_revision.content)
+
+        return await select_tr_by_id(session, transformation_revision.id)
 
 
-def delete_tr(session: SQLAlchemySession, tr_id: UUID) -> None:
+async def delete_tr(session: SQLAlchemySession, tr_id: UUID) -> None:
     try:
-        session.execute(
+        await session.execute(
             delete(TransformationRevisionDBModel).where(TransformationRevisionDBModel.id == tr_id)
         )
+        await session.flush() # Ensure constraints are checked
     except IntegrityError as e:
         msg = (
             f"Integrity Error while trying to delete transformation revision "
@@ -350,34 +355,35 @@ def delete_tr(session: SQLAlchemySession, tr_id: UUID) -> None:
         raise DBIntegrityError(msg) from e
 
 
-def delete_single_transformation_revision(
+async def delete_single_transformation_revision(
     id: UUID,  # noqa: A002
     type: Type | None = None,  # noqa: A002
     ignore_state: bool = False,
 ) -> None:
-    with get_session()() as session, session.begin():
-        result = select_tr_by_id(session, id)
+    async with get_session()() as session:
+        async with session.begin():
+            result = await select_tr_by_id(session, id)
 
-        transformation_revision: TransformationRevision = result
-        if type is not None and transformation_revision.type != type:
-            msg = (
-                f"Transformation revision {id} has type {transformation_revision.type}, "
-                f"delete request with type {type} will not be executed"
-            )
-            logger.error(msg)
-            raise TypeConflict(msg)
+            transformation_revision: TransformationRevision = result
+            if type is not None and transformation_revision.type != type:
+                msg = (
+                    f"Transformation revision {id} has type {transformation_revision.type}, "
+                    f"delete request with type {type} will not be executed"
+                )
+                logger.error(msg)
+                raise TypeConflict(msg)
 
-        if not ignore_state and transformation_revision.state != State.DRAFT:
-            msg = (
-                f"Transformation revision {id} cannot be deleted "
-                f"since it is in the state {transformation_revision.state}"
-            )
-            logger.error(msg)
-            raise StateConflict(msg)
+            if not ignore_state and transformation_revision.state != State.DRAFT:
+                msg = (
+                    f"Transformation revision {id} cannot be deleted "
+                    f"since it is in the state {transformation_revision.state}"
+                )
+                logger.error(msg)
+                raise StateConflict(msg)
 
-        delete_own_nestings(session, transformation_revision.id)
+            await delete_own_nestings(session, transformation_revision.id)
 
-        delete_tr(session, transformation_revision.id)
+            await delete_tr(session, transformation_revision.id)
 
 
 def is_unused(transformation_id: UUID) -> bool:
@@ -402,7 +408,7 @@ def is_unused(transformation_id: UUID) -> bool:
     return len(results) == 0
 
 
-def select_multiple_transformation_revisions(
+async def select_multiple_transformation_revisions(
     type: Type | None = None,  # noqa: A002
     state: State | None = None,
     categories: list[ValidStr] | None = None,
@@ -413,44 +419,49 @@ def select_multiple_transformation_revisions(
     include_deprecated: bool = True,
 ) -> list[TransformationRevision]:
     """Filterable selection of transformation revisions from db"""
-    with get_session()() as session, session.begin():
-        selection = select(TransformationRevisionDBModel)
+    async with get_session()() as session:  # noqa: SIM117
+        # Begin a transaction (optional, depending on your usage) - NEW
+        async with session.begin():
+            selection = select(TransformationRevisionDBModel)
 
-        if type is not None:
-            selection = selection.where(TransformationRevisionDBModel.type == type)
-        if state is not None:
-            selection = selection.where(TransformationRevisionDBModel.state == state)
-        if categories is not None:
-            selection = selection.where(TransformationRevisionDBModel.category.in_(categories))
-        if category_prefix is not None:
-            selection = selection.where(
-                TransformationRevisionDBModel.category.startswith(category_prefix, autoescape=True)
-            )
-        if revision_group_id is not None:
-            selection = selection.where(
-                TransformationRevisionDBModel.revision_group_id == revision_group_id
-            )
-        if ids is not None:
-            selection = selection.where(TransformationRevisionDBModel.id.in_(ids))
-        if names is not None:
-            selection = selection.where(
-                TransformationRevisionDBModel.name.in_(names),
-            )
-        if not include_deprecated:
-            selection = selection.where(TransformationRevisionDBModel.state != State.DISABLED)
+            if type is not None:
+                selection = selection.where(TransformationRevisionDBModel.type == type)
+            if state is not None:
+                selection = selection.where(TransformationRevisionDBModel.state == state)
+            if categories is not None:
+                selection = selection.where(TransformationRevisionDBModel.category.in_(categories))
+            if category_prefix is not None:
+                selection = selection.where(
+                    TransformationRevisionDBModel.category.startswith(
+                        category_prefix, autoescape=True
+                    )
+                )
+            if revision_group_id is not None:
+                selection = selection.where(
+                    TransformationRevisionDBModel.revision_group_id == revision_group_id
+                )
+            if ids is not None:
+                selection = selection.where(TransformationRevisionDBModel.id.in_(ids))
+            if names is not None:
+                selection = selection.where(
+                    TransformationRevisionDBModel.name.in_(names),
+                )
+            if not include_deprecated:
+                selection = selection.where(TransformationRevisionDBModel.state != State.DISABLED)
 
-        results = session.execute(selection).scalars().all()
+            result = await session.execute(selection)  # Await the execution first
+            results = result.scalars().all()  # Then call scalars() on the awaited result
 
-        tr_list = [TransformationRevision.from_orm_model(result) for result in results]
+            tr_list = [TransformationRevision.from_orm_model(result) for result in results]
 
-        return tr_list
+            return tr_list
 
 
-def get_multiple_transformation_revisions(
+async def get_multiple_transformation_revisions(
     params: FilterParams,
 ) -> list[TransformationRevision]:
     """Filterable selection of transformation revisions from db"""
-    tr_list = select_multiple_transformation_revisions(
+    tr_list = await select_multiple_transformation_revisions(
         type=params.type,
         state=params.state,
         categories=params.categories,
@@ -479,7 +490,7 @@ def get_multiple_transformation_revisions(
     return tr_list
 
 
-def nof_db_entries() -> int:
+async def nof_db_entries() -> int:
     with get_session()() as session, session.begin():
         nof_rows = (
             session.scalar(select(func.count()).select_from(TransformationRevisionDBModel.id)) or 0
@@ -489,7 +500,7 @@ def nof_db_entries() -> int:
     return nof_rows
 
 
-def get_all_nested_transformation_revisions(
+async def get_all_nested_transformation_revisions(
     transformation_revision: TransformationRevision,
 ) -> dict[UUID, TransformationRevision]:
     if transformation_revision.type != Type.WORKFLOW:
@@ -506,15 +517,15 @@ def get_all_nested_transformation_revisions(
         nested_transformation_revisions: dict[UUID, TransformationRevision] = {}
 
         for descendant in descendants:
-            nested_transformation_revisions[descendant.operator_id] = select_tr_by_id(
+            nested_transformation_revisions[descendant.operator_id] = await select_tr_by_id(
                 session, descendant.transformation_id
             )
 
     return nested_transformation_revisions
 
 
-def get_latest_revision_id(revision_group_id: UUID) -> UUID:
-    revision_group_list = get_multiple_transformation_revisions(
+async def get_latest_revision_id(revision_group_id: UUID) -> UUID:
+    revision_group_list = await get_multiple_transformation_revisions(
         FilterParams(
             state=State.RELEASED,
             revision_group_id=revision_group_id,
