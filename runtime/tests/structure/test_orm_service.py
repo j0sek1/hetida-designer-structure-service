@@ -2,6 +2,7 @@ import json
 import uuid
 from sqlite3 import Connection as SQLite3Connection
 
+import aiofiles
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import event, func, select
@@ -53,14 +54,15 @@ def set_sqlite_pragma(dbapi_connection: SQLite3Connection, connection_record) ->
 # Tests for Hierarchy and Relationships
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_thing_node_hierarchy(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
+async def test_thing_node_hierarchy(mocked_clean_test_db_session):
+    async with mocked_clean_test_db_session() as session:
         # Fetch all elements from the database
-        element_types_in_db = fetch_all_element_types(session)
-        thing_nodes_in_db = fetch_all_thing_nodes(session)
-        sources_in_db = fetch_all_sources(session)
-        sinks_in_db = fetch_all_sinks(session)
+        element_types_in_db = await fetch_all_element_types(session)
+        thing_nodes_in_db = await fetch_all_thing_nodes(session)
+        sources_in_db = await fetch_all_sources(session)
+        sinks_in_db = await fetch_all_sinks(session)
 
         assert len(element_types_in_db) == 3, "Mismatch in element types count"
         assert len(thing_nodes_in_db) == 7, "Mismatch in thing nodes count"
@@ -71,12 +73,13 @@ def test_thing_node_hierarchy(mocked_clean_test_db_session):
 ### Fetch Functions
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_element_types(mocked_clean_test_db_session):
+async def test_fetch_all_element_types(mocked_clean_test_db_session):
     # Start a session with the mocked clean test database
-    with mocked_clean_test_db_session() as session:
+    async with mocked_clean_test_db_session() as session:
         # Fetch all Element Types from the database
-        element_types = fetch_all_element_types(session)
+        element_types = await fetch_all_element_types(session)
 
         # Assert that the correct number of Element Types were retrieved
         assert len(element_types) == 3, "Expected 3 Element Types in the database"
@@ -104,12 +107,13 @@ def test_fetch_all_element_types(mocked_clean_test_db_session):
             )
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_thing_nodes(mocked_clean_test_db_session):
+async def test_fetch_all_thing_nodes(mocked_clean_test_db_session):
     # Start a session to interact with the database
-    with mocked_clean_test_db_session() as session:
+    async with mocked_clean_test_db_session() as session:
         # Fetch all ThingNodes from the database
-        thing_nodes = fetch_all_thing_nodes(session)
+        thing_nodes = await fetch_all_thing_nodes(session)
 
         # Assert that the expected number of ThingNodes is in the database
         assert len(thing_nodes) == 7, "Expected 7 Thing Nodes in the database"
@@ -152,12 +156,13 @@ def test_fetch_all_thing_nodes(mocked_clean_test_db_session):
             )
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_sources(mocked_clean_test_db_session):
+async def test_fetch_all_sources(mocked_clean_test_db_session):
     # Start a session to interact with the database
-    with mocked_clean_test_db_session() as session:
+    async with mocked_clean_test_db_session() as session:
         # Fetch all Sources from the database
-        sources = fetch_all_sources(session)
+        sources = await fetch_all_sources(session)
 
         # Assert that the expected number of Sources is in the database
         assert len(sources) == 3, "Expected 3 Sources in the database"
@@ -190,12 +195,13 @@ def test_fetch_all_sources(mocked_clean_test_db_session):
             )
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_sinks(mocked_clean_test_db_session):
+async def test_fetch_all_sinks(mocked_clean_test_db_session):
     # Start a session to interact with the database
-    with mocked_clean_test_db_session() as session:
+    async with mocked_clean_test_db_session() as session:
         # Fetch all Sinks from the database
-        sinks = fetch_all_sinks(session)
+        sinks = await fetch_all_sinks(session)
 
         # Assert that the expected number of Sinks is in the database
         assert len(sinks) == 3, "Expected 3 Sinks in the database"
@@ -235,9 +241,10 @@ def test_fetch_all_sinks(mocked_clean_test_db_session):
 ### Structure Helper Functions
 
 
-def test_load_structure_from_json_file(db_test_structure_file_path):
+@pytest.mark.asyncio
+async def test_load_structure_from_json_file(db_test_structure_file_path):
     # Load the structure from the JSON file using the load_structure_from_json_file function
-    complete_structure = orm_load_structure_from_json_file(db_test_structure_file_path)
+    complete_structure = await orm_load_structure_from_json_file(db_test_structure_file_path)
 
     # Assert that the loaded structure is an instance of the CompleteStructure class
     assert isinstance(
@@ -245,8 +252,8 @@ def test_load_structure_from_json_file(db_test_structure_file_path):
     ), "Loaded structure is not an instance of CompleteStructure"
 
     # Load the expected structure directly from the JSON file for comparison
-    with open(db_test_structure_file_path) as file:
-        expected_structure_json = json.load(file)
+    async with aiofiles.open(db_test_structure_file_path, mode="r") as file:
+        expected_structure_json = json.loads(await file.read())
 
     # Convert the expected JSON structure into a CompleteStructure instance
     expected_structure = CompleteStructure(**expected_structure_json)
@@ -287,62 +294,81 @@ def test_load_structure_from_json_file(db_test_structure_file_path):
     ), "Loaded structure does not match the expected structure"
 
 
-def test_load_structure_from_invalid_json_file():
+@pytest.mark.asyncio
+async def test_load_structure_from_invalid_json_file():
     # Use a non-existent file path to simulate a failure in loading JSON
     with pytest.raises(FileNotFoundError):
-        orm_load_structure_from_json_file("non_existent_file.json")
+        await orm_load_structure_from_json_file("non_existent_file.json")
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_delete_structure(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
+async def test_delete_structure(mocked_clean_test_db_session):
+    async with mocked_clean_test_db_session() as session:
         # Verify that the database is initially populated
-        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) > 0
-        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) > 0
-        assert session.scalar(select(func.count()).select_from(SourceOrm)) > 0
-        assert session.scalar(select(func.count()).select_from(SinkOrm)) > 0
-        assert session.scalar(select(func.count()).select_from(thingnode_source_association)) > 0
-        assert session.scalar(select(func.count()).select_from(thingnode_sink_association)) > 0
+        assert await session.scalar(select(func.count()).select_from(ElementTypeOrm)) > 0
+        assert await session.scalar(select(func.count()).select_from(ThingNodeOrm)) > 0
+        assert await session.scalar(select(func.count()).select_from(SourceOrm)) > 0
+        assert await session.scalar(select(func.count()).select_from(SinkOrm)) > 0
+        assert (
+            await session.scalar(select(func.count()).select_from(thingnode_source_association)) > 0
+        )
+        assert (
+            await session.scalar(select(func.count()).select_from(thingnode_sink_association)) > 0
+        )
 
-        orm_delete_structure(session)
+        await orm_delete_structure(session)
 
         # Verify that all tables are empty after purging
-        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(SourceOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(SinkOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(thingnode_source_association)) == 0
-        assert session.scalar(select(func.count()).select_from(thingnode_sink_association)) == 0
+        assert await session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 0
+        assert await session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 0
+        assert await session.scalar(select(func.count()).select_from(SourceOrm)) == 0
+        assert await session.scalar(select(func.count()).select_from(SinkOrm)) == 0
+        assert (
+            await session.scalar(select(func.count()).select_from(thingnode_source_association))
+            == 0
+        )
+        assert (
+            await session.scalar(select(func.count()).select_from(thingnode_sink_association)) == 0
+        )
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_update_structure_with_new_elements():
+async def test_update_structure_with_new_elements():
     # This test checks the update functionality of the orm_update_structure function.
     # It starts with an existing structure in the database, then updates it with new elements
     # from a JSON file and verifies that the structure in the database reflects these updates.
 
-    with get_session()() as session, session.begin():
-        # Verify initial structure
-        verify_initial_structure(session)
+    async with get_session()() as session:  # noqa: SIM117
+        async with session.begin():
+            # Verify initial structure
+            await verify_initial_structure(session)
 
-        # Load updated structure from JSON file
-        file_path = "tests/structure/data/db_updated_test_structure.json"
-        updated_structure = orm_load_structure_from_json_file(file_path)
+            # Load updated structure from JSON file
+            file_path = "tests/structure/data/db_updated_test_structure.json"
+            updated_structure = await orm_load_structure_from_json_file(file_path)
 
     # Update the structure in the database
-    orm_update_structure(updated_structure)
+    await orm_update_structure(updated_structure)
 
     # Verify structure after update
-    with get_session()() as session, session.begin():
-        verify_updated_structure(session)
+    async with get_session()() as session:  # noqa: SIM117
+        async with session.begin():
+            await verify_updated_structure(session)
 
 
-def verify_initial_structure(session):
+async def verify_initial_structure(session):
     # Fetch all initial elements from the database
-    initial_element_types = session.execute(select(ElementTypeOrm)).scalars().all()
-    initial_thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
-    initial_sources = session.execute(select(SourceOrm)).scalars().all()
-    initial_sinks = session.execute(select(SinkOrm)).scalars().all()
+    result = await session.execute(select(ElementTypeOrm))
+    initial_element_types = result.scalars().all()
+
+    result = await session.execute(select(ThingNodeOrm))
+    initial_thing_nodes = result.scalars().all()
+    result = await session.execute(select(SourceOrm))
+    initial_sources = result.scalars().all()
+    result = await session.execute(select(SinkOrm))
+    initial_sinks = result.scalars().all()
 
     # Verify that the initial structure contains the correct number of elements
     assert len(initial_element_types) == 3, "Expected 3 Element Types in the initial structure"
@@ -351,29 +377,35 @@ def verify_initial_structure(session):
     assert len(initial_sinks) == 3, "Expected 3 Sinks in the initial structure"
 
     # Verify specific attributes of the ThingNodes before the update
-    initial_tn = session.execute(
+    result = await session.execute(
         select(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank1")
-    ).scalar_one()
+    )
+    initial_tn = result.scalar_one()
     assert (
         initial_tn.meta_data["capacity"] == "5000"
     ), "Initial capacity of Storage Tank 1 should be 5000"
     assert initial_tn.meta_data["description"] == "Water storage capacity for Storage Tank 1"
 
-    initial_tn2 = session.execute(
+    result = await session.execute(
         select(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank2")
-    ).scalar_one()
+    )
+    initial_tn2 = result.scalar_one()
     assert (
         initial_tn2.meta_data["capacity"] == "6000"
     ), "Initial capacity of Storage Tank 2 should be 6000"
     assert initial_tn2.meta_data["description"] == "Water storage capacity for Storage Tank 2"
 
 
-def verify_updated_structure(session):
+async def verify_updated_structure(session):
     # Fetch all elements from the database after the update
-    final_element_types = session.execute(select(ElementTypeOrm)).scalars().all()
-    final_thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
-    final_sources = session.execute(select(SourceOrm)).scalars().all()
-    final_sinks = session.execute(select(SinkOrm)).scalars().all()
+    result = await session.execute(select(ElementTypeOrm))
+    final_element_types = result.scalars().all()
+    result = await session.execute(select(ThingNodeOrm))
+    final_thing_nodes = result.scalars().all()
+    result = await session.execute(select(SourceOrm))
+    final_sources = result.scalars().all()
+    result = await session.execute(select(SinkOrm))
+    final_sinks = result.scalars().all()
 
     # Verify that the structure now contains the updated number of elements
     assert len(final_element_types) == 4, "Expected 4 Element Types after the update"
@@ -387,7 +419,7 @@ def verify_updated_structure(session):
     verify_associations(session)
 
 
-def verify_new_elements_and_nodes(session, final_element_types, final_thing_nodes):
+async def verify_new_elements_and_nodes(session, final_element_types, final_thing_nodes):
     # Verify that a new ElementType was added
     new_element_type = next(
         et for et in final_element_types if et.external_id == "FiltrationPlant_Type"
@@ -430,10 +462,10 @@ def verify_new_elements_and_nodes(session, final_element_types, final_thing_node
     )
 
 
-def verify_associations(session):
+async def verify_associations(session):
     # Fetch all associations between ThingNodes and Sources/Sinks from the database
-    source_associations = session.execute(select(thingnode_source_association)).all()
-    sink_associations = session.execute(select(thingnode_sink_association)).all()
+    source_associations = await session.execute(select(thingnode_source_association)).all()
+    sink_associations = await session.execute(select(thingnode_sink_association)).all()
 
     # Define the expected associations between ThingNodes and Sources
     expected_source_associations = [
@@ -466,10 +498,10 @@ def verify_associations(session):
 
     # Verify that each expected Source association exists in the database
     for tn_external_id, source_external_id in expected_source_associations:
-        tn_id = session.execute(
+        tn_id = await session.execute(
             select(ThingNodeOrm.id).where(ThingNodeOrm.external_id == tn_external_id)
         ).scalar_one()
-        source_id = session.execute(
+        source_id = await session.execute(
             select(SourceOrm.id).where(SourceOrm.external_id == source_external_id)
         ).scalar_one()
         assert (tn_id, source_id) in [
@@ -481,10 +513,10 @@ def verify_associations(session):
 
     # Verify that each expected Sink association exists in the database
     for tn_external_id, sink_external_id in expected_sink_associations:
-        tn_id = session.execute(
+        tn_id = await session.execute(
             select(ThingNodeOrm.id).where(ThingNodeOrm.external_id == tn_external_id)
         ).scalar_one()
-        sink_id = session.execute(
+        sink_id = await session.execute(
             select(SinkOrm.id).where(SinkOrm.external_id == sink_external_id)
         ).scalar_one()
         assert (tn_id, sink_id) in [
@@ -495,8 +527,9 @@ def verify_associations(session):
         )
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_empty_database")
-def test_update_structure_from_file():
+async def test_update_structure_from_file():
     # This test specifically checks the insert functionality of the update_structure function.
     # It starts with an empty database and verifies that the structure from the JSON file is
     # correctly inserted into the database.
@@ -505,52 +538,55 @@ def test_update_structure_from_file():
     file_path = "tests/structure/data/db_test_structure.json"
 
     # Ensure the database is empty at the beginning
-    with get_session()() as session:
-        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(SourceOrm)) == 0
-        assert session.scalar(select(func.count()).select_from(SinkOrm)) == 0
+    async with get_session()() as session:
+        assert await session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 0
+        assert await session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 0
+        assert await session.scalar(select(func.count()).select_from(SourceOrm)) == 0
+        assert await session.scalar(select(func.count()).select_from(SinkOrm)) == 0
 
     # Load structure from the file and update the database
-    update_structure_from_file(file_path)
+    await update_structure_from_file(file_path)
 
     # Verify that the structure was correctly inserted
-    with get_session()() as session:
-        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 3
-        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 7
-        assert session.scalar(select(func.count()).select_from(SourceOrm)) == 3
-        assert session.scalar(select(func.count()).select_from(SinkOrm)) == 3
+    async with get_session()() as session:
+        assert await session.scalar(select(func.count()).select_from(ElementTypeOrm)) == 3
+        assert await session.scalar(select(func.count()).select_from(ThingNodeOrm)) == 7
+        assert await session.scalar(select(func.count()).select_from(SourceOrm)) == 3
+        assert await session.scalar(select(func.count()).select_from(SinkOrm)) == 3
 
         # Example check for a specific ElementType
-        waterworks_type = session.execute(
+        result = await session.execute(
             select(ElementTypeOrm).filter_by(external_id="Waterworks_Type")
-        ).scalar_one()
+        )
+        waterworks_type = result.scalar_one()
         assert waterworks_type.name == "Waterworks"
         assert waterworks_type.description == "Element type for waterworks"
 
         # Example check for a specific ThingNode
-        waterworks1 = session.execute(
-            select(ThingNodeOrm).filter_by(external_id="Waterworks1")
-        ).scalar_one()
+        result = await session.execute(select(ThingNodeOrm).filter_by(external_id="Waterworks1"))
+        waterworks1 = result.scalar_one()
         assert waterworks1.name == "Waterworks 1"
         assert waterworks1.meta_data["location"] == "Main Site"
 
         # Example check for a specific Source
-        source = session.execute(
+        result = await session.execute(
             select(SourceOrm).filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
-        ).scalar_one()
+        )
+        source = result.scalar_one()
         assert source.name == "Energy usage of the pump system in Storage Tank"
         assert source.meta_data["1010001"]["unit"] == "kW/h"
 
         # Example check for a specific Sink
-        sink = session.execute(
+        result = await session.execute(
             select(SinkOrm).filter_by(external_id="AnomalyScore_EnergyUsage_PumpSystem_StorageTank")
-        ).scalar_one()
+        )
+        sink = result.scalar_one()
         assert sink.name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_update_structure_no_elements_deleted():
+async def test_update_structure_no_elements_deleted():
     # This test ensures that no elements are deleted when updating the structure
     # with a new JSON file that omits some elements. It verifies that the total number of elements
     # remains unchanged and that specific elements from the original structure are still present.
@@ -560,91 +596,84 @@ def test_update_structure_no_elements_deleted():
     new_file_path = "tests/structure/data/db_test_incomplete_structure.json"
 
     # Load initial structure from JSON file
-    initial_structure: CompleteStructure = orm_load_structure_from_json_file(old_file_path)
+    initial_structure: CompleteStructure = await orm_load_structure_from_json_file(old_file_path)
 
     # Load updated structure from new JSON file
-    updated_structure: CompleteStructure = orm_load_structure_from_json_file(new_file_path)
+    updated_structure: CompleteStructure = await orm_load_structure_from_json_file(new_file_path)
 
     # Update the structure in the database with new structure
-    orm_update_structure(updated_structure)
+    await orm_update_structure(updated_structure)
 
     # Verify structure after update
-    with get_session()() as session:
+    async with get_session()() as session:
         # Check the number of elements after update
-        assert session.scalar(select(func.count()).select_from(ElementTypeOrm)) == len(
+        assert await session.scalar(select(func.count()).select_from(ElementTypeOrm)) == len(
             initial_structure.element_types
         )
-        assert session.scalar(select(func.count()).select_from(ThingNodeOrm)) == len(
+        assert await session.scalar(select(func.count()).select_from(ThingNodeOrm)) == len(
             initial_structure.thing_nodes
         )
-        assert session.scalar(select(func.count()).select_from(SourceOrm)) == len(
+        assert await session.scalar(select(func.count()).select_from(SourceOrm)) == len(
             initial_structure.sources
         )
-        assert session.scalar(select(func.count()).select_from(SinkOrm)) == len(
+        assert await session.scalar(select(func.count()).select_from(SinkOrm)) == len(
             initial_structure.sinks
         )
 
         # Verify specific elements from the initial structure are still present
         # Element Types
         for element_type in initial_structure.element_types:
-            assert (
-                session.execute(
-                    select(func.count())
-                    .select_from(ElementTypeOrm)
-                    .filter_by(external_id=element_type.external_id)
-                ).scalar_one()
-                == 1
+            result = await session.execute(
+                select(func.count())
+                .select_from(ElementTypeOrm)
+                .filter_by(external_id=element_type.external_id)
             )
+            assert result.scalar_one() == 1
 
         # Thing Nodes
         for thing_node in initial_structure.thing_nodes:
-            assert (
-                session.execute(
-                    select(func.count())
-                    .select_from(ThingNodeOrm)
-                    .filter_by(external_id=thing_node.external_id)
-                ).scalar_one()
-                == 1
+            result = await session.execute(
+                select(func.count())
+                .select_from(ThingNodeOrm)
+                .filter_by(external_id=thing_node.external_id)
             )
+            assert result.scalar_one() == 1
 
         # Sources
         for source in initial_structure.sources:
-            assert (
-                session.execute(
-                    select(func.count())
-                    .select_from(SourceOrm)
-                    .filter_by(external_id=source.external_id)
-                ).scalar_one()
-                == 1
+            result = await session.execute(
+                select(func.count())
+                .select_from(SourceOrm)
+                .filter_by(external_id=source.external_id)
             )
+            assert result.scalar_one() == 1
 
         # Sinks
         for sink in initial_structure.sinks:
-            assert (
-                session.execute(
-                    select(func.count())
-                    .select_from(SinkOrm)
-                    .filter_by(external_id=sink.external_id)
-                ).scalar_one()
-                == 1
+            result = await session.execute(
+                select(func.count()).select_from(SinkOrm).filter_by(external_id=sink.external_id)
             )
+            assert result.scalar_one() == 1
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_empty_database")
-def test_is_database_empty_when_empty(mocked_clean_test_db_session):
-    assert orm_is_database_empty(), "Database should be empty but is not."
+async def test_is_database_empty_when_empty(mocked_clean_test_db_session):
+    assert await orm_is_database_empty(), "Database should be empty but is not."
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_structure")
-def test_is_database_empty_when_not_empty(mocked_clean_test_db_session):
-    assert not orm_is_database_empty(), "Database should not be empty but it is."
+async def test_is_database_empty_when_not_empty(mocked_clean_test_db_session):
+    assert not await orm_is_database_empty(), "Database should not be empty but it is."
 
 
+@pytest.mark.asyncio
 @pytest.mark.usefixtures("_db_test_unordered_structure")
-def test_sort_thing_nodes_from_db(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
+async def test_sort_thing_nodes_from_db(mocked_clean_test_db_session):
+    async with mocked_clean_test_db_session() as session:
         # Fetch all thing nodes from the database
-        thing_nodes_in_db = fetch_all_thing_nodes(session)
+        thing_nodes_in_db = await fetch_all_thing_nodes(session)
 
         # Create a mapping of thing nodes for the sort function
         existing_thing_nodes = {tn.stakeholder_key + tn.external_id: tn for tn in thing_nodes_in_db}
@@ -713,10 +742,11 @@ def test_sort_thing_nodes_from_db(mocked_clean_test_db_session):
         assert not orphan_in_levels, "Orphan node should not be placed in any level."
 
 
-def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
+@pytest.mark.asyncio
+async def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
+    async with mocked_clean_test_db_session() as session:
         # Load a complete structure from JSON for testing
-        complete_structure = orm_load_structure_from_json_file(
+        complete_structure = await orm_load_structure_from_json_file(
             "tests/structure/data/db_test_structure.json"
         )
 
@@ -768,39 +798,42 @@ def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
         # Add orphan source and sink to the session
         session.add(orphan_source.to_orm_model())
         session.add(orphan_sink.to_orm_model())
-        session.commit()
+        await session.commit()
 
         # Fill the associations in the database
-        fill_source_sink_associations_db(complete_structure, session)
+        await fill_source_sink_associations_db(complete_structure, session)
 
         # Check that the Orphan Source and Sink were skipped during association processing
-        orphan_source_in_db = session.execute(
-            select(SourceOrm).filter_by(external_id="Orphan_Source")
-        ).scalar_one_or_none()
-        orphan_sink_in_db = session.execute(
-            select(SinkOrm).filter_by(external_id="Orphan_Sink")
-        ).scalar_one_or_none()
+        result = await session.execute(select(SourceOrm).filter_by(external_id="Orphan_Source"))
+        orphan_source_in_db = result.scalar_one_or_none()
+
+        result = await session.execute(select(SinkOrm).filter_by(external_id="Orphan_Sink"))
+        orphan_sink_in_db = result.scalar_one_or_none()
 
         assert orphan_source_in_db is not None, "Orphan Source should exist in the database."
         assert orphan_sink_in_db is not None, "Orphan Sink should exist in the database."
 
         # Verify that no associations exist for the Orphan Source and Sink
-        orphan_source_associations = session.execute(
+        result = await session.execute(
             select(thingnode_source_association).filter_by(source_id=orphan_source_in_db.id)
-        ).all()
-        orphan_sink_associations = session.execute(
+        )
+        orphan_source_associations = result.fetchall()
+
+        result = await session.execute(
             select(thingnode_sink_association).filter_by(sink_id=orphan_sink_in_db.id)
-        ).all()
+        )
+        orphan_sink_associations = result.fetchall()
 
         assert len(orphan_source_associations) == 0, "Orphan Source should have no associations."
         assert len(orphan_sink_associations) == 0, "Orphan Sink should have no associations."
 
         # Verify that the "Missing Source" was not associated due to it not existing in the database
-        missing_source_associations = session.execute(
+        result = await session.execute(
             select(thingnode_source_association)
             .join(SourceOrm, thingnode_source_association.c.source_id == SourceOrm.id)
             .filter(SourceOrm.external_id == "Missing_Source")
-        ).all()
+        )
+        missing_source_associations = result.fetchall()
 
         assert len(missing_source_associations) == 0, (
             "Missing Source should not create any associations"
@@ -808,45 +841,50 @@ def test_fill_source_sink_associations_db(mocked_clean_test_db_session):
         )
 
         # Verify that the "Missing Source" was indeed skipped in processing
-        missing_source_in_db = session.execute(
-            select(SourceOrm).filter_by(external_id="Missing_Source")
-        ).scalar_one_or_none()
+        result = await session.execute(select(SourceOrm).filter_by(external_id="Missing_Source"))
+        missing_source_in_db = result.scalar_one_or_none()
         assert missing_source_in_db is None, "Missing Source should not exist in the database."
 
 
-def test_fetch_existing_records_exception_handling(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_fetch_existing_records_exception_handling(mocked_clean_test_db_session):
     class InvalidModel:
         # This is a dummy class that does not correspond to any database model
         pass
 
-    with pytest.raises(SQLAlchemyError), mocked_clean_test_db_session() as session:
-        # Attempt to fetch records using an invalid model class,
-        # which should raise an exception
-        fetch_existing_records(session, InvalidModel)
+    with pytest.raises(SQLAlchemyError):
+        async with mocked_clean_test_db_session() as session:
+            # Attempt to fetch records using an invalid model class,
+            # which should raise an exception
+            await fetch_existing_records(session, InvalidModel)
 
 
-def test_update_existing_elements_exception_handling(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_update_existing_elements_exception_handling(mocked_clean_test_db_session):
     class InvalidModel:
         # This is a dummy class that does not correspond to any database model
         pass
 
     existing_elements = {}
 
-    with pytest.raises(SQLAlchemyError), mocked_clean_test_db_session() as session:
-        # Attempt to update elements using an invalid model class,
-        # which should raise an exception
-        update_existing_elements(session, InvalidModel, existing_elements)
+    with pytest.raises(SQLAlchemyError):
+        async with mocked_clean_test_db_session() as session:
+            # Attempt to update elements using an invalid model class,
+            # which should raise an exception
+            await update_existing_elements(session, InvalidModel, existing_elements)
 
 
-def test_update_structure_from_file_valid_root_node(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_update_structure_from_file_valid_root_node(mocked_clean_test_db_session):
     """Tests an valid structure where the root node has an valid parent_external_node_id."""
-    update_structure_from_file("tests/structure/data/db_test_structure.json")
+    await update_structure_from_file("tests/structure/data/db_test_structure.json")
 
 
-def test_update_structure_from_file_invalid_root_node(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_update_structure_from_file_invalid_root_node(mocked_clean_test_db_session):
     """Tests an invalid structure where the root node has an invalid parent_external_node_id."""
     with pytest.raises(ValidationError) as excinfo:
-        update_structure_from_file(
+        await update_structure_from_file(
             "tests/structure/data/db_test_invalid_structure_no_root_node.json"
         )
 
@@ -856,13 +894,14 @@ def test_update_structure_from_file_invalid_root_node(mocked_clean_test_db_sessi
     ), "Expected ValidationError for invalid parent_external_node_id was not raised as expected."
 
 
-def test_update_structure_from_file_integrity_error_handling(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_update_structure_from_file_integrity_error_handling(mocked_clean_test_db_session):
     """Tests that IntegrityError is handled correctly and raises DBIntegrityError."""
 
     file_path = "tests/structure/data/db_test_invalid_structure_no_duplicate_id.json"
 
     with pytest.raises(DBIntegrityError) as excinfo:
-        update_structure_from_file(file_path)
+        await update_structure_from_file(file_path)
 
     # Assert that the raised error is DBIntegrityError and includes a relevant message
     assert "Integrity Error while updating or inserting the structure" in str(

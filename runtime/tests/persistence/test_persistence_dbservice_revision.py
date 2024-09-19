@@ -40,7 +40,8 @@ def set_sqlite_pragma(dbapi_connection: SQLite3Connection, connection_record) ->
     cursor.close()
 
 
-def test_storing_and_receiving(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_storing_and_receiving(mocked_clean_test_db_session):
     tr_uuid = get_uuid_from_seed("test_storing_and_receiving")
 
     tr_object = TransformationRevision(
@@ -58,16 +59,18 @@ def test_storing_and_receiving(mocked_clean_test_db_session):
         documentation="",
     )
 
-    store_single_transformation_revision(tr_object)
+    async with mocked_clean_test_db_session() as session:
+        # Use await for async functions
+        await store_single_transformation_revision(tr_object)
 
-    received_tr_object = read_single_transformation_revision(tr_uuid)
+        # Retrieve and assert
+        received_tr_object = await read_single_transformation_revision(tr_uuid)
+        assert tr_object == received_tr_object
 
-    assert tr_object == received_tr_object
-
-    # non-existent object
-    wrong_tr_uuid = get_uuid_from_seed("wrong id")
-    with pytest.raises(DBNotFoundError):
-        received_tr_object = read_single_transformation_revision(wrong_tr_uuid)
+        # Test for a non-existent object
+        wrong_tr_uuid = get_uuid_from_seed("wrong id")
+        with pytest.raises(DBNotFoundError):
+            await read_single_transformation_revision(wrong_tr_uuid)
 
 
 def test_is_modifiable():
@@ -152,8 +155,8 @@ def test_is_modifiable():
         is True
     )
 
-
-def test_updating(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_updating(mocked_clean_test_db_session):
     tr_uuid = get_uuid_from_seed("test_updating")
 
     tr_object = TransformationRevision(
@@ -171,11 +174,11 @@ def test_updating(mocked_clean_test_db_session):
         documentation="",
     )
 
-    store_single_transformation_revision(tr_object)
+    await store_single_transformation_revision(tr_object)
 
     tr_object.name = "Test Update"
 
-    received_tr_object = update_or_create_single_transformation_revision(
+    received_tr_object = await update_or_create_single_transformation_revision(
         tr_object, update_component_code=False
     )
     assert received_tr_object.content == "code"
@@ -193,12 +196,13 @@ def test_updating(mocked_clean_test_db_session):
             )
         ]
     )
-    received_tr_object = update_or_create_single_transformation_revision(tr_object)
+    received_tr_object = await update_or_create_single_transformation_revision(tr_object)
     assert "COMPONENT_INFO" in received_tr_object.content
     assert len(received_tr_object.test_wiring.input_wirings) == 1
 
 
-def test_strip_wirings_and_keep_only_wirings(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_strip_wirings_and_keep_only_wirings(mocked_clean_test_db_session):
     tr_uuid = get_uuid_from_seed("test_strip_wirings_and_keep_only_wirings")
 
     tr_object = TransformationRevision(
@@ -216,7 +220,7 @@ def test_strip_wirings_and_keep_only_wirings(mocked_clean_test_db_session):
         documentation="",
     )
 
-    store_single_transformation_revision(tr_object)
+    await store_single_transformation_revision(tr_object)
 
     tr_object.name = "Test Update"
 
@@ -242,13 +246,13 @@ def test_strip_wirings_and_keep_only_wirings(mocked_clean_test_db_session):
     )
 
     # Test strip_wiring
-    received_tr_object = update_or_create_single_transformation_revision(
+    received_tr_object = await update_or_create_single_transformation_revision(
         tr_object.copy(deep=True), strip_wiring=True
     )
     assert len(received_tr_object.test_wiring.input_wirings) == 0
 
     # Test strip_wirings_with_adapter_ids
-    received_tr_object = update_or_create_single_transformation_revision(
+    received_tr_object = await update_or_create_single_transformation_revision(
         tr_object.copy(deep=True),
         strip_wiring=False,
         strip_wirings_with_adapter_ids={"blubb", "blah"},
@@ -258,7 +262,7 @@ def test_strip_wirings_and_keep_only_wirings(mocked_clean_test_db_session):
 
     # Test keep_only_wirings_with_adapter_ids
 
-    received_tr_object = update_or_create_single_transformation_revision(
+    received_tr_object = await update_or_create_single_transformation_revision(
         tr_object.copy(deep=True),
         strip_wiring=False,
         keep_only_wirings_with_adapter_ids={"blubb", "blah"},
@@ -267,7 +271,8 @@ def test_strip_wirings_and_keep_only_wirings(mocked_clean_test_db_session):
     assert received_tr_object.test_wiring.input_wirings[0].adapter_id == "blah"
 
 
-def test_creating(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_creating(mocked_clean_test_db_session):
     tr_uuid = get_uuid_from_seed("test_creating")
 
     tr_object = TransformationRevision(
@@ -285,14 +290,15 @@ def test_creating(mocked_clean_test_db_session):
         documentation="",
     )
 
-    update_or_create_single_transformation_revision(tr_object)
+    await update_or_create_single_transformation_revision(tr_object)
 
-    received_tr_object = read_single_transformation_revision(tr_uuid)
+    received_tr_object = await read_single_transformation_revision(tr_uuid)
 
     assert tr_object == received_tr_object
 
 
-def test_deleting(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_deleting(mocked_clean_test_db_session):
     tr_draft_uuid = get_uuid_from_seed("draft")
 
     tr_draft_object = TransformationRevision(
@@ -345,26 +351,26 @@ def test_deleting(mocked_clean_test_db_session):
         documentation="",
     )
 
-    store_single_transformation_revision(tr_draft_object)
-    store_single_transformation_revision(tr_released_object)
-    update_or_create_single_transformation_revision(tr_workflow)
+    await store_single_transformation_revision(tr_draft_object)
+    await store_single_transformation_revision(tr_released_object)
+    await update_or_create_single_transformation_revision(tr_workflow)
 
-    delete_single_transformation_revision(tr_draft_uuid)
+    await delete_single_transformation_revision(tr_draft_uuid)
 
     with pytest.raises(DBNotFoundError):
-        read_single_transformation_revision(tr_draft_uuid)
+        await read_single_transformation_revision(tr_draft_uuid)
 
     with pytest.raises(StateConflict):
-        delete_single_transformation_revision(tr_released_uuid)
+        await delete_single_transformation_revision(tr_released_uuid)
 
     with pytest.raises(TypeConflict):
-        delete_single_transformation_revision(tr_workflow_uuid, type=Type.COMPONENT)
+        await delete_single_transformation_revision(tr_workflow_uuid, type=Type.COMPONENT)
 
     with pytest.raises(DBIntegrityError):
-        delete_single_transformation_revision(tr_released_uuid, ignore_state=True)
+        await delete_single_transformation_revision(tr_released_uuid, ignore_state=True)
 
-    delete_single_transformation_revision(tr_workflow_uuid, ignore_state=True)
-    delete_single_transformation_revision(tr_released_uuid, ignore_state=True)
+    await delete_single_transformation_revision(tr_workflow_uuid, ignore_state=True)
+    await delete_single_transformation_revision(tr_released_uuid, ignore_state=True)
 
 
 def test_multiple_select(mocked_clean_test_db_session):  # noqa: PLR0915
