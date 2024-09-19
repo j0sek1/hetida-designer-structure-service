@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+import aiofiles
 from sqlalchemy import Table, delete, select
 from sqlalchemy.exc import IntegrityError
 
@@ -36,9 +37,10 @@ logger = logging.getLogger(__name__)
 # Fetch Functions
 
 
-def fetch_all_element_types(session: SQLAlchemySession) -> Sequence[ElementTypeOrm]:
+async def fetch_all_element_types(session: SQLAlchemySession) -> Sequence[ElementTypeOrm]:
     try:
-        element_types = session.execute(select(ElementTypeOrm)).scalars().all()
+        result = await session.execute(select(ElementTypeOrm))
+        element_types = result.scalars().all()
         logger.debug("Fetched %d element types from the database.", len(element_types))
         return element_types
     except Exception as e:
@@ -47,9 +49,10 @@ def fetch_all_element_types(session: SQLAlchemySession) -> Sequence[ElementTypeO
         raise DBFetchError(msg) from e
 
 
-def fetch_all_thing_nodes(session: SQLAlchemySession) -> Sequence[ThingNodeOrm]:
+async def fetch_all_thing_nodes(session: SQLAlchemySession) -> Sequence[ThingNodeOrm]:
     try:
-        thing_nodes = session.execute(select(ThingNodeOrm)).scalars().all()
+        result = await session.execute(select(ThingNodeOrm))
+        thing_nodes = result.scalars().all()
         logger.debug("Fetched %d thing nodes from the database", len(thing_nodes))
         return thing_nodes
     except Exception as e:
@@ -58,9 +61,10 @@ def fetch_all_thing_nodes(session: SQLAlchemySession) -> Sequence[ThingNodeOrm]:
         raise DBFetchError(msg) from e
 
 
-def fetch_all_sources(session: SQLAlchemySession) -> Sequence[SourceOrm]:
+async def fetch_all_sources(session: SQLAlchemySession) -> Sequence[SourceOrm]:
     try:
-        sources = session.execute(select(SourceOrm)).scalars().all()
+        result = await session.execute(select(SourceOrm))
+        sources = result.scalars().all()
         logger.debug("Fetched %d sources from the database.", len(sources))
         return sources
     except Exception as e:
@@ -69,9 +73,10 @@ def fetch_all_sources(session: SQLAlchemySession) -> Sequence[SourceOrm]:
         raise DBFetchError(msg) from e
 
 
-def fetch_all_sinks(session: SQLAlchemySession) -> Sequence[SinkOrm]:
+async def fetch_all_sinks(session: SQLAlchemySession) -> Sequence[SinkOrm]:
     try:
-        sinks = session.execute(select(SinkOrm)).scalars().all()
+        result = await session.execute(select(SinkOrm))
+        sinks = result.scalars().all()
         logger.debug("Fetched %d sinks from the database.", len(sinks))
         return sinks
     except Exception as e:
@@ -81,13 +86,13 @@ def fetch_all_sinks(session: SQLAlchemySession) -> Sequence[SinkOrm]:
 
 
 # Structure Services
-def orm_load_structure_from_json_file(
+async def orm_load_structure_from_json_file(
     file_path: str,
 ) -> CompleteStructure:
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
-        with open(file_path) as file:
-            structure_json = json.load(file)
+        async with aiofiles.open(file_path, mode="r") as file:
+            structure_json = json.loads(await file.read())
         logger.debug("Successfully loaded JSON from %s.", file_path)
         complete_structure = CompleteStructure(**structure_json)
         logger.debug("Successfully created CompleteStructure from JSON data.")
@@ -247,7 +252,7 @@ def fill_all_thingnode_parent_uuids_from_db(
                     )
 
 
-def fill_source_sink_associations_db(
+async def fill_source_sink_associations_db(
     complete_structure: CompleteStructure, session: SQLAlchemySession
 ) -> None:
     """
@@ -268,7 +273,7 @@ def fill_source_sink_associations_db(
     try:
         existing_thing_nodes = {
             tn.stakeholder_key + tn.external_id: tn
-            for tn in session.execute(select(ThingNodeOrm)).scalars().all()
+            for tn in (await session.execute(select(ThingNodeOrm))).scalars().all()
         }
         logger.debug(
             "Fetched %d existing ThingNodes from the database.",
@@ -277,7 +282,7 @@ def fill_source_sink_associations_db(
 
         existing_sources: dict[str, SourceOrm | SinkOrm] = {
             src.stakeholder_key + src.external_id: src
-            for src in session.execute(select(SourceOrm)).scalars().all()
+            for src in (await session.execute(select(SourceOrm))).scalars().all()
         }
         logger.debug(
             "Fetched %d existing Sources from the database.",
@@ -286,14 +291,14 @@ def fill_source_sink_associations_db(
 
         existing_sinks: dict[str, SourceOrm | SinkOrm] = {
             snk.stakeholder_key + snk.external_id: snk
-            for snk in session.execute(select(SinkOrm)).scalars().all()
+            for snk in (await session.execute(select(SinkOrm))).scalars().all()
         }
         logger.debug(
             "Fetched %d existing Sinks from the database.",
             len(existing_sinks),
         )
 
-        def process_db_associations(
+        async def process_db_associations(
             entities: list[Source | Sink],
             existing_entities: dict[str, SourceOrm | SinkOrm],
             assoc_table: Table,
@@ -326,11 +331,12 @@ def fill_source_sink_associations_db(
                         )
                         continue
                     entity_id = db_entity.id
-                    association_exists = session.scalars(
+                    result = await session.scalars(
                         select(assoc_table)
                         .filter_by(thing_node_id=thing_node_id, **{entity_key: entity_id})
                         .limit(1)
-                    ).first()
+                    )
+                    association_exists = result.first()
                     if association_exists:
                         logger.debug(
                             "Association already exists between ThingNode id %s and %s id %s.",
@@ -343,7 +349,7 @@ def fill_source_sink_associations_db(
                             "thing_node_id": thing_node_id,
                             entity_key: entity_id,
                         }
-                        session.execute(assoc_table.insert().values(association))
+                        await session.execute(assoc_table.insert().values(association))
                         logger.debug(
                             "Created new association between ThingNode id %s and %s id %s.",
                             thing_node_id,
@@ -352,7 +358,7 @@ def fill_source_sink_associations_db(
                         )
 
         logger.debug("Processing associations for Sources.")
-        process_db_associations(
+        await process_db_associations(
             complete_structure.sources,  # type: ignore
             existing_sources,
             thingnode_source_association,
@@ -360,7 +366,7 @@ def fill_source_sink_associations_db(
         )
 
         logger.debug("Processing associations for Sinks.")
-        process_db_associations(
+        await process_db_associations(
             complete_structure.sinks,  # type: ignore
             existing_sinks,
             thingnode_sink_association,
@@ -386,71 +392,78 @@ def fill_source_sink_associations_db(
         raise DBAssociationError(msg) from e
 
 
-def update_structure_from_file(file_path: str) -> CompleteStructure:
+async def update_structure_from_file(file_path: str) -> CompleteStructure:
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
-    complete_structure = orm_load_structure_from_json_file(file_path)
+    complete_structure = await orm_load_structure_from_json_file(file_path)
     logger.debug("Successfully loaded structure from JSON file.")
-    return orm_update_structure(complete_structure)
+    return await orm_update_structure(complete_structure)
 
 
-def orm_update_structure(complete_structure: CompleteStructure) -> CompleteStructure:
+async def orm_update_structure(complete_structure: CompleteStructure) -> CompleteStructure:
     """
     This function updates or inserts the given complete structure into the database.
     """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
 
     try:
-        with get_session()() as session, session.begin():
-            logger.debug("Fetching existing records from the database.")
+        async with get_session()() as session:  # noqa: SIM117
+            async with session.begin():
+                logger.debug("Fetching existing records from the database.")
 
-            existing_element_types = fetch_existing_records(session, ElementTypeOrm)
-            existing_thing_nodes = fetch_existing_records(session, ThingNodeOrm)
-            existing_sources = fetch_existing_records(session, SourceOrm)
-            existing_sinks = fetch_existing_records(session, SinkOrm)
+                existing_element_types = await fetch_existing_records(session, ElementTypeOrm)
+                existing_thing_nodes = await fetch_existing_records(session, ThingNodeOrm)
+                existing_sources = await fetch_existing_records(session, SourceOrm)
+                existing_sinks = await fetch_existing_records(session, SinkOrm)
 
-            with session.no_autoflush:
-                logger.debug("Updating or creating element types.")
-                update_or_create_element_types(
-                    complete_structure.element_types, existing_element_types, session
-                )
-                session.flush()
+                with session.no_autoflush:
+                    logger.debug("Updating or creating element types.")
+                    await update_or_create_element_types(
+                        complete_structure.element_types, existing_element_types, session
+                    )
+                    await session.flush()
 
-                update_existing_elements(session, ElementTypeOrm, existing_element_types)
+                    await update_existing_elements(session, ElementTypeOrm, existing_element_types)
 
-                logger.debug("Filling in element type IDs for thing nodes.")
-                fill_all_thingnode_element_type_ids_from_db(
-                    complete_structure.thing_nodes, existing_element_types
-                )
+                    logger.debug("Filling in element type IDs for thing nodes.")
+                    fill_all_thingnode_element_type_ids_from_db(
+                        complete_structure.thing_nodes, existing_element_types
+                    )
 
-                logger.debug("Filling in parent node IDs for thing nodes.")
-                fill_all_thingnode_parent_uuids_from_db(
-                    complete_structure.thing_nodes, existing_thing_nodes
-                )
+                    logger.debug("Filling in parent node IDs for thing nodes.")
+                    fill_all_thingnode_parent_uuids_from_db(
+                        complete_structure.thing_nodes, existing_thing_nodes
+                    )
 
-                logger.debug("Sorting and flattening the thing nodes hierarchy.")
-                sorted_thing_nodes = sort_and_flatten_thing_nodes(
-                    complete_structure.thing_nodes, existing_thing_nodes
-                )
+                    logger.debug("Sorting and flattening the thing nodes hierarchy.")
+                    sorted_thing_nodes = sort_and_flatten_thing_nodes(
+                        complete_structure.thing_nodes, existing_thing_nodes
+                    )
 
-                logger.debug("Updating or creating thing nodes.")
-                update_or_create_thing_nodes(sorted_thing_nodes, existing_thing_nodes, session)
-                session.flush()
+                    logger.debug("Updating or creating thing nodes.")
+                    await update_or_create_thing_nodes(
+                        sorted_thing_nodes, existing_thing_nodes, session
+                    )
+                    await session.flush()
 
-                update_existing_elements(session, ThingNodeOrm, existing_thing_nodes)
-                session.flush()
+                    await update_existing_elements(session, ThingNodeOrm, existing_thing_nodes)
+                    await session.flush()
 
-                logger.debug("Updating or creating sources.")
-                update_or_create_sources_or_sinks(
-                    complete_structure.sources, existing_sources, session
-                )
-                session.flush()
+                    logger.debug("Updating or creating sources.")
+                    await update_or_create_sources_or_sinks(
+                        complete_structure.sources, existing_sources, session
+                    )
+                    await session.flush()
 
-                logger.debug("Updating or creating sinks.")
-                update_or_create_sources_or_sinks(complete_structure.sinks, existing_sinks, session)
-                session.flush()
+                    logger.debug("Updating or creating sinks.")
+                    await update_or_create_sources_or_sinks(
+                        complete_structure.sinks, existing_sinks, session
+                    )
+                    await session.flush()
 
-                logger.debug("Establishing associations between thing nodes, sources, and sinks.")
-                fill_source_sink_associations_db(complete_structure, session)
+                    logger.debug(
+                        "Establishing associations between thing nodes, sources, and sinks."
+                    )
+                    await fill_source_sink_associations_db(complete_structure, session)
     except IntegrityError as e:
         msg = f"Integrity Error while updating or inserting the structure: {str(e)}"
         logger.error(msg)
@@ -460,7 +473,7 @@ def orm_update_structure(complete_structure: CompleteStructure) -> CompleteStruc
     return complete_structure
 
 
-def fetch_existing_records(session: SQLAlchemySession, model_class: Any) -> dict[str, Any]:
+async def fetch_existing_records(session: SQLAlchemySession, model_class: Any) -> dict[str, Any]:
     """
     Fetches all records of the specified model class from the database and returns them as a
     dictionary with keys composed of stakeholder_key and external_id.
@@ -468,7 +481,8 @@ def fetch_existing_records(session: SQLAlchemySession, model_class: Any) -> dict
     logger.debug("Fetching all records for model class %s from the database.", model_class.__name__)
     try:
         # Fetch all records of the given model class from the database
-        records = session.execute(select(model_class)).scalars().all()
+        records = await session.execute(select(model_class))
+        records = records.scalars().all()
         logger.debug("Fetched %d records for model class %s.", len(records), model_class.__name__)
         # Create a dictionary mapping stakeholder_key + external_id to the record
         return {rec.stakeholder_key + rec.external_id: rec for rec in records}
@@ -486,7 +500,7 @@ def fetch_existing_records(session: SQLAlchemySession, model_class: Any) -> dict
         raise
 
 
-def update_or_create_element_types(
+async def update_or_create_element_types(
     elements: list[ElementType],
     existing_elements: dict[str, ElementTypeOrm],
     session: SQLAlchemySession,
@@ -516,7 +530,7 @@ def update_or_create_element_types(
         raise DBUpdateError(msg) from e
 
 
-def update_existing_elements(
+async def update_existing_elements(
     session: SQLAlchemySession, model_class: Any, existing_elements: dict[str, Any]
 ) -> None:
     """
@@ -526,10 +540,8 @@ def update_existing_elements(
     logger.debug("Updating existing elements dictionary for model class %s.", model_class.__name__)
     try:
         # Query the database for all records of the specified model class
-        new_elements = {
-            el.stakeholder_key + el.external_id: el
-            for el in session.execute(select(model_class)).scalars().all()
-        }
+        result = await session.execute(select(model_class))
+        new_elements = {el.stakeholder_key + el.external_id: el for el in result.scalars()}
         # Update the existing_elements dictionary with the new elements from the database
         existing_elements.update(new_elements)
         logger.debug(
@@ -556,7 +568,7 @@ def sort_and_flatten_thing_nodes(
     return flattened_nodes
 
 
-def update_or_create_thing_nodes(
+async def update_or_create_thing_nodes(
     thing_nodes: list[ThingNode],
     existing_thing_nodes: dict[str, ThingNodeOrm],
     session: SQLAlchemySession,
@@ -593,7 +605,7 @@ def update_or_create_thing_nodes(
         raise DBUpdateError(msg) from e
 
 
-def update_or_create_sources_or_sinks(
+async def update_or_create_sources_or_sinks(
     sources_or_sinks: Sequence[Source | Sink],
     existing_items: dict[str, SourceOrm | SinkOrm],
     session: SQLAlchemySession,
@@ -639,7 +651,7 @@ def update_or_create_sources_or_sinks(
         raise DBUpdateError(msg) from e
 
 
-def orm_delete_structure(session: SQLAlchemySession) -> None:
+async def orm_delete_structure(session: SQLAlchemySession) -> None:
     logger.debug("Deleting all structure data from the database.")
     try:
         # Ignore type mypy error messages that arise from the __table__ assignment
@@ -660,27 +672,28 @@ def orm_delete_structure(session: SQLAlchemySession) -> None:
         # Delete all records in each table
         for table in tables:
             logger.debug("Deleting records from table %s.", table)
-            session.execute(delete(table))
+            await session.execute(delete(table))
 
-        session.commit()
+        await session.commit()
+
     except IntegrityError as e:
         msg = f"Integrity Error while deleting structure: {str(e)}"
         logger.error(msg)
-        session.rollback()
+        await session.rollback()
         raise DBIntegrityError(msg) from e
     except Exception as e:
-        session.rollback()
+        await session.rollback()
         logger.error("Error during structure deletion: %s", str(e))
         raise
 
 
-def orm_is_database_empty() -> bool:
+async def orm_is_database_empty() -> bool:
     logger.debug("Checking if the database is empty.")
-    with get_session()() as session:
-        element_types = fetch_all_element_types(session)
-        thing_nodes = fetch_all_thing_nodes(session)
-        sources = fetch_all_sources(session)
-        sinks = fetch_all_sinks(session)
+    async with get_session()() as session:
+        element_types = await fetch_all_element_types(session)
+        thing_nodes = await fetch_all_thing_nodes(session)
+        sources = await fetch_all_sources(session)
+        sinks = await fetch_all_sinks(session)
         # TODO: Shorten function by only checking for ElementTypes?
 
     is_empty = not (element_types or thing_nodes or sources or sinks)
@@ -689,7 +702,7 @@ def orm_is_database_empty() -> bool:
     return is_empty
 
 
-def orm_get_children(
+async def orm_get_children(
     parent_id: UUID | None,
 ) -> tuple[list[ThingNode], list[Source], list[Sink]]:
     """
@@ -704,11 +717,13 @@ def orm_get_children(
 
     logger.debug("Fetching children for parent_id: %s", parent_id)
 
-    with get_session()() as session:
+    async with get_session()() as session:
         if parent_id is None:
             logger.debug("No parent_id provided, fetching root nodes.")
             root_nodes = (
-                session.execute(select(ThingNodeOrm).where(ThingNodeOrm.parent_node_id.is_(None)))
+                await session.execute(
+                    select(ThingNodeOrm).where(ThingNodeOrm.parent_node_id.is_(None))
+                )
                 .scalars()
                 .all()
             )
@@ -721,40 +736,37 @@ def orm_get_children(
             )
 
         logger.debug("Fetching child nodes for parent_id: %s", parent_id)
-        child_nodes = (
-            session.execute(select(ThingNodeOrm).where(ThingNodeOrm.parent_node_id == parent_id))
-            .scalars()
-            .all()
+
+        result = await session.execute(
+            select(ThingNodeOrm).where(ThingNodeOrm.parent_node_id == parent_id)
         )
+        child_nodes = result.scalars().all()
+
         logger.debug("Fetched %d child nodes.", len(child_nodes))
 
         logger.debug("Fetching sources for parent_id: %s", parent_id)
-        sources = (
-            session.execute(
-                select(SourceOrm)
-                .join(
-                    thingnode_source_association,
-                    thingnode_source_association.c.source_id == SourceOrm.id,
-                )
-                .where(thingnode_source_association.c.thing_node_id == parent_id)
+        result = await session.execute(
+            select(SourceOrm)
+            .join(
+                thingnode_source_association,
+                thingnode_source_association.c.source_id == SourceOrm.id,
             )
-            .scalars()
-            .all()
+            .where(thingnode_source_association.c.thing_node_id == parent_id)
         )
+
+        sources = result.scalars().all()
+
         logger.debug("Fetched %d sources.", len(sources))
 
         logger.debug("Fetching sinks for parent_id: %s", parent_id)
-        sinks = (
-            session.execute(
-                select(SinkOrm)
-                .join(
-                    thingnode_sink_association, thingnode_sink_association.c.sink_id == SinkOrm.id
-                )
-                .where(thingnode_sink_association.c.thing_node_id == parent_id)
-            )
-            .scalars()
-            .all()
+
+        result = await session.execute(
+            select(SinkOrm)
+            .join(thingnode_sink_association, thingnode_sink_association.c.sink_id == SinkOrm.id)
+            .where(thingnode_sink_association.c.thing_node_id == parent_id)
         )
+        sinks = result.scalars().all()
+
         logger.debug("Fetched %d sinks.", len(sinks))
 
         logger.debug(
