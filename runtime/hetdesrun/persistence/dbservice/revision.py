@@ -31,7 +31,9 @@ from hetdesrun.utils import State, Type, cache_conditionally
 logger = logging.getLogger(__name__)
 
 
-async def add_tr(session: SQLAlchemySession, transformation_revision: TransformationRevision) -> None:
+async def add_tr(
+    session: SQLAlchemySession, transformation_revision: TransformationRevision
+) -> None:
     try:
         db_model = transformation_revision.to_orm_model()
         session.add(db_model)
@@ -55,7 +57,9 @@ async def store_single_transformation_revision(
                 assert isinstance(  # noqa: S101
                     transformation_revision.content, WorkflowContent
                 )  # hint for mypy
-                await update_nesting(session, transformation_revision.id, transformation_revision.content)
+                await update_nesting(
+                    session, transformation_revision.id, transformation_revision.content
+                )
 
 
 async def select_tr_by_id(
@@ -94,7 +98,9 @@ def read_single_transformation_revision_with_caching(
     return read_single_transformation_revision(id, log_error)
 
 
-async def update_tr(session: SQLAlchemySession, transformation_revision: TransformationRevision) -> None:
+async def update_tr(
+    session: SQLAlchemySession, transformation_revision: TransformationRevision
+) -> None:
     try:
         db_model = transformation_revision.to_orm_model()
         await session.execute(
@@ -335,7 +341,9 @@ async def update_or_create_single_transformation_revision(
                 assert isinstance(  # noqa: S101
                     transformation_revision.content, WorkflowContent
                 )  # hint for mypy
-                await update_nesting(session, transformation_revision.id, transformation_revision.content)
+                await update_nesting(
+                    session, transformation_revision.id, transformation_revision.content
+                )
 
         return await select_tr_by_id(session, transformation_revision.id)
 
@@ -345,7 +353,7 @@ async def delete_tr(session: SQLAlchemySession, tr_id: UUID) -> None:
         await session.execute(
             delete(TransformationRevisionDBModel).where(TransformationRevisionDBModel.id == tr_id)
         )
-        await session.flush() # Ensure constraints are checked
+        await session.flush()  # Ensure constraints are checked
     except IntegrityError as e:
         msg = (
             f"Integrity Error while trying to delete transformation revision "

@@ -155,6 +155,7 @@ def test_is_modifiable():
         is True
     )
 
+
 @pytest.mark.asyncio
 async def test_updating(mocked_clean_test_db_session):
     tr_uuid = get_uuid_from_seed("test_updating")
