@@ -571,7 +571,8 @@ def test_circular_tn_relation(mocked_clean_test_db_session):
         CompleteStructure(**circular_data)
 
 
-def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
+@pytest.mark.asyncio
+async def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
     # Initial Structure: A thing node with a specific external_id and stakeholder_key
     initial_structure = {
         "element_types": [
@@ -612,10 +613,10 @@ def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
         ],
     }
 
-    update_structure(CompleteStructure(**initial_structure))  # Insert initial Structure
+    await update_structure(CompleteStructure(**initial_structure))  # Insert initial Structure
 
     # Verify initial structure is in the database
-    thing_nodes = get_all_thing_nodes_from_db()
+    thing_nodes = await get_all_thing_nodes_from_db()
     assert len(thing_nodes) == 1
     assert thing_nodes[0].external_id == "Node1"
     assert thing_nodes[0].stakeholder_key == "SK1"
@@ -628,7 +629,7 @@ def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
             r"UNIQUE constraint failed.*element_type.name"
         ),
     ):
-        update_structure(CompleteStructure(**conflicting_structure))
+        await update_structure(CompleteStructure(**conflicting_structure))
 
 
 def test_stakeholder_key_consistency(mocked_clean_test_db_session):
