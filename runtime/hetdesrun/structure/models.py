@@ -382,7 +382,7 @@ class CompleteStructure(BaseModel):
             "sources": set(),
             "sinks": set(),
         }
-        for category in unique_check.keys():
+        for category in unique_check:
             for item in values.get(category, []):
                 if item["external_id"] in unique_check[category]:
                     raise ValueError(
@@ -409,14 +409,3 @@ class CompleteStructure(BaseModel):
                         f"non-existing ThingNode '{tn_id}'."
                     )
         return values
-
-    @validator("sources", "sinks", pre=True, each_item=True)
-    def validate_passthrough_filters(cls, v: Any) -> Any:
-        for filter in v.get("passthrough_filters", []):
-            if "name" not in filter or not isinstance(filter["name"], str):
-                raise ValueError("Each passthrough filter must have a 'name' of type str.")
-            if "type" not in filter or filter["type"] not in ["free_text", "number", "date"]:
-                raise ValueError("Each passthrough filter must have a valid 'type'.")
-            if "required" not in filter or not isinstance(filter["required"], bool):
-                raise ValueError("Each passthrough filter must have a 'required' boolean field.")
-        return v
