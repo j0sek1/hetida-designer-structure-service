@@ -49,7 +49,7 @@ async def add_tr(
 async def store_single_transformation_revision(
     transformation_revision: TransformationRevision,
 ) -> None:
-    async with get_session()() as session:
+    async with get_session()() as session:  # noqa SIM117
         async with session.begin():
             await add_tr(session, transformation_revision)
 
@@ -85,7 +85,7 @@ async def read_single_transformation_revision(
     id: UUID,  # noqa: A002
     log_error: bool = True,
 ) -> TransformationRevision:
-    async with get_session()() as session:
+    async with get_session()() as session:  # noqa SIM117
         async with session.begin():
             return await select_tr_by_id(session, id, log_error)
 
@@ -368,7 +368,7 @@ async def delete_single_transformation_revision(
     type: Type | None = None,  # noqa: A002
     ignore_state: bool = False,
 ) -> None:
-    async with get_session()() as session:
+    async with get_session()() as session:  # noqa SIM117
         async with session.begin():
             result = await select_tr_by_id(session, id)
 
