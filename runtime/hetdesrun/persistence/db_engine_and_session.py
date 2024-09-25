@@ -95,7 +95,7 @@ def get_db_engine(override_db_url: SecretStr | str | URL | None = None) -> Async
 
     logger.debug("Created DB Engine with url: %s", repr(engine.url))
 
-    return engine
+    return engine  # type: ignore
 
 
 Session = async_sessionmaker(bind=get_db_engine(), future=True)

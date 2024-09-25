@@ -17,6 +17,7 @@ geopandas
 gunicorn
 h5py
 holidays
+htpy
 httptools
 httpx
 joblib
