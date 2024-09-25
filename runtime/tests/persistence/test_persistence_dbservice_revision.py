@@ -59,15 +59,12 @@ async def test_storing_and_receiving(mocked_clean_test_db_session):
         documentation="",
     )
 
-    async with mocked_clean_test_db_session() as session:
-        # Use await for async functions
+    async with mocked_clean_test_db_session():
         await store_single_transformation_revision(tr_object)
 
-        # Retrieve and assert
         received_tr_object = await read_single_transformation_revision(tr_uuid)
         assert tr_object == received_tr_object
 
-        # Test for a non-existent object
         wrong_tr_uuid = get_uuid_from_seed("wrong id")
         with pytest.raises(DBNotFoundError):
             await read_single_transformation_revision(wrong_tr_uuid)
