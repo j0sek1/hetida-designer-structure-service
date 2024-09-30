@@ -4,10 +4,10 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from hetdesrun.adapters.virtual_structure_adapter.models import (
-    StructureResponse,
-    StructureThingNode,
-    StructureVirtualSink,
-    StructureVirtualSource,
+    VirtualStructureAdapterResponse,
+    VirtualStructureAdapterSink,
+    VirtualStructureAdapterSource,
+    VirtualStructureAdapterThingNode,
 )
 from hetdesrun.adapters.virtual_structure_adapter.structure import (
     get_single_sink,
@@ -27,10 +27,10 @@ virtual_structure_adapter_router = HandleTrailingSlashAPIRouter(
 
 @virtual_structure_adapter_router.get(
     "/structure",
-    response_model=StructureResponse,
+    response_model=VirtualStructureAdapterResponse,
     dependencies=get_auth_deps(),
 )
-async def get_structure_endpoint(parentId: UUID | None = None) -> StructureResponse:
+async def get_structure_endpoint(parentId: UUID | None = None) -> VirtualStructureAdapterResponse:
     """Returns one level of the thingnode hierarchy for lazy-loading in the frontend"""
     return get_structure(parent_id=parentId)
 
@@ -50,10 +50,10 @@ async def get_thingnode_metadata_endpoint(node_id: UUID) -> list:  # noqa: ARG00
 
 @virtual_structure_adapter_router.get(
     "/thingNodes/{node_id}",
-    response_model=StructureThingNode,
+    response_model=VirtualStructureAdapterThingNode,
     dependencies=get_auth_deps(),
 )
-async def get_single_thingnode_endpoint(node_id: UUID) -> StructureThingNode:
+async def get_single_thingnode_endpoint(node_id: UUID) -> VirtualStructureAdapterThingNode:
     try:
         node = get_single_thingnode(node_id)
     except DBNotFoundError as exc:
@@ -80,10 +80,10 @@ async def get_source_metadata_endpoint(source_id: UUID) -> list:  # noqa: ARG001
 
 @virtual_structure_adapter_router.get(
     "/sources/{source_id}",
-    response_model=StructureVirtualSource,
+    response_model=VirtualStructureAdapterSource,
     dependencies=get_auth_deps(),
 )
-async def get_single_source_endpoint(source_id: UUID) -> StructureVirtualSource:
+async def get_single_source_endpoint(source_id: UUID) -> VirtualStructureAdapterSource:
     try:
         source = get_single_source(source_id)
     except DBNotFoundError as exc:
@@ -110,10 +110,10 @@ async def get_sink_metadata_endpoint(sink_id: UUID) -> list:  # noqa: ARG001
 
 @virtual_structure_adapter_router.get(
     "/sinks/{sink_id}",
-    response_model=StructureVirtualSink,
+    response_model=VirtualStructureAdapterSink,
     dependencies=get_auth_deps(),
 )
-async def get_single_sink_endpoint(sink_id: UUID) -> StructureVirtualSink:
+async def get_single_sink_endpoint(sink_id: UUID) -> VirtualStructureAdapterSink:
     try:
         sink = get_single_sink(sink_id)
     except DBNotFoundError as exc:

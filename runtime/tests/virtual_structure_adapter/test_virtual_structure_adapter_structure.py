@@ -3,9 +3,9 @@ import uuid
 import pytest
 
 from hetdesrun.adapters.virtual_structure_adapter.models import (
-    StructureThingNode,
-    StructureVirtualSink,
-    StructureVirtualSource,
+    VirtualStructureAdapterSink,
+    VirtualStructureAdapterSource,
+    VirtualStructureAdapterThingNode,
 )
 from hetdesrun.adapters.virtual_structure_adapter.structure import (
     get_structure,
@@ -19,7 +19,7 @@ def test_get_structure_with_none():
     # Verify that the root node of the structure is returned
     assert structure.sources == structure.sinks == []
     assert len(structure.thingNodes) == 1
-    assert isinstance(structure.thingNodes[0], StructureThingNode)
+    assert isinstance(structure.thingNodes[0], VirtualStructureAdapterThingNode)
     assert structure.thingNodes[0].parentId is None
     assert structure.thingNodes[0].name == "Waterworks 1"
 
@@ -47,7 +47,7 @@ def test_get_structure_with_existing_uuid():
 
     # Check Sources
     assert len(structure.sources) == 2
-    assert isinstance(structure.sources[0], StructureVirtualSource)
+    assert isinstance(structure.sources[0], VirtualStructureAdapterSource)
     expected_source_names = [
         "Energy usage with preset filter",
         "Energy usage with passthrough filters",
@@ -57,7 +57,7 @@ def test_get_structure_with_existing_uuid():
 
     # Check Sinks
     assert len(structure.sinks) == 1
-    assert isinstance(structure.sinks[0], StructureVirtualSink)
+    assert isinstance(structure.sinks[0], VirtualStructureAdapterSink)
     assert (
         structure.sinks[0].name
         == "Anomaly score for the energy usage of the pump system in Storage Tank"

@@ -2,10 +2,10 @@ import logging
 from uuid import UUID
 
 from hetdesrun.adapters.virtual_structure_adapter.models import (
-    StructureResponse,
-    StructureThingNode,
-    StructureVirtualSink,
-    StructureVirtualSource,
+    VirtualStructureAdapterResponse,
+    VirtualStructureAdapterSink,
+    VirtualStructureAdapterSource,
+    VirtualStructureAdapterThingNode,
 )
 from hetdesrun.structure.structure_service import (
     get_children,
@@ -19,22 +19,30 @@ logger = logging.getLogger(__name__)
 
 def get_children_from_structure_service(
     parent_id: UUID | None = None,
-) -> tuple[list[StructureThingNode], list[StructureVirtualSource], list[StructureVirtualSink]]:
+) -> tuple[
+    list[VirtualStructureAdapterThingNode],
+    list[VirtualStructureAdapterSource],
+    list[VirtualStructureAdapterSink],
+]:
     """Retrieves all children of the node with the given parent_id.
     And returns their respective structure-representation (for the frontend).
     """
     thing_nodes, sources, sinks = get_children(parent_id)
-    struct_thing_nodes = [StructureThingNode.from_structure_service(node) for node in thing_nodes]
-    struct_sources = [StructureVirtualSource.from_structure_service(source) for source in sources]
-    struct_sinks = [StructureVirtualSink.from_structure_service(sink) for sink in sinks]
+    struct_thing_nodes = [
+        VirtualStructureAdapterThingNode.from_structure_service(node) for node in thing_nodes
+    ]
+    struct_sources = [
+        VirtualStructureAdapterSource.from_structure_service(source) for source in sources
+    ]
+    struct_sinks = [VirtualStructureAdapterSink.from_structure_service(sink) for sink in sinks]
 
     return struct_thing_nodes, struct_sources, struct_sinks
 
 
-def get_structure(parent_id: UUID | None = None) -> StructureResponse:
+def get_structure(parent_id: UUID | None = None) -> VirtualStructureAdapterResponse:
     nodes, sources, sinks = get_children_from_structure_service(parent_id)
 
-    return StructureResponse(
+    return VirtualStructureAdapterResponse(
         id="vst-adapter",
         name="Virtual Structure Adapter",
         thingNodes=nodes,
@@ -45,20 +53,20 @@ def get_structure(parent_id: UUID | None = None) -> StructureResponse:
 
 def get_single_thingnode(
     tn_id: UUID,
-) -> StructureThingNode:
+) -> VirtualStructureAdapterThingNode:
     node = get_single_thingnode_from_db(tn_id)
-    return StructureThingNode.from_structure_service(node)
+    return VirtualStructureAdapterThingNode.from_structure_service(node)
 
 
 def get_single_source(
     src_id: UUID,
-) -> StructureVirtualSource:
+) -> VirtualStructureAdapterSource:
     source = get_single_source_from_db(src_id)
-    return StructureVirtualSource.from_structure_service(source)
+    return VirtualStructureAdapterSource.from_structure_service(source)
 
 
 def get_single_sink(
     sink_id: UUID,
-) -> StructureVirtualSink:
+) -> VirtualStructureAdapterSink:
     sink = get_single_sink_from_db(sink_id)
-    return StructureVirtualSink.from_structure_service(sink)
+    return VirtualStructureAdapterSink.from_structure_service(sink)

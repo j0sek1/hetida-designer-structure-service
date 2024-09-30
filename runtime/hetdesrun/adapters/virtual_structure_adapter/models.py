@@ -7,14 +7,14 @@ from hetdesrun.adapters.generic_rest.external_types import ExternalType
 from hetdesrun.structure.models import Sink, Source, ThingNode
 
 
-class StructureThingNode(BaseModel):
+class VirtualStructureAdapterThingNode(BaseModel):
     id: UUID  # noqa: A003
     parentId: UUID | None = None
     name: str
     description: str
 
     @classmethod
-    def from_structure_service(cls, struct_tn: ThingNode) -> "StructureThingNode":
+    def from_structure_service(cls, struct_tn: ThingNode) -> "VirtualStructureAdapterThingNode":
         return cls(
             id=struct_tn.id,
             parentId=struct_tn.parent_node_id,
@@ -23,7 +23,7 @@ class StructureThingNode(BaseModel):
         )
 
 
-class StructureVirtualSource(BaseModel):
+class VirtualStructureAdapterSource(BaseModel):
     id: UUID  # noqa: A003
     # Needed for metadata(any) sources to fill ref_id in InputWiring for Frontend execution
     thingNodeId: UUID
@@ -35,7 +35,7 @@ class StructureVirtualSource(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service(cls, source: Source) -> "StructureVirtualSource":
+    def from_structure_service(cls, source: Source) -> "VirtualStructureAdapterSource":
         def replace_whitespace(filter_name: str) -> str:
             filter_name = filter_name.strip()
             return filter_name.replace(" ", "_")
@@ -53,7 +53,7 @@ class StructureVirtualSource(BaseModel):
         )
 
 
-class StructureVirtualSink(BaseModel):
+class VirtualStructureAdapterSink(BaseModel):
     id: UUID  # noqa: A003
     thingNodeId: (
         UUID  # Needed for metadata(any) sinks to fill ref_id in InputWiring for Frontend execution
@@ -66,7 +66,7 @@ class StructureVirtualSink(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service(cls, sink: Sink) -> "StructureVirtualSink":
+    def from_structure_service(cls, sink: Sink) -> "VirtualStructureAdapterSink":
         def replace_whitespace(filter_name: str) -> str:
             filter_name = filter_name.strip()
             return filter_name.replace(" ", "_")
@@ -84,9 +84,9 @@ class StructureVirtualSink(BaseModel):
         )
 
 
-class StructureResponse(BaseModel):
+class VirtualStructureAdapterResponse(BaseModel):
     id: str  # noqa: A003
     name: str
-    thingNodes: list[StructureThingNode]
-    sources: list[StructureVirtualSource]
-    sinks: list[StructureVirtualSink]
+    thingNodes: list[VirtualStructureAdapterThingNode]
+    sources: list[VirtualStructureAdapterSource]
+    sinks: list[VirtualStructureAdapterSink]

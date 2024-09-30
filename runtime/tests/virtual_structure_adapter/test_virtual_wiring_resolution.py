@@ -3,8 +3,8 @@ import uuid
 import pytest
 
 from hetdesrun.adapters.virtual_structure_adapter.models import (
-    StructureVirtualSink,
-    StructureVirtualSource,
+    VirtualStructureAdapterSink,
+    VirtualStructureAdapterSource,
 )
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
 from hetdesrun.structure.db.exceptions import DBNotFoundError
@@ -17,8 +17,8 @@ def test_virtual_wiring_resolution_with_one_source_and_sink():
     # Create Input- and OutputWiring for the source and sink from the test json
     sources = get_all_sources_from_db()
     sinks = get_all_sinks_from_db()
-    struct_src = StructureVirtualSource.from_structure_service(sources[0])
-    struct_sink = StructureVirtualSink.from_structure_service(sinks[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service(sources[0])
+    struct_sink = VirtualStructureAdapterSink.from_structure_service(sinks[0])
     example_filters = {
         "timestampFrom": "2024-07-10T09:36:00.000000000Z",
         "timestampTo": "2024-07-11T09:36:00.000000000Z",
@@ -80,7 +80,7 @@ def test_virtual_wiring_resolution_with_empty_workflow_wiring():
 def test_virtual_wiring_resolution_with_other_adapter_key():
     # Create example InputWiring
     sources = get_all_sources_from_db()
-    struct_src = StructureVirtualSource.from_structure_service(sources[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service(sources[0])
     example_filters = {
         "timestampFrom": "2024-07-10T09:36:00.000000000Z",
         "timestampTo": "2024-07-11T09:36:00.000000000Z",
@@ -110,7 +110,7 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
     # Only a source is created because the retrieval process for
     # sources and sinks is identical
     sources = get_all_sources_from_db()
-    struct_src = StructureVirtualSource.from_structure_service(sources[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service(sources[0])
     struct_src.id = uuid.uuid4()  # Overwrite existing ID
 
     example_filters = {
