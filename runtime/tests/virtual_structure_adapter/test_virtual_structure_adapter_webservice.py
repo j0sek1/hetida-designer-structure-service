@@ -7,7 +7,7 @@ import pytest
 async def test_vst_adapter_get_structure_with_none_from_webservice(
     async_test_client_with_vst_adapter,
 ):
-    response = await async_test_client_with_vst_adapter.get("/adapters/vst/structure")
+    response = await async_test_client_with_vst_adapter.get("/adapters/virtual_structure/structure")
 
     assert response.status_code == 200
 
@@ -21,7 +21,7 @@ async def test_vst_adapter_get_structure_with_none_from_webservice(
     first_thing_node_id = resp_obj["thingNodes"][0]["id"]
 
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/thingNodes/{first_thing_node_id}"
+        f"/adapters/virtual_structure/thingNodes/{first_thing_node_id}"
     )
 
     # Verify that the thingNodes endpoint returns the same node
@@ -33,7 +33,7 @@ async def test_vst_adapter_get_structure_with_none_from_webservice(
 @pytest.mark.asyncio
 async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_vst_adapter):
     # Make multiple calls to the structure endpoint to unravel the hierarchy
-    response = await async_test_client_with_vst_adapter.get("/adapters/vst/structure")
+    response = await async_test_client_with_vst_adapter.get("/adapters/virtual_structure/structure")
 
     assert response.status_code == 200
 
@@ -44,7 +44,7 @@ async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_
     first_thing_node_id = resp_obj["thingNodes"][0]["id"]
 
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/structure?parentId={first_thing_node_id}"
+        f"/adapters/virtual_structure/structure?parentId={first_thing_node_id}"
     )
 
     assert response.status_code == 200
@@ -57,7 +57,7 @@ async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_
 
     # Get down the hierarchy far enough to arrive at a source
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/structure?parentId={first_thing_node_id}"
+        f"/adapters/virtual_structure/structure?parentId={first_thing_node_id}"
     )
 
     assert response.status_code == 200
@@ -67,7 +67,7 @@ async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_
     first_thing_node_id = resp_obj["thingNodes"][0]["id"]
 
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/structure?parentId={first_thing_node_id}"
+        f"/adapters/virtual_structure/structure?parentId={first_thing_node_id}"
     )
 
     assert response.status_code == 200
@@ -97,7 +97,7 @@ async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_v
 
     # Test thingnode metadata
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/thingNodes/{example_uuid}/metadata/"
+        f"/adapters/virtual_structure/thingNodes/{example_uuid}/metadata/"
     )
     assert response.status_code == 200
     resp_obj = response.json()
@@ -105,7 +105,7 @@ async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_v
 
     # Test source metadata
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/sources/{example_uuid}/metadata/"
+        f"/adapters/virtual_structure/sources/{example_uuid}/metadata/"
     )
     assert response.status_code == 200
     resp_obj = response.json()
@@ -113,7 +113,7 @@ async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_v
 
     # Test sink metadata
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/vst/sinks/{example_uuid}/metadata/"
+        f"/adapters/virtual_structure/sinks/{example_uuid}/metadata/"
     )
     assert response.status_code == 200
     resp_obj = response.json()

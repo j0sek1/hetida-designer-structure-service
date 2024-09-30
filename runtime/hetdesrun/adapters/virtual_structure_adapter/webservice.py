@@ -21,7 +21,7 @@ from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter
 
 logger = logging.getLogger(__name__)
 virtual_structure_adapter_router = HandleTrailingSlashAPIRouter(
-    prefix="/adapters/vst", tags=["virtual structure adapter"]
+    prefix="/adapters/virtual_structure", tags=["virtual structure adapter"]
 )
 
 
