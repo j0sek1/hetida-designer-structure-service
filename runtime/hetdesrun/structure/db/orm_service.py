@@ -745,3 +745,21 @@ def orm_get_children(
             [Source.from_orm_model(source) for source in sources],
             [Sink.from_orm_model(sink) for sink in sinks],
         )
+
+
+def orm_get_sources_by_substring_match(filter_string: str) -> list[Source]:
+    with get_session()() as session:
+        matching_sources = (
+            session.query(SourceOrm).filter(SourceOrm.name.ilike(f"%{filter_string}%")).all()
+        )
+
+    return [Source.from_orm_model(src) for src in matching_sources]
+
+
+def orm_get_sinks_by_substring_match(filter_string: str) -> list[Sink]:
+    with get_session()() as session:
+        matching_sinks = (
+            session.query(SinkOrm).filter(SinkOrm.name.ilike(f"%{filter_string}%")).all()
+        )
+
+    return [Sink.from_orm_model(sink) for sink in matching_sinks]

@@ -1,10 +1,12 @@
 import logging
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Query
 
 from hetdesrun.adapters.virtual_structure_adapter import VERSION
 from hetdesrun.adapters.virtual_structure_adapter.models import (
+    MultipleVirtualStructureAdapterSinksResponse,
+    MultipleVirtualStructureAdapterSourcesResponse,
     VirtualStructureAdapterInfoResponse,
     VirtualStructureAdapterResponse,
     VirtualStructureAdapterSink,
@@ -12,6 +14,8 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterThingNode,
 )
 from hetdesrun.adapters.virtual_structure_adapter.structure import (
+    get_filtered_sinks,
+    get_filtered_sources,
     get_single_sink,
     get_single_source,
     get_single_thingnode,
@@ -79,6 +83,21 @@ async def get_single_thingnode_endpoint(node_id: UUID) -> VirtualStructureAdapte
 
 
 @virtual_structure_adapter_router.get(
+    "/sources",
+    response_model=MultipleVirtualStructureAdapterSourcesResponse,
+    dependencies=get_auth_deps(),
+)
+async def get_sources_endpoint(
+    filter_str: str | None = Query(None, alias="filter"),
+) -> MultipleVirtualStructureAdapterSourcesResponse:
+    matching_sources = get_filtered_sources(filter_str)
+    return MultipleVirtualStructureAdapterSourcesResponse(
+        resultCount=len(matching_sources),
+        sources=matching_sources,
+    )
+
+
+@virtual_structure_adapter_router.get(
     "/sources/{source_id}/metadata/",
     response_model=list,
     dependencies=get_auth_deps(),
@@ -106,6 +125,21 @@ async def get_single_source_endpoint(source_id: UUID) -> VirtualStructureAdapter
         ) from exc
 
     return source
+
+
+@virtual_structure_adapter_router.get(
+    "/sinks",
+    response_model=MultipleVirtualStructureAdapterSinksResponse,
+    dependencies=get_auth_deps(),
+)
+async def get_sinks_endpoint(
+    filter_str: str | None = Query(None, alias="filter"),
+) -> MultipleVirtualStructureAdapterSinksResponse:
+    matching_sinks = get_filtered_sinks(filter_str)
+    return MultipleVirtualStructureAdapterSinksResponse(
+        resultCount=len(matching_sinks),
+        sinks=matching_sinks,
+    )
 
 
 @virtual_structure_adapter_router.get(

@@ -12,6 +12,8 @@ from hetdesrun.structure.structure_service import (
     get_single_sink_from_db,
     get_single_source_from_db,
     get_single_thingnode_from_db,
+    get_sinks_by_substring_match,
+    get_sources_by_substring_match,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,8 +69,22 @@ def get_single_source(
     return VirtualStructureAdapterSource.from_structure_service_model(source)
 
 
+def get_filtered_sources(filter_string: str | None) -> list[VirtualStructureAdapterSource]:
+    if filter_string is None:
+        return []
+    sources = get_sources_by_substring_match(filter_string)
+    return [VirtualStructureAdapterSource.from_structure_service_model(src) for src in sources]
+
+
 def get_single_sink(
     sink_id: UUID,
 ) -> VirtualStructureAdapterSink:
     sink = get_single_sink_from_db(sink_id)
     return VirtualStructureAdapterSink.from_structure_service_model(sink)
+
+
+def get_filtered_sinks(filter_string: str | None) -> list[VirtualStructureAdapterSink]:
+    if filter_string is None:
+        return []
+    sinks = get_sinks_by_substring_match(filter_string)
+    return [VirtualStructureAdapterSink.from_structure_service_model(sink) for sink in sinks]

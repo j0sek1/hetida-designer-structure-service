@@ -78,6 +78,12 @@ class VirtualStructureAdapterSink(BaseModel):
         )
 
 
+class VirtualStructureAdapterInfoResponse(BaseModel):
+    id: str  # noqa: A003
+    name: str
+    version: str
+
+
 class VirtualStructureAdapterResponse(BaseModel):
     id: str  # noqa: A003
     name: str
@@ -86,7 +92,11 @@ class VirtualStructureAdapterResponse(BaseModel):
     sinks: list[VirtualStructureAdapterSink]
 
 
-class VirtualStructureAdapterInfoResponse(BaseModel):
-    id: str  # noqa: A003
-    name: str
-    version: str
+class MultipleVirtualStructureAdapterSourcesResponse(BaseModel):
+    resultCount: int
+    sources: list[VirtualStructureAdapterSource]
+
+
+class MultipleVirtualStructureAdapterSinksResponse(BaseModel):
+    resultCount: int
+    sinks: list[VirtualStructureAdapterSink]

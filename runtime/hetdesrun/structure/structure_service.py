@@ -11,6 +11,8 @@ from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.orm_service import (
     orm_delete_structure,
     orm_get_children,
+    orm_get_sinks_by_substring_match,
+    orm_get_sources_by_substring_match,
     orm_is_database_empty,
     orm_load_structure_from_json_file,
     orm_update_structure,
@@ -89,6 +91,10 @@ def get_collection_of_sources_from_db(src_ids: list[UUID]) -> dict[UUID, Source]
     return sources
 
 
+def get_sources_by_substring_match(filter_string: str) -> list[Source]:
+    return orm_get_sources_by_substring_match(filter_string)
+
+
 def get_single_sink_from_db(sink_id: UUID) -> Sink:
     logger.debug("Fetching single Sink from database with ID: %s", sink_id)
     with get_session()() as session:
@@ -116,6 +122,10 @@ def get_collection_of_sinks_from_db(sink_ids: list[UUID]) -> dict[UUID, Sink]:
     sinks = {sink_id: get_single_sink_from_db(sink_id) for sink_id in sink_ids}
     logger.debug("Successfully fetched collection of Sinks.")
     return sinks
+
+
+def get_sinks_by_substring_match(filter_string: str) -> list[Sink]:
+    return orm_get_sinks_by_substring_match(filter_string)
 
 
 def is_database_empty() -> bool:

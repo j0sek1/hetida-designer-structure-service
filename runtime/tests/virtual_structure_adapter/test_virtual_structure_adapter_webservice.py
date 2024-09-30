@@ -1,20 +1,13 @@
 import uuid
 
 import pytest
-import pytest_asyncio
-
-
-@pytest_asyncio.fixture
-async def open_async_test_client_with_vst_adapter(async_test_client_with_vst_adapter):
-    async with async_test_client_with_vst_adapter as client:
-        yield client
 
 
 @pytest.mark.asyncio
 async def test_access_vst_adapter_info(
-    open_async_test_client_with_vst_adapter,
+    async_test_client_with_vst_adapter,
 ) -> None:
-    response = await open_async_test_client_with_vst_adapter.get("adapters/virtual_structure/info")
+    response = await async_test_client_with_vst_adapter.get("adapters/virtual_structure/info")
     assert response.status_code == 200
     assert "version" in response.json()
 
@@ -134,3 +127,52 @@ async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_v
     assert response.status_code == 200
     resp_obj = response.json()
     assert resp_obj == []
+
+
+@pytest.mark.asyncio
+async def test_vst_adapter_sources_endpoint(async_test_client_with_vst_adapter):
+    # Without filter string provided
+    response = await async_test_client_with_vst_adapter.get("adapters/virtual_structure/sources")
+
+    assert response.status_code == 200
+
+    resp_obj = response.json()
+    assert len(resp_obj["sources"]) == 0
+
+    # Filter string provided
+    response = await async_test_client_with_vst_adapter.get(
+        "adapters/virtual_structure/sources",
+        params={"filter": "PrEsEt"},  # Use this capitalization to test case-insensitivity
+    )
+
+    assert response.status_code == 200
+
+    resp_obj = response.json()
+    assert len(resp_obj["sources"]) == 1
+    assert resp_obj["sources"][0]["name"] == "Energy usage with preset filter"
+
+
+@pytest.mark.asyncio
+async def test_vst_adapter_sinks_endpoint(async_test_client_with_vst_adapter):
+    # Without filter string provided
+    response = await async_test_client_with_vst_adapter.get("adapters/virtual_structure/sinks")
+
+    assert response.status_code == 200
+
+    resp_obj = response.json()
+    assert len(resp_obj["sinks"]) == 0
+
+    # Filter string provided
+    response = await async_test_client_with_vst_adapter.get(
+        "adapters/virtual_structure/sinks",
+        params={"filter": "AnOmAly"},  # Use this capitalization to test case-insensitivity
+    )
+
+    assert response.status_code == 200
+
+    resp_obj = response.json()
+    assert len(resp_obj["sinks"]) == 1
+    assert (
+        resp_obj["sinks"][0]["name"]
+        == "Anomaly score for the energy usage of the pump system in Storage Tank"
+    )
