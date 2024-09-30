@@ -2,6 +2,12 @@ from typing import Any
 
 from hetdesrun.models.data_selection import FilteredSink, FilteredSource
 
+try:
+    with open("VERSION", encoding="utf8") as version_file:
+        VERSION = version_file.read().strip()
+except FileNotFoundError:
+    VERSION = "dev snapshot"
+
 
 # Empty functions just to register the adapter
 async def load_data(

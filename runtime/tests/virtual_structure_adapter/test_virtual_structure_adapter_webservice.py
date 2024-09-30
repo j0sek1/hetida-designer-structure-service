@@ -1,6 +1,22 @@
 import uuid
 
 import pytest
+import pytest_asyncio
+
+
+@pytest_asyncio.fixture
+async def open_async_test_client_with_vst_adapter(async_test_client_with_vst_adapter):
+    async with async_test_client_with_vst_adapter as client:
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_access_vst_adapter_info(
+    open_async_test_client_with_vst_adapter,
+) -> None:
+    response = await open_async_test_client_with_vst_adapter.get("adapters/virtual_structure/info")
+    assert response.status_code == 200
+    assert "version" in response.json()
 
 
 @pytest.mark.asyncio

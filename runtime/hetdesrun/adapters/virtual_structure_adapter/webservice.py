@@ -3,7 +3,9 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
+from hetdesrun.adapters.virtual_structure_adapter import VERSION
 from hetdesrun.adapters.virtual_structure_adapter.models import (
+    VirtualStructureAdapterInfoResponse,
     VirtualStructureAdapterResponse,
     VirtualStructureAdapterSink,
     VirtualStructureAdapterSource,
@@ -23,6 +25,17 @@ logger = logging.getLogger(__name__)
 virtual_structure_adapter_router = HandleTrailingSlashAPIRouter(
     prefix="/adapters/virtual_structure", tags=["virtual structure adapter"]
 )
+
+
+@virtual_structure_adapter_router.get(
+    "/info",
+    response_model=VirtualStructureAdapterInfoResponse,
+    # no auth for info endpoint
+)
+async def get_info_endpoint() -> VirtualStructureAdapterInfoResponse:
+    return VirtualStructureAdapterInfoResponse(
+        id="virtual-structure-adapter", name="Virtual Structure Adapter", version=VERSION
+    )
 
 
 @virtual_structure_adapter_router.get(

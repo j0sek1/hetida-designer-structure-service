@@ -84,3 +84,9 @@ class VirtualStructureAdapterResponse(BaseModel):
     thingNodes: list[VirtualStructureAdapterThingNode]
     sources: list[VirtualStructureAdapterSource]
     sinks: list[VirtualStructureAdapterSink]
+
+
+class VirtualStructureAdapterInfoResponse(BaseModel):
+    id: str  # noqa: A003
+    name: str
+    version: str
