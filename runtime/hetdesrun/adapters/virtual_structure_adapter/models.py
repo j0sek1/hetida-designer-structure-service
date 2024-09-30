@@ -14,7 +14,9 @@ class VirtualStructureAdapterThingNode(BaseModel):
     description: str
 
     @classmethod
-    def from_structure_service(cls, struct_tn: ThingNode) -> "VirtualStructureAdapterThingNode":
+    def from_structure_service_model(
+        cls, struct_tn: ThingNode
+    ) -> "VirtualStructureAdapterThingNode":
         return cls(
             id=struct_tn.id,
             parentId=struct_tn.parent_node_id,
@@ -35,7 +37,7 @@ class VirtualStructureAdapterSource(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service(cls, source: Source) -> "VirtualStructureAdapterSource":
+    def from_structure_service_model(cls, source: Source) -> "VirtualStructureAdapterSource":
         def replace_whitespace(filter_name: str) -> str:
             filter_name = filter_name.strip()
             return filter_name.replace(" ", "_")
@@ -66,7 +68,7 @@ class VirtualStructureAdapterSink(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service(cls, sink: Sink) -> "VirtualStructureAdapterSink":
+    def from_structure_service_model(cls, sink: Sink) -> "VirtualStructureAdapterSink":
         def replace_whitespace(filter_name: str) -> str:
             filter_name = filter_name.strip()
             return filter_name.replace(" ", "_")
