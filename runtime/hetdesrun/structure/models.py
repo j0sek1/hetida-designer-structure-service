@@ -134,8 +134,27 @@ class FilterType(str, Enum):
 
 class Filter(BaseModel):
     name: str = Field(..., description="Name of the filter")
+    internal_name: str = Field(
+        default="",
+        description="Name used to identify the filter in the input or output wiring",
+    )
     type: FilterType = Field(..., description="Type of the filter")  # noqa: A003
     required: bool = Field(..., description="Indicates if the filter is required")
+
+    @root_validator(pre=True)
+    def set_internal_name(cls, values: dict) -> dict:
+        # Internally the designer requires an identifier for the filter
+        # that has to be separated by underscores
+        # Hence, an internal name is created for the wiring resoultion
+        # performed by the virtual structure adapter
+        values["internal_name"] = "_".join(values["name"].strip().lower().split())
+        return values
+
+    @validator("name")
+    def no_empty_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("The name of the filter must be set")
+        return value
 
 
 class Source(BaseModel):

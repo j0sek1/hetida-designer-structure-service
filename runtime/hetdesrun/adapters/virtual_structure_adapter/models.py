@@ -38,10 +38,6 @@ class VirtualStructureAdapterSource(BaseModel):
 
     @classmethod
     def from_structure_service_model(cls, source: Source) -> "VirtualStructureAdapterSource":
-        def replace_whitespace(filter_name: str) -> str:
-            filter_name = filter_name.strip()
-            return filter_name.replace(" ", "_")
-
         return cls(
             id=source.id,
             thingNodeId=source.id,
@@ -49,7 +45,7 @@ class VirtualStructureAdapterSource(BaseModel):
             type=source.type,
             path=source.display_path,
             metadataKey=source.ref_key,
-            filters={replace_whitespace(f.name): f for f in source.passthrough_filters}
+            filters={f.internal_name: f for f in source.passthrough_filters}
             if source.passthrough_filters
             else {},
         )
@@ -69,10 +65,6 @@ class VirtualStructureAdapterSink(BaseModel):
 
     @classmethod
     def from_structure_service_model(cls, sink: Sink) -> "VirtualStructureAdapterSink":
-        def replace_whitespace(filter_name: str) -> str:
-            filter_name = filter_name.strip()
-            return filter_name.replace(" ", "_")
-
         return cls(
             id=sink.id,
             thingNodeId=sink.id,
@@ -80,7 +72,7 @@ class VirtualStructureAdapterSink(BaseModel):
             type=sink.type,
             path=sink.display_path,
             metadataKey=sink.ref_key,
-            filters={replace_whitespace(f.name): f for f in sink.passthrough_filters}
+            filters={f.internal_name: f for f in sink.passthrough_filters}
             if sink.passthrough_filters
             else {},
         )
