@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Query, status
 
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
@@ -38,21 +38,20 @@ virtual_structure_router = HandleTrailingSlashAPIRouter(
     responses={status.HTTP_204_NO_CONTENT: {"description": "Successfully updated the structure"}},
 )
 async def update_structure_endpoint(
-    new_structure: CompleteStructure, delete_existing_structure: bool = True
+    new_structure: CompleteStructure,
+    delete_existing_structure: bool = Query(True, alias="delete_existing_structure"),
 ) -> None:
     logger.info("Starting to update the vst structure via the API endpoint")
     if delete_existing_structure:
-        delete_structure()
+        logger.info("Starting to delete potentially existing structure")
+        try:
+            delete_structure()
+        except DBIntegrityError as e:
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     try:
         update_structure(new_structure)
         logger.info("The structure was successfully updated")
-    except DBIntegrityError as e:
+    except (DBIntegrityError, DBUpdateError, DBAssociationError, DBFetchError) as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     except DBNotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e)) from e
-    except DBUpdateError as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
-    except DBAssociationError as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
-    except DBFetchError as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
