@@ -2,7 +2,9 @@ from unittest import mock
 
 import pytest
 
-from hetdesrun.adapters.virtual_structure_adapter.utils import prepopulate_structure
+from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import (
+    prepopulate_structure,
+)
 from hetdesrun.structure.structure_service import is_database_empty, load_structure_from_json_file
 
 
@@ -28,7 +30,7 @@ def test_if_existing_structure_is_overwritten_if_specified():
         ),
     ):
         with mock.patch(
-            "hetdesrun.adapters.virtual_structure_adapter.utils.delete_structure"
+            "hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation.delete_structure"
         ) as mocked_delete:
             prepopulate_structure()
             mocked_delete.assert_called_once()

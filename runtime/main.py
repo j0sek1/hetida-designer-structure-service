@@ -93,28 +93,23 @@ def run_migrations(
     command.upgrade(alembic_cfg, "head")
     logger.info("Finished running migrations.")
 
+
 def run_trafo_rev_deployment():
     from hetdesrun.exportimport.importing import import_transformations
 
-    import_transformations(
-        "./transformations", update_component_code=False, directly_into_db=True
-    )
+    import_transformations("./transformations", update_component_code=False, directly_into_db=True)
 
 
 in_memory_db = detect_in_memory_db()
 is_backend = get_config().is_backend_service
 
-consumption_mode_variable = os.environ.get(
-    "HETIDA_DESIGNER_KAFKA_CONSUMPTION_MODE", None
-)
+consumption_mode_variable = os.environ.get("HETIDA_DESIGNER_KAFKA_CONSUMPTION_MODE", None)
 kafka_consumption_modus = (
     consumption_mode_variable is not None and len(consumption_mode_variable) > 0
 )
 
 if in_memory_db:
-    logger.info(
-        "Detected in-memory db usage: Running migrations during importing of main.py."
-    )
+    logger.info("Detected in-memory db usage: Running migrations during importing of main.py.")
     run_migrations()
 
     if is_backend or kafka_consumption_modus:
@@ -125,15 +120,16 @@ if in_memory_db:
         )
         run_trafo_rev_deployment()
 
-        from hetdesrun.adapters.virtual_structure_adapter.utils import prepopulate_structure
+        from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import (
+            prepopulate_structure,
+        )
+
         prepopulate_structure()
 
 
 if __name__ == "__main__":
     if not in_memory_db:
-        logger.info(
-            "Running migrations from main.py since main.py was invoked directly."
-        )
+        logger.info("Running migrations from main.py since main.py was invoked directly.")
         run_migrations()
 
         if is_backend or kafka_consumption_modus:
