@@ -1,6 +1,6 @@
 import os
 
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, Field, validator
 
 from hetdesrun.structure.models import CompleteStructure
 
@@ -65,6 +65,47 @@ class VirtualStructureAdapterConfig(BaseSettings):
         "Used analogously to 'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'.",
         env="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER",
     )
+
+    @validator("structure_filepath_to_prepopulate_virtual_structure_adapter")
+    def filepath_must_be_set_when_populating_from_file(
+        cls, value: str | None, values: dict
+    ) -> str | None:
+        if values.get("prepopulate_virtual_structure_adapter_via_file") and (
+            value is None or value == ""
+        ):
+            raise ValueError(
+                "STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER must be set "
+                "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True"
+            )
+        return value
+
+    @validator("structure_to_prepopulate_virtual_structure_adapter")
+    def structure_must_be_provided_if_populating_from_env_var(
+        cls, value: CompleteStructure | None, values
+    ) -> CompleteStructure | None:
+        if (
+            values.get("prepopulate_virtual_structure_adapter_at_designer_startup")
+            and not values.get("prepopulate_virtual_structure_adapter_via_file")
+            and value is None
+        ):
+            raise ValueError(
+                "STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must be set "
+                "if PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP is set to True "
+                "and you want to populate from an environment variable"
+            )
+        return value
+
+    @validator("structure_to_prepopulate_virtual_structure_adapter")
+    def complete_structure_must_not_be_set_if_populating_from_file(
+        cls, value: CompleteStructure | None, values
+    ) -> CompleteStructure | None:
+        if values.get("prepopulate_virtual_structure_adapter_via_file") and value is not None:
+            raise ValueError(
+                "STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must NOT be set "
+                "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True, "
+                "since you wish to populate from a file"
+            )
+        return value
 
 
 environment_file = os.environ.get("HD_VST_ADAPTER_ENVIRONMENT_FILE", None)
