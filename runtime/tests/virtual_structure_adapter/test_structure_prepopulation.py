@@ -10,8 +10,8 @@ from hetdesrun.structure.structure_service import is_database_empty, load_struct
 
 def test_with_prepopulation_disabled(mocked_clean_test_db_session):
     with mock.patch(
-        "hetdesrun.webservice.config.runtime_config.prepopulate_virtual_structure_adapter_at_designer_startup",
-        False,
+        "hetdesrun.adapters.virtual_structure_adapter.config.vst_adapter_config",
+        prepopulate_virtual_structure_adapter_at_designer_startup=False,
     ):
         prepopulate_structure()
 
@@ -22,7 +22,7 @@ def test_with_prepopulation_disabled(mocked_clean_test_db_session):
 @pytest.mark.usefixtures("_fill_db")
 def test_if_existing_structure_is_overwritten_if_specified():
     with mock.patch.multiple(  # noqa: SIM117
-        "hetdesrun.webservice.config.runtime_config",
+        "hetdesrun.adapters.virtual_structure_adapter.config.vst_adapter_config",
         prepopulate_virtual_structure_adapter_at_designer_startup=True,
         completely_overwrite_an_existing_virtual_structure_at_hd_startup=True,
         structure_to_prepopulate_virtual_structure_adapter=load_structure_from_json_file(
@@ -38,7 +38,7 @@ def test_if_existing_structure_is_overwritten_if_specified():
 
 def test_if_error_raised_when_no_filepath_is_provided():
     with mock.patch.multiple(  # noqa: SIM117
-        "hetdesrun.webservice.config.runtime_config",
+        "hetdesrun.adapters.virtual_structure_adapter.config.vst_adapter_config",
         prepopulate_virtual_structure_adapter_at_designer_startup=True,
         prepopulate_virtual_structure_adapter_via_file=True,
     ):
@@ -54,7 +54,7 @@ def test_if_error_raised_when_no_filepath_is_provided():
 
 def test_if_error_raised_when_no_structure_is_provided():
     with mock.patch.multiple(  # noqa: SIM117
-        "hetdesrun.webservice.config.runtime_config",
+        "hetdesrun.adapters.virtual_structure_adapter.config.vst_adapter_config",
         prepopulate_virtual_structure_adapter_at_designer_startup=True,
     ):
         with pytest.raises(

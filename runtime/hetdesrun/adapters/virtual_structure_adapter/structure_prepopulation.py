@@ -1,3 +1,4 @@
+from hetdesrun.adapters.virtual_structure_adapter.config import get_vst_adapter_config
 from hetdesrun.adapters.virtual_structure_adapter.utils import (
     logger,
 )
@@ -8,15 +9,14 @@ from hetdesrun.structure.structure_service import (
     load_structure_from_json_file,
     update_structure,
 )
-from hetdesrun.webservice.config import get_config
 
 
 def retrieve_complete_structure_for_prepopulation() -> CompleteStructure:
-    if get_config().prepopulate_virtual_structure_adapter_via_file:
+    if get_vst_adapter_config().prepopulate_virtual_structure_adapter_via_file:
         logger.info("Prepopulating the virtual structure adapter via a JSON-file")
         if (
             structure_filepath
-            := get_config().structure_filepath_to_prepopulate_virtual_structure_adapter
+            := get_vst_adapter_config().structure_filepath_to_prepopulate_virtual_structure_adapter
         ):
             return load_structure_from_json_file(structure_filepath)
         raise ValueError(
@@ -26,7 +26,10 @@ def retrieve_complete_structure_for_prepopulation() -> CompleteStructure:
             "but it is not."
         )
 
-    if complete_structure := get_config().structure_to_prepopulate_virtual_structure_adapter:
+    if (
+        complete_structure
+        := get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter
+    ):
         logger.info(
             "Prepopulating the virtual structure adapter via the environment variable "
             "'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'"
@@ -44,7 +47,7 @@ def prepopulate_structure() -> None:
     with a user defined structure, if one is provided.
     """
     logger.info("Starting the prepopulation process for the virtual structure adapter")
-    if not get_config().prepopulate_virtual_structure_adapter_at_designer_startup:
+    if not get_vst_adapter_config().prepopulate_virtual_structure_adapter_at_designer_startup:
         logger.info(
             "Structure of the virtual structure adapter was not prepopulated, "
             "because the environment variable "
@@ -55,12 +58,15 @@ def prepopulate_structure() -> None:
     complete_structure = retrieve_complete_structure_for_prepopulation()
 
     if (
-        get_config().completely_overwrite_an_existing_virtual_structure_at_hd_startup
+        get_vst_adapter_config().completely_overwrite_an_existing_virtual_structure_at_hd_startup
         and not is_database_empty()
     ):
+        logger.info(
+            "An existing structure was found in the database. The deletion process starts now"
+        )
         delete_structure()
         logger.info(
-            "An existing structure was found in the database and deleted, "
+            "The existing structure was successfully deleted, "
             "during the prepopulation process of the virtual structure adapter"
         )
     update_structure(complete_structure)
