@@ -7,7 +7,7 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     StructureVirtualSink,
     StructureVirtualSource,
 )
-from hetdesrun.structure.structure_service import (
+from hetdesrun.structure.vst_structure_service import (
     get_children,
     get_single_sink_from_db,
     get_single_source_from_db,

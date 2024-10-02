@@ -10,7 +10,7 @@ from hetdesrun.structure.db.exceptions import (
     DBUpdateError,
 )
 from hetdesrun.structure.models import CompleteStructure
-from hetdesrun.structure.structure_service import (
+from hetdesrun.structure.vst_structure_service import (
     delete_structure,
     update_structure,
 )

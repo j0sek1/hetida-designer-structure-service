@@ -3,7 +3,10 @@ from unittest import mock
 import pytest
 
 from hetdesrun.adapters.virtual_structure_adapter.utils import prepopulate_structure
-from hetdesrun.structure.structure_service import is_database_empty, load_structure_from_json_file
+from hetdesrun.structure.vst_structure_service import (
+    is_database_empty,
+    load_structure_from_json_file,
+)
 
 
 def test_with_prepopulation_disabled(mocked_clean_test_db_session):

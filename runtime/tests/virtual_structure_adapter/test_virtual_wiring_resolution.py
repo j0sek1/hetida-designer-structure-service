@@ -8,7 +8,10 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
 )
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
 from hetdesrun.structure.db.exceptions import DBNotFoundError
-from hetdesrun.structure.structure_service import get_all_sinks_from_db, get_all_sources_from_db
+from hetdesrun.structure.vst_structure_service import (
+    get_all_sinks_from_db,
+    get_all_sources_from_db,
+)
 from hetdesrun.wiring import resolve_virtual_structure_wirings
 
 
