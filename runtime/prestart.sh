@@ -72,7 +72,11 @@ if [[ "$_is_backend_service" == $_true_equiv ]]; then
     fi
 
     # Prepopulation of the virtual structure adapter
-    python -c 'from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import prepopulate_structure; prepopulate_structure();'
+    _prepopulate_vst_structure="${PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP,,}"  # to lower case
+    if [[ "$_prepopulate_vst_structure" == "true" ]]; then
+        echo "PREPOPULATING STRUCTURE OF VIRTUAL STRUCTURE ADAPTER"
+        python -c 'from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import prepopulate_structure; prepopulate_structure();'
+    fi
 
     if [[ -n "$HD_BACKEND_AUTOIMPORT_DIRECTORY" ]]; then
         echo "Trying autoimport from $HD_BACKEND_AUTOIMPORT_DIRECTORY"

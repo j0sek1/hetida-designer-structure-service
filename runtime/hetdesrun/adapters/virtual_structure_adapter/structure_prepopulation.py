@@ -14,15 +14,6 @@ def prepopulate_structure() -> None:
     """This function handles the population of the virtual structure adapter
     with a user defined structure, if one is provided.
     """
-    logger.info("Starting the prepopulation process for the virtual structure adapter")
-    if not get_vst_adapter_config().prepopulate_virtual_structure_adapter_at_designer_startup:
-        logger.info(
-            "Structure of the virtual structure adapter was not prepopulated, "
-            "because the environment variable "
-            "'PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP' is set to False"
-        )
-        return
-
     # Set the structure for prepopulation
     if get_vst_adapter_config().prepopulate_virtual_structure_adapter_via_file:
         structure_filepath = (
@@ -39,6 +30,7 @@ def prepopulate_structure() -> None:
             "'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'"
         )
 
+    # Overwrite structure if configured
     if (
         get_vst_adapter_config().completely_overwrite_an_existing_virtual_structure_at_hd_startup
         and not is_database_empty()
@@ -53,4 +45,4 @@ def prepopulate_structure() -> None:
         )
 
     update_structure(complete_structure)
-    logger.info("The structure was successfully updated.")
+    logger.info("The structure was successfully populated.")

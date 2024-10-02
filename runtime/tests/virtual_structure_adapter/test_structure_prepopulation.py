@@ -8,18 +8,7 @@ from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import
     prepopulate_structure,
 )
 from hetdesrun.structure.models import CompleteStructure
-from hetdesrun.structure.structure_service import is_database_empty, load_structure_from_json_file
-
-
-def test_with_prepopulation_disabled(mocked_clean_test_db_session):
-    with mock.patch(
-        "hetdesrun.adapters.virtual_structure_adapter.config.vst_adapter_config",
-        prepopulate_virtual_structure_adapter_at_designer_startup=False,
-    ):
-        prepopulate_structure()
-
-    # Verify that no changes have been made to the database
-    assert is_database_empty()
+from hetdesrun.structure.structure_service import load_structure_from_json_file
 
 
 @pytest.mark.usefixtures("_fill_db")
