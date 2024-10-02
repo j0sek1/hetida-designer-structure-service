@@ -45,6 +45,14 @@ class VirtualStructureAdapterConfig(BaseSettings):
         env="COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP",
     )
 
+    structure_filepath_to_prepopulate_virtual_structure_adapter: str | None = Field(
+        None,
+        description="A JSON-filepath, used to provide a structure "
+        "for the virtual structure adapter at hetida designer startup. "
+        "Used analogously to 'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'.",
+        env="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER",
+    )
+
     structure_to_prepopulate_virtual_structure_adapter: CompleteStructure | None = Field(
         None,
         description="A JSON, used to provide a structure for the virtual structure adapter "
@@ -56,14 +64,6 @@ class VirtualStructureAdapterConfig(BaseSettings):
         "The JSON should contain definitions for all thingnodes, sources, sinks and element types "
         "representing the users data.",
         env="STRUCTURE_TO_PREPOPULATE_VST_ADAPTER",
-    )
-
-    structure_filepath_to_prepopulate_virtual_structure_adapter: str | None = Field(
-        None,
-        description="A JSON-filepath, used to provide a structure "
-        "for the virtual structure adapter at hetida designer startup. "
-        "Used analogously to 'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'.",
-        env="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER",
     )
 
     @validator("structure_filepath_to_prepopulate_virtual_structure_adapter")
@@ -81,7 +81,7 @@ class VirtualStructureAdapterConfig(BaseSettings):
 
     @validator("structure_to_prepopulate_virtual_structure_adapter")
     def structure_must_be_provided_if_populating_from_env_var(
-        cls, value: CompleteStructure | None, values
+        cls, value: CompleteStructure | None, values: dict
     ) -> CompleteStructure | None:
         if (
             values.get("prepopulate_virtual_structure_adapter_at_designer_startup")
@@ -97,9 +97,13 @@ class VirtualStructureAdapterConfig(BaseSettings):
 
     @validator("structure_to_prepopulate_virtual_structure_adapter")
     def complete_structure_must_not_be_set_if_populating_from_file(
-        cls, value: CompleteStructure | None, values
+        cls, value: CompleteStructure | None, values: dict
     ) -> CompleteStructure | None:
-        if values.get("prepopulate_virtual_structure_adapter_via_file") and value is not None:
+        if (
+            values.get("prepopulate_virtual_structure_adapter_via_file")
+            and values.get("structure_filepath_to_prepopulate_virtual_structure_adapter")
+            and value is not None
+        ):
             raise ValueError(
                 "STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must NOT be set "
                 "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True, "

@@ -29,10 +29,10 @@ def prepopulate_structure() -> None:
             get_vst_adapter_config().structure_filepath_to_prepopulate_virtual_structure_adapter
         )
         logger.info("Prepopulating the virtual structure adapter via a file")
-        complete_structure = load_structure_from_json_file(structure_filepath)
+        complete_structure = load_structure_from_json_file(structure_filepath)  # type: ignore
     else:
         complete_structure = (
-            get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter
+            get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter  # type: ignore
         )
         logger.info(
             "Prepopulating the virtual structure adapter via the environment variable "
