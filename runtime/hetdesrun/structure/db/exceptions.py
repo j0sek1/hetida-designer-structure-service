@@ -24,3 +24,11 @@ class DBFetchError(DBError):
 
 class DBInsertError(DBError):
     pass
+
+
+class DBConnectionError(DBError):
+    pass
+
+
+class DBParsingError(DBError):
+    pass
