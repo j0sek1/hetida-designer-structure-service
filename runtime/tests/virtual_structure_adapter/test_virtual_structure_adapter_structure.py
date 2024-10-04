@@ -46,11 +46,12 @@ def test_get_structure_with_existing_uuid():
     assert structure.thingNodes == []
 
     # Check Sources
-    assert len(structure.sources) == 2
+    assert len(structure.sources) == 3
     assert isinstance(structure.sources[0], VirtualStructureAdapterSource)
     expected_source_names = [
         "Energy usage with preset filter",
         "Energy usage with passthrough filters",
+        "Test source for type metadata(any)",
     ]
     for source in structure.sources:
         assert source.name in expected_source_names

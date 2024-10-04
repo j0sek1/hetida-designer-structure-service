@@ -85,12 +85,13 @@ async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_
 
     assert len(resp_obj["thingNodes"]) == 0
     assert len(resp_obj["sinks"]) == 1
-    assert len(resp_obj["sources"]) == 2
+    assert len(resp_obj["sources"]) == 3
 
     sink_name = resp_obj["sinks"][0]["name"]
     expected_source_names = [
         "Energy usage with preset filter",
         "Energy usage with passthrough filters",
+        "Test source for type metadata(any)",
     ]
 
     for source in resp_obj["sources"]:

@@ -6,10 +6,13 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterSink,
     VirtualStructureAdapterSource,
 )
+from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
+    resolve_virtual_structure_wirings,
+)
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
 from hetdesrun.structure.db.exceptions import DBNotFoundError
+from hetdesrun.structure.db.orm_service import orm_get_sources_by_substring_match
 from hetdesrun.structure.structure_service import get_all_sinks_from_db, get_all_sources_from_db
-from hetdesrun.wiring import resolve_virtual_structure_wirings
 
 
 @pytest.mark.usefixtures("_fill_db")
@@ -45,10 +48,10 @@ def test_virtual_wiring_resolution_with_one_source_and_sink():
 
     # Check if the wiring was correctly replaced
     assert (
-        wf_wiring.input_wirings[0].adapter_id == "demo-adapter-python"
+        wf_wiring.input_wirings[0].adapter_id == sources[0].adapter_key
     )  # Should replace virtual-structure-adapter
     assert (
-        wf_wiring.output_wirings[0].adapter_id == "demo-adapter-python"
+        wf_wiring.output_wirings[0].adapter_id == sinks[0].adapter_key
     )  # Should replace virtual-structure-adapter
 
     assert wf_wiring.input_wirings[0].workflow_input_name == "nf"  # Should keep the original name
@@ -81,16 +84,13 @@ def test_virtual_wiring_resolution_with_other_adapter_key():
     # Create example InputWiring
     sources = get_all_sources_from_db()
     struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
-    example_filters = {
-        "timestampFrom": "2024-07-10T09:36:00.000000000Z",
-        "timestampTo": "2024-07-11T09:36:00.000000000Z",
-    }
+
     input_wiring = InputWiring(
         workflow_input_name="nf",
         adapter_id="sql-adapter",
         ref_id=str(struct_src.id),
         type=struct_src.type,
-        filters=example_filters,
+        filters={},
     )
 
     wf_wiring = WorkflowWiring(input_wirings=[input_wiring])
@@ -113,19 +113,38 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
     struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
     struct_src.id = uuid.uuid4()  # Overwrite existing ID
 
-    example_filters = {
-        "timestampFrom": "2024-07-10T09:36:00.000000000Z",
-        "timestampTo": "2024-07-11T09:36:00.000000000Z",
-    }
     input_wiring = InputWiring(
         workflow_input_name="nf",
         adapter_id="virtual-structure-adapter",
         ref_id=str(struct_src.id),
         type=struct_src.type,
-        filters=example_filters,
+        filters={},
     )
 
     wf_wiring = WorkflowWiring(input_wirings=[input_wiring])
 
     with pytest.raises(DBNotFoundError):
         resolve_virtual_structure_wirings(wf_wiring)
+
+
+@pytest.mark.usefixtures("_fill_db")
+def test_virtual_wiring_resolution_with_metadata_any_source():
+    # Create example InputWiring
+    sources = orm_get_sources_by_substring_match("Test source for type metadata(any)")
+    struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
+
+    input_wiring = InputWiring(
+        workflow_input_name="nf",
+        adapter_id="virtual-structure-adapter",
+        ref_id=str(struct_src.thingNodeId),
+        ref_id_type="THINGNODE",
+        ref_key="Additional Info",
+        type=struct_src.type,
+        filters={},
+    )
+
+    wf_wiring = WorkflowWiring(input_wirings=[input_wiring])
+    resolve_virtual_structure_wirings(wf_wiring)
+
+    assert wf_wiring.input_wirings[0].adapter_id == sources[0].adapter_key
+    assert wf_wiring.input_wirings[0].ref_id == sources[0].ref_id

@@ -45,7 +45,7 @@ def use_in_memory_db(pytestconfig: pytest.Config) -> Any:
 
 @pytest.fixture(scope="function")  # noqa: PT003
 def _fill_db(mocked_clean_test_db_session):
-    file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_test.json"
+    file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_with_any_test.json"
     update_structure_from_file(file_path)
 
 
