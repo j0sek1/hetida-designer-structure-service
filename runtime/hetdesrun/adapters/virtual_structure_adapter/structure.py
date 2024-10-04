@@ -31,14 +31,13 @@ def get_children_from_structure_service(
     """
     thing_nodes, sources, sinks = get_children(parent_id)
     struct_thing_nodes = [
-        VirtualStructureAdapterThingNode.from_structure_service_model(node) for node in thing_nodes
+        VirtualStructureAdapterThingNode.from_structure_service_thingnode(node)
+        for node in thing_nodes
     ]
     struct_sources = [
-        VirtualStructureAdapterSource.from_structure_service_model(source) for source in sources
+        VirtualStructureAdapterSource.from_structure_service_source(source) for source in sources
     ]
-    struct_sinks = [
-        VirtualStructureAdapterSink.from_structure_service_model(sink) for sink in sinks
-    ]
+    struct_sinks = [VirtualStructureAdapterSink.from_structure_service_sink(sink) for sink in sinks]
 
     return struct_thing_nodes, struct_sources, struct_sinks
 
@@ -59,32 +58,32 @@ def get_single_thingnode(
     tn_id: UUID,
 ) -> VirtualStructureAdapterThingNode:
     node = get_single_thingnode_from_db(tn_id)
-    return VirtualStructureAdapterThingNode.from_structure_service_model(node)
+    return VirtualStructureAdapterThingNode.from_structure_service_thingnode(node)
 
 
 def get_single_source(
     src_id: UUID,
 ) -> VirtualStructureAdapterSource:
     source = get_single_source_from_db(src_id)
-    return VirtualStructureAdapterSource.from_structure_service_model(source)
+    return VirtualStructureAdapterSource.from_structure_service_source(source)
 
 
 def get_filtered_sources(filter_string: str | None) -> list[VirtualStructureAdapterSource]:
     if filter_string is None:
         return []
     sources = get_sources_by_substring_match(filter_string)
-    return [VirtualStructureAdapterSource.from_structure_service_model(src) for src in sources]
+    return [VirtualStructureAdapterSource.from_structure_service_source(src) for src in sources]
 
 
 def get_single_sink(
     sink_id: UUID,
 ) -> VirtualStructureAdapterSink:
     sink = get_single_sink_from_db(sink_id)
-    return VirtualStructureAdapterSink.from_structure_service_model(sink)
+    return VirtualStructureAdapterSink.from_structure_service_sink(sink)
 
 
 def get_filtered_sinks(filter_string: str | None) -> list[VirtualStructureAdapterSink]:
     if filter_string is None:
         return []
     sinks = get_sinks_by_substring_match(filter_string)
-    return [VirtualStructureAdapterSink.from_structure_service_model(sink) for sink in sinks]
+    return [VirtualStructureAdapterSink.from_structure_service_sink(sink) for sink in sinks]

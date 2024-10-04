@@ -20,8 +20,8 @@ def test_virtual_wiring_resolution_with_one_source_and_sink():
     # Create Input- and OutputWiring for the source and sink from the test json
     sources = get_all_sources_from_db()
     sinks = get_all_sinks_from_db()
-    struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
-    struct_sink = VirtualStructureAdapterSink.from_structure_service_model(sinks[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service_source(sources[0])
+    struct_sink = VirtualStructureAdapterSink.from_structure_service_sink(sinks[0])
     example_filters = {
         "timestampFrom": "2024-07-10T09:36:00.000000000Z",
         "timestampTo": "2024-07-11T09:36:00.000000000Z",
@@ -83,7 +83,7 @@ def test_virtual_wiring_resolution_with_empty_workflow_wiring():
 def test_virtual_wiring_resolution_with_other_adapter_key():
     # Create example InputWiring
     sources = get_all_sources_from_db()
-    struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service_source(sources[0])
 
     input_wiring = InputWiring(
         workflow_input_name="nf",
@@ -110,7 +110,7 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
     # Only a source is created because the retrieval process for
     # sources and sinks is identical
     sources = get_all_sources_from_db()
-    struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service_source(sources[0])
     struct_src.id = uuid.uuid4()  # Overwrite existing ID
 
     input_wiring = InputWiring(
@@ -131,7 +131,7 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
 def test_virtual_wiring_resolution_with_metadata_any_source():
     # Create example InputWiring
     sources = orm_get_sources_by_substring_match("Test source for type metadata(any)")
-    struct_src = VirtualStructureAdapterSource.from_structure_service_model(sources[0])
+    struct_src = VirtualStructureAdapterSource.from_structure_service_source(sources[0])
 
     input_wiring = InputWiring(
         workflow_input_name="nf",

@@ -14,7 +14,7 @@ class VirtualStructureAdapterThingNode(BaseModel):
     description: str
 
     @classmethod
-    def from_structure_service_model(
+    def from_structure_service_thingnode(
         cls, struct_tn: ThingNode
     ) -> "VirtualStructureAdapterThingNode":
         return cls(
@@ -37,7 +37,7 @@ class VirtualStructureAdapterSource(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service_model(cls, source: Source) -> "VirtualStructureAdapterSource":
+    def from_structure_service_source(cls, source: Source) -> "VirtualStructureAdapterSource":
         return cls(
             id=source.id,
             thingNodeId=source.id,
@@ -64,7 +64,7 @@ class VirtualStructureAdapterSink(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service_model(cls, sink: Sink) -> "VirtualStructureAdapterSink":
+    def from_structure_service_sink(cls, sink: Sink) -> "VirtualStructureAdapterSink":
         return cls(
             id=sink.id,
             thingNodeId=sink.id,
