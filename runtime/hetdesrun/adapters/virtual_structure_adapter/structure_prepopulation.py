@@ -1,6 +1,14 @@
+import logging
+
 from hetdesrun.adapters.virtual_structure_adapter.config import get_vst_adapter_config
-from hetdesrun.adapters.virtual_structure_adapter.utils import (
-    logger,
+from hetdesrun.adapters.virtual_structure_adapter.exceptions import StructurePrepopulationError
+from hetdesrun.structure.db.exceptions import (
+    DBAssociationError,
+    DBConnectionError,
+    DBError,
+    DBIntegrityError,
+    DBParsingError,
+    DBUpdateError,
 )
 from hetdesrun.structure.vst_structure_service import (
     delete_structure,
@@ -8,6 +16,8 @@ from hetdesrun.structure.vst_structure_service import (
     load_structure_from_json_file,
     update_structure,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def prepopulate_structure() -> None:
@@ -20,7 +30,15 @@ def prepopulate_structure() -> None:
             get_vst_adapter_config().structure_filepath_to_prepopulate_virtual_structure_adapter
         )
         logger.info("Prepopulating the virtual structure adapter via a file")
-        complete_structure = load_structure_from_json_file(structure_filepath)  # type: ignore
+        try:
+            complete_structure = load_structure_from_json_file(structure_filepath)  # type: ignore
+        except (FileNotFoundError, DBParsingError, DBError) as e:
+            logger.error(
+                "Loading the structure from a JSON failed during the prepopulation process: %s", e
+            )
+            raise StructurePrepopulationError(
+                "Error during the prepopulation process: %s", e
+            ) from e
     else:
         complete_structure = (
             get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter  # type: ignore
@@ -38,11 +56,28 @@ def prepopulate_structure() -> None:
         logger.info(
             "An existing structure was found in the database. The deletion process starts now"
         )
-        delete_structure()
+        try:
+            delete_structure()
+        except (DBIntegrityError, DBError) as e:
+            logger.error(
+                "Deletion of a potentially existing structure failed"
+                "during the prepopulation process: %s",
+                e,
+            )
+            raise StructurePrepopulationError(
+                "Error during the prepopulation process: %s", e
+            ) from e
         logger.info(
             "The existing structure was successfully deleted, "
             "during the prepopulation process of the virtual structure adapter"
         )
 
-    update_structure(complete_structure)
+    try:
+        update_structure(complete_structure)
+    except (DBIntegrityError, DBConnectionError, DBAssociationError, DBUpdateError, DBError) as e:
+        logger.error(
+            "Update of the structure failed during the prepopulation process: %s",
+            e,
+        )
+        raise StructurePrepopulationError("Error during the prepopulation process: %s", e) from e
     logger.info("The structure was successfully populated.")
