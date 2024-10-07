@@ -15,7 +15,38 @@ async def test_update_structure(async_test_client, mocked_clean_test_db_session)
 
 
 @pytest.mark.asyncio
+async def test_update_structure_with_formally_invalid_structure(
+    async_test_client, mocked_clean_test_db_session
+):
+    async with async_test_client as ac:
+        response = await ac.put("/api/structure/update/", json="'nf'")
+    assert response.status_code == 422, f"Unexpected status code: {response.status_code}"
+    assert "value is not a valid dict" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_update_structure_with_invalid_structure(
+    async_test_client, mocked_clean_test_db_session
+):
+    json_with_type_mismatch = {
+        "element_types": [
+            {
+                "external_id": "Waterworks_Type",
+                "stakeholder_key": "GW",
+                "name": 42,  # Wrong datatype
+                "description": "Element type for waterworks",
+            }
+        ]
+    }
+
+    async with async_test_client as ac:
+        response = await ac.put("/api/structure/update/", json=json_with_type_mismatch)
+    assert response.status_code == 422, f"Unexpected status code: {response.status_code}"
+    assert "Integrity Error while upserting ThingNodeOrm" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_update_structure_with_logically_invalid_structure(
     async_test_client, mocked_clean_test_db_session
 ):
     file_path = "tests/structure/data/db_test_invalid_structure_no_duplicate_id.json"
