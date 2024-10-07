@@ -47,11 +47,14 @@ async def update_structure_endpoint(
         try:
             delete_structure()
         except DBIntegrityError as e:
+            logger.error("Structure deletion during an update request failed: %s", e)
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     try:
         update_structure(new_structure)
         logger.info("The structure was successfully updated")
     except (DBIntegrityError, DBUpdateError, DBAssociationError, DBFetchError) as e:
+        logger.error("Structure update request failed: %s", e)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     except DBNotFoundError as e:
+        logger.error("Structure update request failed: %s", e)
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e)) from e
