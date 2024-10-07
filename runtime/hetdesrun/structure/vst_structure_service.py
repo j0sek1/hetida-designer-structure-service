@@ -3,21 +3,24 @@ from uuid import UUID
 
 from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
+    ElementTypeOrm,
     SinkOrm,
     SourceOrm,
     ThingNodeOrm,
 )
-from hetdesrun.structure.db.exceptions import DBNotFoundError
-from hetdesrun.structure.db.orm_service import (
+from hetdesrun.structure.db.db_structure_service import (
     orm_delete_structure,
     orm_get_children,
-    orm_get_sinks_by_substring_match,
-    orm_get_sources_by_substring_match,
     orm_is_database_empty,
     orm_load_structure_from_json_file,
     orm_update_structure,
 )
-from hetdesrun.structure.models import CompleteStructure, Sink, Source, ThingNode
+from hetdesrun.structure.db.exceptions import DBNotFoundError
+from hetdesrun.structure.db.source_sink_service import (
+    orm_get_sinks_by_substring_match,
+    orm_get_sources_by_substring_match,
+)
+from hetdesrun.structure.models import CompleteStructure, ElementType, Sink, Source, ThingNode
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,15 @@ def get_single_thingnode_from_db(tn_id: UUID) -> ThingNode:
 
     logger.error("No ThingNode found for ID %s. Raising DBNotFoundError.", tn_id)
     raise DBNotFoundError(f"No ThingNode found for ID {tn_id}")
+
+
+def get_all_element_types_from_db() -> list[ElementType]:
+    logger.debug("Fetching all ElementTypes from the database.")
+    with get_session()() as session:
+        element_types = session.query(ElementTypeOrm).all()
+
+    logger.debug("Successfully fetched %d ThingNodes from the database.", len(element_types))
+    return [ElementType.from_orm_model(element_type) for element_type in element_types]
 
 
 def get_all_thing_nodes_from_db() -> list[ThingNode]:
@@ -156,12 +168,13 @@ def update_structure(
     """Wrapper function to update or insert the given complete structure into the database."""
     logger.debug("Calling wrapper function 'update_structure'.")
     updated_structure = orm_update_structure(complete_structure)
-    logger.debug(
-        "Wrapper function 'update_structure' completed. "
-        "Successfully updated or inserted the complete structure into the database."
-    )
+    logger.debug("Successfully updated or inserted the complete structure into the database.")
     return updated_structure
 
 
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:
-    return orm_load_structure_from_json_file(file_path)
+    """Wrapper function to load the complete structure from a JSON file."""
+    logger.debug("Calling wrapper function 'load_structure_from_json_file'.")
+    complete_structure = orm_load_structure_from_json_file(file_path)
+    logger.debug("Successfully loaded the complete structure from the JSON file.")
+    return complete_structure

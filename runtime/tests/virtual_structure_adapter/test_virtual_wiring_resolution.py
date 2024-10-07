@@ -11,8 +11,8 @@ from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
 )
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
 from hetdesrun.structure.db.exceptions import DBNotFoundError
-from hetdesrun.structure.db.orm_service import orm_get_sources_by_substring_match
-from hetdesrun.structure.structure_service import get_all_sinks_from_db, get_all_sources_from_db
+from hetdesrun.structure.db.source_sink_service import orm_get_sources_by_substring_match
+from hetdesrun.structure.vst_structure_service import get_all_sinks_from_db, get_all_sources_from_db
 
 
 @pytest.mark.usefixtures("_fill_db")

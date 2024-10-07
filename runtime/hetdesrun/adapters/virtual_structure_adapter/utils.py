@@ -3,7 +3,7 @@ from uuid import UUID
 
 from hetdesrun.models.wiring import InputWiring, OutputWiring
 from hetdesrun.structure.models import Sink, Source
-from hetdesrun.structure.structure_service import (
+from hetdesrun.structure.vst_structure_service import (
     get_collection_of_sinks_from_db,
     get_collection_of_sources_from_db,
 )

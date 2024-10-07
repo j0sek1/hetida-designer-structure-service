@@ -13,15 +13,24 @@ from sqlalchemy.future.engine import Engine
 from sqlalchemy.orm import Session as SQLAlchemySession  # noqa: F401
 from sqlalchemy.orm import sessionmaker
 
+from hetdesrun.structure.models import (
+    Filter,
+)
 from hetdesrun.webservice.config import get_config
 
 logger = logging.getLogger(__name__)
 
 
-def _default(val: Any) -> str:
+def _default(val: Any) -> Any:
     if isinstance(val, UUID):
         return str(val)
-    raise TypeError()
+    if isinstance(val, Filter):
+        return {
+            "name": val.name,
+            "type": val.type.value,
+            "required": val.required,
+        }
+    raise TypeError(f"Object of type {type(val).__name__} is not JSON serializable")
 
 
 def dumps(d: Any) -> str:

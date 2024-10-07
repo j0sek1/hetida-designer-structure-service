@@ -8,20 +8,16 @@ from sqlalchemy.future.engine import Engine
 
 from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
+    ElementTypeOrm,
     SinkOrm,
     SourceOrm,
     ThingNodeOrm,
 )
 from hetdesrun.structure.db.exceptions import DBIntegrityError, DBNotFoundError
-from hetdesrun.structure.db.orm_service import (
-    fetch_all_element_types,
-    fetch_all_sinks,
-    fetch_all_sources,
-    fetch_all_thing_nodes,
-)
 from hetdesrun.structure.models import CompleteStructure, Sink, Source, ThingNode
-from hetdesrun.structure.structure_service import (
+from hetdesrun.structure.vst_structure_service import (
     delete_structure,
+    get_all_element_types_from_db,
     get_all_sinks_from_db,
     get_all_sources_from_db,
     get_all_thing_nodes_from_db,
@@ -100,8 +96,7 @@ def test_get_children():
 
 def get_node_by_name(session, name: str) -> ThingNodeOrm:
     """Helper function to fetch a ThingNode by name."""
-    all_nodes = fetch_all_thing_nodes(session)
-    node = next((node for node in all_nodes if node.name == name), None)
+    node = session.query(ThingNodeOrm).filter(ThingNodeOrm.name == name).one_or_none()
     assert node is not None, f"Expected node '{name}' not found"
     return node
 
@@ -161,13 +156,13 @@ def test_is_database_empty_when_not_empty(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_delete_structure(mocked_clean_test_db_session):
+def test_delete_structure_vsta(mocked_clean_test_db_session):
     # Ensure the structure exists before deletion
     with mocked_clean_test_db_session() as session:
-        initial_thing_nodes = fetch_all_thing_nodes(session)
-        initial_sources = fetch_all_sources(session)
-        initial_sinks = fetch_all_sinks(session)
-        initial_element_types = fetch_all_element_types(session)
+        initial_thing_nodes = session.query(ThingNodeOrm).all()
+        initial_sources = session.query(SourceOrm).all()
+        initial_sinks = session.query(SinkOrm).all()
+        initial_element_types = session.query(ElementTypeOrm).all()
 
         assert len(initial_thing_nodes) > 0, "Expected some thing nodes before deletion"
         assert len(initial_sources) > 0, "Expected some sources before deletion"
@@ -178,10 +173,10 @@ def test_delete_structure(mocked_clean_test_db_session):
         delete_structure()
 
         # Verify everything is deleted
-        remaining_thing_nodes = fetch_all_thing_nodes(session)
-        remaining_sources = fetch_all_sources(session)
-        remaining_sinks = fetch_all_sinks(session)
-        remaining_element_types = fetch_all_element_types(session)
+        remaining_thing_nodes = session.query(ThingNodeOrm).all()
+        remaining_sources = session.query(SourceOrm).all()
+        remaining_sinks = session.query(SinkOrm).all()
+        remaining_element_types = session.query(ElementTypeOrm).all()
 
         assert len(remaining_thing_nodes) == 0, "Expected no thing nodes after deletion"
         assert len(remaining_sources) == 0, "Expected no sources after deletion"
@@ -190,7 +185,7 @@ def test_delete_structure(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_empty_database")
-def test_update_structure(mocked_clean_test_db_session):
+def test_update_structure_vsta(mocked_clean_test_db_session):
     # This test checks both the insert and update functionality of the update_structure function.
     # It starts with an empty database, loads a complete structure from a JSON file, and then
     # updates the database with this structure. The test then verifies that the structure
@@ -208,10 +203,10 @@ def test_update_structure(mocked_clean_test_db_session):
     # Open a new session to interact with the database
     with mocked_clean_test_db_session() as session:
         # Fetch all ThingNodes, Sources, Sinks, and ElementTypes from the database
-        thing_nodes = fetch_all_thing_nodes(session)
-        sources = fetch_all_sources(session)
-        sinks = fetch_all_sinks(session)
-        element_types = fetch_all_element_types(session)
+        thing_nodes = session.query(ThingNodeOrm).all()
+        sources = session.query(SourceOrm).all()
+        sinks = session.query(SinkOrm).all()
+        element_types = session.query(ElementTypeOrm).all()
 
         # Verify that the number of ThingNodes in the database
         # matches the number in the JSON structure
@@ -230,13 +225,11 @@ def test_update_structure(mocked_clean_test_db_session):
 
         # Validate that specific ThingNodes, Sources, and Sinks exist in the database
         # Check if the 'Waterworks 1' ThingNode was correctly inserted
-        # The `next` function retrieves the first matching ThingNode or returns None if not found
         waterworks_node = next((tn for tn in thing_nodes if tn.name == "Waterworks 1"), None)
         assert waterworks_node is not None, "Expected 'Waterworks 1' node not found"
 
-        # Check if the 'Energy consumption of a single pump
-        # in Storage Tank' Source was correctly inserted
-        # The `next` function retrieves the first matching Source or returns None if not found
+        # Check if the 'Energy consumption of a single pump in Storage Tank' Source
+        # was correctly inserted
         source = next(
             (s for s in sources if s.name == "Energy consumption of a single pump in Storage Tank"),
             None,
@@ -245,9 +238,8 @@ def test_update_structure(mocked_clean_test_db_session):
             source is not None
         ), "Expected source 'Energy consumption of a single pump in Storage Tank' not found"
 
-        # Check if the 'Anomaly Score for the energy usage of the pump system
-        # in Storage Tank' Sink was correctly inserted
-        # The `next` function retrieves the first matching Sink or returns None if not found
+        # Check if the 'Anomaly Score for the energy usage of the pump system in
+        # Storage Tank' Sink was correctly inserted
         sink = next(
             (
                 s
@@ -263,7 +255,7 @@ def test_update_structure(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_single_thingnode_from_db(mocked_clean_test_db_session):
+def test_get_single_thingnode_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch an existing ThingNode ID
         existing_tn = session.query(ThingNodeOrm).first()
@@ -280,7 +272,7 @@ def test_get_single_thingnode_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_all_thing_nodes_from_db(mocked_clean_test_db_session):
+def test_get_all_thing_nodes_from_db_vsta(mocked_clean_test_db_session):
     # Open a session to interact with the database
     with mocked_clean_test_db_session() as session:
         # Ensure the database is not empty and contains ThingNodes
@@ -313,7 +305,7 @@ def test_get_all_thing_nodes_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_collection_of_thingnodes_from_db(mocked_clean_test_db_session):
+def test_get_collection_of_thingnodes_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch a list of existing ThingNode IDs
         existing_tns = session.query(ThingNodeOrm).limit(3).all()
@@ -335,7 +327,7 @@ def test_get_collection_of_thingnodes_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_single_source_from_db(mocked_clean_test_db_session):
+def test_get_single_source_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch an existing Source ID from the database
         existing_source = session.query(SourceOrm).first()
@@ -353,7 +345,7 @@ def test_get_single_source_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_all_sources_from_db(mocked_clean_test_db_session):
+def test_get_all_sources_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sources directly from the database using the ORM for comparison
         expected_sources = session.query(SourceOrm).all()
@@ -377,7 +369,7 @@ def test_get_all_sources_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_collection_of_sources_from_db(mocked_clean_test_db_session):
+def test_get_collection_of_sources_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some specific sources directly from the database
         expected_sources = session.query(SourceOrm).limit(2).all()
@@ -409,7 +401,7 @@ def test_get_collection_of_sources_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_single_sink_from_db(mocked_clean_test_db_session):
+def test_get_single_sink_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch a specific sink directly from the database
         expected_sink = session.query(SinkOrm).first()
@@ -436,7 +428,7 @@ def test_get_single_sink_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_all_sinks_from_db(mocked_clean_test_db_session):
+def test_get_all_sinks_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sinks directly from the database
         expected_sinks = session.query(SinkOrm).all()
@@ -464,7 +456,7 @@ def test_get_all_sinks_from_db(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_get_collection_of_sinks_from_db(mocked_clean_test_db_session):
+def test_get_collection_of_sinks_from_db_vsta(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some sinks directly from the database
         sinks_in_db = session.query(SinkOrm).limit(2).all()
@@ -492,7 +484,7 @@ def test_get_collection_of_sinks_from_db(mocked_clean_test_db_session):
         ), f"Expected name '{expected_sink.name}', but got '{fetched_sink.name}'."
 
 
-def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
+def test_validate_root_nodes_parent_ids_are_none_vsta(mocked_clean_test_db_session):
     invalid_structure = {
         "element_types": [
             {
@@ -557,8 +549,8 @@ def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
     CompleteStructure(**valid_structure)
 
 
-def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
-    # Initial Structure: A thing node with a specific external_id and stakeholder_key
+def test_update_with_conflicting_stakeholder_key_vsta(mocked_clean_test_db_session):
+    # Initial Structure: An element type with a specific external_id and stakeholder_key
     initial_structure = {
         "element_types": [
             {
@@ -566,19 +558,10 @@ def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
                 "stakeholder_key": "SK1",
                 "name": "Type 1",
             }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            }
-        ],
+        ]
     }
 
-    # Updating Structure: Same external_id but with a different stakeholder_key
+    # Conflicting Structure: Same external_id and name but with a different stakeholder_key
     conflicting_structure = {
         "element_types": [
             {
@@ -586,33 +569,23 @@ def test_update_with_conflicting_stakeholder_key(mocked_clean_test_db_session):
                 "stakeholder_key": "SK2",
                 "name": "Type 1",
             }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK2",
-                "name": "Node 1 - Conflicting Stakeholder Key",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            }
-        ],
+        ]
     }
 
-    update_structure(CompleteStructure(**initial_structure))  # Insert initial Structure
+    # Insert initial Structure
+    update_structure(CompleteStructure(**initial_structure))
 
     # Verify initial structure is in the database
-    thing_nodes = get_all_thing_nodes_from_db()
-    assert len(thing_nodes) == 1
-    assert thing_nodes[0].external_id == "Node1"
-    assert thing_nodes[0].stakeholder_key == "SK1"
+    element_types = get_all_element_types_from_db()
+    assert len(element_types) == 1
+    assert element_types[0].external_id == "Type1"
+    assert element_types[0].stakeholder_key == "SK1"
+    assert element_types[0].name == "Type 1"
 
     # Attempt to create the conflicting structure with validation error check
     with pytest.raises(
         DBIntegrityError,
-        match=(
-            r"Integrity Error while updating or inserting the structure:.*"
-            r"UNIQUE constraint failed.*element_type.name"
-        ),
+        match=r"Integrity Error while upserting ElementTypeOrm",
     ):
         update_structure(CompleteStructure(**conflicting_structure))
 

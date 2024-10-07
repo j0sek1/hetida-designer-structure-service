@@ -2,7 +2,7 @@ from hetdesrun.adapters.virtual_structure_adapter.config import get_vst_adapter_
 from hetdesrun.adapters.virtual_structure_adapter.utils import (
     logger,
 )
-from hetdesrun.structure.structure_service import (
+from hetdesrun.structure.vst_structure_service import (
     delete_structure,
     is_database_empty,
     load_structure_from_json_file,
