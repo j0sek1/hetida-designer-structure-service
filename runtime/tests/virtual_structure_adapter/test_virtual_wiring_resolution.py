@@ -138,7 +138,7 @@ def test_virtual_wiring_resolution_with_metadata_any_source():
         adapter_id="virtual-structure-adapter",
         ref_id=str(struct_src.thingNodeId),
         ref_id_type="THINGNODE",
-        ref_key="Additional Info",
+        ref_key="Location",
         type=struct_src.type,
         filters={},
     )

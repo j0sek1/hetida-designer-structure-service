@@ -21,11 +21,11 @@ sources_json_objects: list[dict[str, Any]] = [
         "type": ExternalType.METADATA_STR,
     },
     {  # metadatum that appears as its own point in the tree and is filterable
-        "id": "root.plantA.plant_additional_info",
+        "id": "root.plantA.plant_location",
         "thingNodeId": "root.plantA",
-        "name": "Additional Info",
+        "name": "Location",
         "path": "Plant A",
-        "metadataKey": "Additional Info",
+        "metadataKey": "Location",
         "type": ExternalType.METADATA_ANY,
     },
     {  # metadatum that appears as its own point in the tree and is filterable
