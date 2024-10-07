@@ -21,7 +21,7 @@ async def test_update_structure_with_formally_invalid_structure(
     async with async_test_client as ac:
         response = await ac.put("/api/structure/update/", json="'nf'")
     assert response.status_code == 422, f"Unexpected status code: {response.status_code}"
-    assert "value is not a valid dict" in response.json()["detail"]
+    assert "value is not a valid dict" in response.json()["detail"][0]["msg"]
 
 
 @pytest.mark.asyncio
@@ -33,7 +33,7 @@ async def test_update_structure_with_invalid_structure(
             {
                 "external_id": "Waterworks_Type",
                 "stakeholder_key": "GW",
-                "name": 42,  # Wrong datatype
+                "name": [42],  # Wrong datatype
                 "description": "Element type for waterworks",
             }
         ]
@@ -42,7 +42,7 @@ async def test_update_structure_with_invalid_structure(
     async with async_test_client as ac:
         response = await ac.put("/api/structure/update/", json=json_with_type_mismatch)
     assert response.status_code == 422, f"Unexpected status code: {response.status_code}"
-    assert "Integrity Error while upserting ThingNodeOrm" in response.json()["detail"]
+    assert "str type expected" in response.json()["detail"][0]["msg"]
 
 
 @pytest.mark.asyncio
