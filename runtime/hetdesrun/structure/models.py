@@ -1,5 +1,6 @@
 import uuid
 from enum import Enum
+from itertools import chain
 from typing import Any
 from uuid import UUID
 
@@ -354,6 +355,27 @@ class CompleteStructure(BaseModel):
                     f"parent_external_node_id '{parent_ext_id}' that does "
                     "not reference any existing ThingNode."
                 )
+        return values
+
+    @root_validator(pre=True)
+    def check_for_duplicate_key_and_id_pairs(cls, values: dict[str, Any]) -> dict[str, Any]:
+        # Retrieve all stakeholder key + external id tuples of all fields
+        all_key_id_tpls = [
+            (obj["stakeholder_key"], obj["external_id"])
+            for obj in chain.from_iterable(values.values())
+        ]
+
+        # Check for duplicates
+        visited = set()
+        for key_id_tpl in all_key_id_tpls:
+            if key_id_tpl in visited:
+                raise ValueError(
+                    f"The stakeholder key and external id pair: {key_id_tpl} "
+                    "exists at least twice in the given structure. "
+                    "Each key-id pair must be unique"
+                )
+            visited.add(key_id_tpl)
+
         return values
 
     @root_validator(pre=True)
