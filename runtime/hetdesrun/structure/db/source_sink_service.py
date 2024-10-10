@@ -1,4 +1,6 @@
 import logging
+from itertools import batched
+from math import ceil
 
 from sqlalchemy import tuple_
 from sqlalchemy.exc import IntegrityError
@@ -36,14 +38,21 @@ def fetch_sources(
         IntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
+    existing_sources_mapping: dict[tuple[str, str], SourceOrm] = {}
+    if not keys:
+        return existing_sources_mapping
     try:
-        items = (
-            session.query(SourceOrm)
-            .filter(tuple_(SourceOrm.stakeholder_key, SourceOrm.external_id).in_(keys))
-            .all()
-        )
-        logger.debug("Fetched %d SourceOrm items from the database.", len(items))
-        return {(item.stakeholder_key, item.external_id): item for item in items}
+        # Loop through keys in batches of size 500 or less
+        for key_batch in batched(keys, ceil(len(keys) / 500)):
+            batch_query = session.query(SourceOrm).filter(
+                tuple_(SourceOrm.stakeholder_key, SourceOrm.external_id).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for source in batch_results:
+                key = (source.stakeholder_key, source.external_id)
+                existing_sources_mapping[key] = source
+        logger.debug("Fetched %d SourceOrm items from the database.", len(existing_sources_mapping))
+        return existing_sources_mapping
     except IntegrityError as e:
         logger.error("Integrity Error while fetching SourceOrm: %s", e)
         raise DBIntegrityError("Integrity Error while fetching SourceOrm") from e
@@ -69,14 +78,21 @@ def fetch_sinks(
         IntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
+    existing_sinks_mapping: dict[tuple[str, str], SinkOrm] = {}
+    if not keys:
+        return existing_sinks_mapping
     try:
-        items = (
-            session.query(SinkOrm)
-            .filter(tuple_(SinkOrm.stakeholder_key, SinkOrm.external_id).in_(keys))
-            .all()
-        )
-        logger.debug("Fetched %d SinkOrm items from the database.", len(items))
-        return {(item.stakeholder_key, item.external_id): item for item in items}
+        # Loop through keys in batches of size 500 or less
+        for key_batch in batched(keys, ceil(len(keys) / 500)):
+            batch_query = session.query(SinkOrm).filter(
+                tuple_(SinkOrm.stakeholder_key, SinkOrm.external_id).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for sink in batch_results:
+                key = (sink.stakeholder_key, sink.external_id)
+                existing_sinks_mapping[key] = sink
+        logger.debug("Fetched %d SinkOrm items from the database.", len(existing_sinks_mapping))
+        return existing_sinks_mapping
     except IntegrityError as e:
         logger.error("Integrity Error while fetching SinkOrm: %s", e)
         raise DBIntegrityError("Integrity Error while fetching SinkOrm") from e

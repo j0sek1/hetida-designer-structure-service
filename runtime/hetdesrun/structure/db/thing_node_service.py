@@ -1,4 +1,6 @@
 import logging
+from itertools import batched
+from math import ceil
 
 from sqlalchemy import tuple_
 from sqlalchemy.exc import IntegrityError
@@ -29,14 +31,21 @@ def fetch_thing_nodes(
         DBIntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
+    existing_tns_mapping: dict[tuple[str, str], ThingNodeOrm] = {}
+    if not keys:
+        return existing_tns_mapping
     try:
-        thing_nodes = (
-            session.query(ThingNodeOrm)
-            .filter(tuple_(ThingNodeOrm.stakeholder_key, ThingNodeOrm.external_id).in_(keys))
-            .all()
-        )
-        logger.debug("Fetched %d ThingNodes from the database.", len(thing_nodes))
-        return {(tn.stakeholder_key, tn.external_id): tn for tn in thing_nodes}
+        # Loop through keys in batches of size 500 or less
+        for key_batch in batched(keys, ceil(len(keys) / 500)):
+            batch_query = session.query(ThingNodeOrm).filter(
+                tuple_(ThingNodeOrm.stakeholder_key, ThingNodeOrm.external_id).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for tn in batch_results:
+                key = (tn.stakeholder_key, tn.external_id)
+                existing_tns_mapping[key] = tn
+        logger.debug("Fetched %d ThingNodeOrm items from the database.", len(existing_tns_mapping))
+        return existing_tns_mapping
     except IntegrityError as e:
         logger.error("Integrity Error while fetching ThingNodes: %s", e)
         raise DBIntegrityError("Integrity Error while fetching ThingNodes") from e

@@ -1,4 +1,6 @@
 import logging
+from itertools import batched
+from math import ceil
 
 from sqlalchemy import tuple_
 from sqlalchemy.exc import IntegrityError
@@ -29,14 +31,23 @@ def fetch_element_types(
         DBIntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
+    existing_ets_mapping: dict[tuple[str, str], ElementTypeOrm] = {}
+    if not keys:
+        return existing_ets_mapping
     try:
-        element_types = (
-            session.query(ElementTypeOrm)
-            .filter(tuple_(ElementTypeOrm.stakeholder_key, ElementTypeOrm.external_id).in_(keys))
-            .all()
+        # Loop through keys in batches of size 500 or less
+        for key_batch in batched(keys, ceil(len(keys) / 500)):
+            batch_query = session.query(ElementTypeOrm).filter(
+                tuple_(ElementTypeOrm.stakeholder_key, ElementTypeOrm.external_id).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for et in batch_results:
+                key = (et.stakeholder_key, et.external_id)
+                existing_ets_mapping[key] = et
+        logger.debug(
+            "Fetched %d ElementTypeOrm items from the database.", len(existing_ets_mapping)
         )
-        logger.debug("Fetched %d ElementTypes from the database.", len(element_types))
-        return {(et.stakeholder_key, et.external_id): et for et in element_types}
+        return existing_ets_mapping
     except IntegrityError as e:
         logger.error("Integrity Error while fetching ElementTypes: %s", e)
         raise DBIntegrityError("Integrity Error while fetching ElementTypes") from e
