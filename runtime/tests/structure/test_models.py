@@ -37,7 +37,7 @@ def test_complete_structure_elment_type_not_empty_validator():
         ValidationError,
         match="The structure must include at least one ElementType object to be valid.",
     ):
-        _ = CompleteStructure(**{"element_types": []})
+        _ = CompleteStructure(element_types=[])
 
 
 @pytest.fixture()

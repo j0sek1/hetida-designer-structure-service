@@ -1,10 +1,31 @@
 import json
+from unittest import mock
 
 import pytest
+from sqlalchemy.future.engine import Engine
+
+from hetdesrun.persistence.db_engine_and_session import sessionmaker
+from hetdesrun.persistence.structure_service_dbmodels import Base as structure_service_Base
+
+
+@pytest.fixture()
+def clean_test_db_engine_for_vst_router(test_db_engine: Engine) -> Engine:
+    structure_service_Base.metadata.drop_all(test_db_engine)
+    structure_service_Base.metadata.create_all(test_db_engine)
+    return test_db_engine
+
+
+@pytest.fixture()
+def mocked_clean_test_db_session_for_vst_router(clean_test_db_engine_for_vst_router):
+    with mock.patch(
+        "hetdesrun.persistence.db_engine_and_session.Session",
+        sessionmaker(clean_test_db_engine_for_vst_router),
+    ) as _fixture:
+        yield _fixture
 
 
 @pytest.mark.asyncio
-async def test_update_structure(async_test_client, mocked_clean_test_db_session):
+async def test_update_structure(async_test_client, mocked_clean_test_db_session_for_vst_router):
     file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_test.json"
     with open(file_path) as file:
         structure_json = json.load(file)
@@ -16,7 +37,7 @@ async def test_update_structure(async_test_client, mocked_clean_test_db_session)
 
 @pytest.mark.asyncio
 async def test_update_structure_with_formally_invalid_structure(
-    async_test_client, mocked_clean_test_db_session
+    async_test_client, mocked_clean_test_db_session_for_vst_router
 ):
     async with async_test_client as ac:
         response = await ac.put("/api/structure/update/", json="'nf'")
@@ -26,7 +47,7 @@ async def test_update_structure_with_formally_invalid_structure(
 
 @pytest.mark.asyncio
 async def test_update_structure_with_invalid_structure(
-    async_test_client, mocked_clean_test_db_session
+    async_test_client, mocked_clean_test_db_session_for_vst_router
 ):
     json_with_type_mismatch = {
         "element_types": [
@@ -47,7 +68,7 @@ async def test_update_structure_with_invalid_structure(
 
 @pytest.mark.asyncio
 async def test_update_structure_with_logically_invalid_structure(
-    async_test_client, mocked_clean_test_db_session
+    async_test_client, mocked_clean_test_db_session_for_vst_router
 ):
     file_path = "tests/structure/data/db_test_invalid_structure_no_duplicate_id.json"
     with open(file_path) as file:

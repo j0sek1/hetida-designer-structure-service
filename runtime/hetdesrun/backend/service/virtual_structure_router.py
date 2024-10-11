@@ -12,6 +12,7 @@ from hetdesrun.structure.db.exceptions import (
 from hetdesrun.structure.models import CompleteStructure
 from hetdesrun.structure.vst_structure_service import (
     delete_structure,
+    is_database_empty,
     update_structure,
 )
 from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter
@@ -42,8 +43,8 @@ async def update_structure_endpoint(
     delete_existing_structure: bool = Query(True, alias="delete_existing_structure"),
 ) -> None:
     logger.info("Starting to update the vst structure via the API endpoint")
-    if delete_existing_structure:
-        logger.info("Starting to delete potentially existing structure")
+    if delete_existing_structure and not is_database_empty():
+        logger.info("Starting to delete existing structure")
         try:
             delete_structure()
         except DBIntegrityError as e:
