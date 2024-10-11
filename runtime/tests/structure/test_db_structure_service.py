@@ -761,8 +761,7 @@ def verify_associations(session):
         )
 
 
-@pytest.mark.usefixtures("_db_empty_database")
-def test_update_structure_from_file_db_service():
+def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
     # This test specifically checks the insert functionality of the update_structure function.
     # It starts with an empty database and verifies that the structure from the JSON file is
     # correctly inserted into the database.
@@ -904,7 +903,6 @@ def test_update_structure_no_elements_deleted_db_service():
             assert session.query(SinkOrm).filter_by(external_id=sink.external_id).count() == 1
 
 
-@pytest.mark.usefixtures("_db_empty_database")
 def test_is_database_empty_when_empty_db_service(mocked_clean_test_db_session):
     assert orm_is_database_empty(), "Database should be empty but is not."
 

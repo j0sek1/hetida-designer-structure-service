@@ -145,7 +145,6 @@ def test_complete_structure_object_creation():
     assert all(name in tn_names for name in expected_tn_names)
 
 
-@pytest.mark.usefixtures("_db_empty_database")
 def test_is_database_empty_when_empty(mocked_clean_test_db_session):
     assert is_database_empty(), "Database should be empty but is not."
 
@@ -184,7 +183,6 @@ def test_delete_structure_vsta(mocked_clean_test_db_session):
         assert len(remaining_element_types) == 0, "Expected no element types after deletion"
 
 
-@pytest.mark.usefixtures("_db_empty_database")
 def test_update_structure_vsta(mocked_clean_test_db_session):
     # This test checks both the insert and update functionality of the update_structure function.
     # It starts with an empty database, loads a complete structure from a JSON file, and then

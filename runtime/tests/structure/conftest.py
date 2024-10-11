@@ -46,13 +46,6 @@ def use_in_memory_db(pytestconfig: pytest.Config) -> Any:
     return pytestconfig.getoption("use_in_memory_db")
 
 
-# Fixture to load an empty database structure from a JSON file
-@pytest.fixture()
-def _db_empty_database(mocked_clean_test_db_session):
-    file_path = "tests/structure/data/db_empty_structure.json"
-    update_structure_from_file(file_path)
-
-
 # Fixture to load a basic test structure into the database from a JSON file
 @pytest.fixture()
 def _db_test_structure(mocked_clean_test_db_session):
