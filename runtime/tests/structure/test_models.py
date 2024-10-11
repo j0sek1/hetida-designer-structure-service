@@ -32,6 +32,14 @@ def test_complete_structure_initialization_from_json():
         assert name in thing_node_names
 
 
+def test_complete_structure_elment_type_not_empty_validator():
+    with pytest.raises(
+        ValidationError,
+        match="The structure must include at least one ElementType object to be valid.",
+    ):
+        _ = CompleteStructure(**{"element_types": []})
+
+
 @pytest.fixture()
 def filter_json():
     file_path = "tests/structure/data/test_filter_creation.json"

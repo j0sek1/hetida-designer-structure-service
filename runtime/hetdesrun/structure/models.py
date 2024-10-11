@@ -338,6 +338,14 @@ class CompleteStructure(BaseModel):
     sources: list[Source] = Field(default_factory=list, description="All sources of the structure")
     sinks: list[Sink] = Field(default_factory=list, description="All sinks of the structure")
 
+    @validator("element_types")
+    def check_element_types_not_empty(cls, v):
+        if not v:
+            raise ValueError(
+                "The structure must include at least one ElementType object to be valid."
+            )
+        return v
+
     @root_validator(pre=True)
     def validate_root_nodes_parent_ids_are_none(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Check if each parent_external_node_id exists in at least one other node
