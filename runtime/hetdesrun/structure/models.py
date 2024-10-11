@@ -339,7 +339,7 @@ class CompleteStructure(BaseModel):
     sinks: list[Sink] = Field(default_factory=list, description="All sinks of the structure")
 
     @validator("element_types")
-    def check_element_types_not_empty(cls, v):
+    def check_element_types_not_empty(cls, v: list[ElementType]) -> list[ElementType]:
         if not v:
             raise ValueError(
                 "The structure must include at least one ElementType object to be valid."

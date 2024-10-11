@@ -212,7 +212,7 @@ def upsert_sources(
                         ref_id=source.ref_id,
                         meta_data=source.meta_data,
                         preset_filters=source.preset_filters,
-                        passthrough_filters=source.passthrough_filters,
+                        passthrough_filters=source.passthrough_filters,  # type: ignore
                     )
                     # Set relationships
                     for tn_external_id in source.thing_node_external_ids or []:
@@ -299,7 +299,7 @@ def upsert_sinks(
                         ref_id=sink.ref_id,
                         meta_data=sink.meta_data,
                         preset_filters=sink.preset_filters,
-                        passthrough_filters=sink.passthrough_filters,
+                        passthrough_filters=sink.passthrough_filters,  # type: ignore
                     )
                     # Set relationships
                     for tn_external_id in sink.thing_node_external_ids or []:

@@ -454,7 +454,7 @@ def orm_delete_structure(session: SQLAlchemySession) -> None:
 
     try:
         for table in deletion_order:
-            table_name = table.name if hasattr(table, "name") else table.__tablename__
+            table_name = table.name if hasattr(table, "name") else table.__tablename__  # type: ignore
             logger.debug("Deleting records from table: %s", table_name)
             session.execute(delete(table))
         session.commit()

@@ -147,7 +147,7 @@ class SourceOrm(Base):
             ThingNodeOrm.external_id == thingnode_source_association.c.thing_node_external_id,
         ),
         back_populates="sources",  # Specifies reciprocal relationship in ThingNodeOrm
-    )
+    )  # type: ignore
 
     __table_args__ = (
         UniqueConstraint(
@@ -210,7 +210,7 @@ class SinkOrm(Base):
             ThingNodeOrm.external_id == thingnode_sink_association.c.thing_node_external_id,
         ),
         back_populates="sinks",  # Specifies reciprocal relationship in ThingNodeOrm
-    )
+    )  # type: ignore
 
     __table_args__ = (
         UniqueConstraint(
