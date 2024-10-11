@@ -55,5 +55,5 @@ async def test_update_structure_with_logically_invalid_structure(
 
     async with async_test_client as ac:
         response = await ac.put("/api/structure/update/", json=structure_json)
-    assert response.status_code == 500, f"Unexpected status code: {response.status_code}"
-    assert "Integrity Error while upserting ThingNodeOrm" in response.json()["detail"]
+    assert response.status_code == 422, f"Unexpected status code: {response.status_code}"
+    assert "The stakeholder key and external id pair" in response.json()["detail"][0]["msg"]
