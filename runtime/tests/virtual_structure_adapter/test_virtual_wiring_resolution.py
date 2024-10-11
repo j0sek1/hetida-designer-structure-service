@@ -11,8 +11,11 @@ from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
 )
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
 from hetdesrun.structure.db.exceptions import DBNotFoundError
-from hetdesrun.structure.db.source_sink_service import orm_get_sources_by_substring_match
-from hetdesrun.structure.vst_structure_service import get_all_sinks_from_db, get_all_sources_from_db
+from hetdesrun.structure.vst_structure_service import (
+    get_all_sinks_from_db,
+    get_all_sources_from_db,
+    get_sources_by_substring_match,
+)
 
 
 @pytest.mark.usefixtures("_fill_db")
@@ -130,7 +133,7 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
 @pytest.mark.usefixtures("_fill_db")
 def test_virtual_wiring_resolution_with_metadata_any_source():
     # Create example InputWiring
-    sources = orm_get_sources_by_substring_match("Test source for type metadata(any)")
+    sources = get_sources_by_substring_match("Test source for type metadata(any)")
     struct_src = VirtualStructureAdapterSource.from_structure_service_source(sources[0])
 
     input_wiring = InputWiring(

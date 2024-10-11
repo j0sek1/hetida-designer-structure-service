@@ -1162,7 +1162,6 @@ def test_upsert_element_types_success(mocked_clean_test_db_session):
         assert result.name == "Test ElementType"
 
 
-@pytest.mark.skip("Session-usage must be changed")
 def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Add SinkOrms to the session
@@ -1214,7 +1213,6 @@ def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
         assert result[0].name == "Test Sink"
 
 
-@pytest.mark.skip("Session-usage must be changed")
 def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Add SinkOrms to the session
@@ -1246,7 +1244,6 @@ def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session
         assert len(result) == 0
 
 
-@pytest.mark.skip("Session-usage must be changed")
 def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Add SourceOrms to the session
@@ -1298,7 +1295,6 @@ def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session)
         assert result[0].name == "Test Source"
 
 
-@pytest.mark.skip("Session-usage must be changed")
 def test_filter_sources_by_substring_match_no_matches(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Add SourceOrms to the session

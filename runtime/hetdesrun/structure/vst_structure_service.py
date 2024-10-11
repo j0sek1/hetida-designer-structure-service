@@ -104,7 +104,8 @@ def get_collection_of_sources_from_db(src_ids: list[UUID]) -> dict[UUID, Source]
 
 
 def get_sources_by_substring_match(filter_string: str) -> list[Source]:
-    return orm_get_sources_by_substring_match(filter_string)
+    with get_session()() as session:
+        return orm_get_sources_by_substring_match(session, filter_string)
 
 
 def get_single_sink_from_db(sink_id: UUID) -> Sink:
@@ -137,7 +138,8 @@ def get_collection_of_sinks_from_db(sink_ids: list[UUID]) -> dict[UUID, Sink]:
 
 
 def get_sinks_by_substring_match(filter_string: str) -> list[Sink]:
-    return orm_get_sinks_by_substring_match(filter_string)
+    with get_session()() as session:
+        return orm_get_sinks_by_substring_match(session, filter_string)
 
 
 def is_database_empty() -> bool:
