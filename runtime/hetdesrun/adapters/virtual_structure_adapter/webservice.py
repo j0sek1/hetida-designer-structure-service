@@ -21,7 +21,6 @@ from hetdesrun.adapters.virtual_structure_adapter.structure import (
     get_single_thingnode,
     get_structure,
 )
-from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.webservice.auth_dependency import get_auth_deps
 from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter
 
@@ -71,13 +70,12 @@ async def get_thingnode_metadata_endpoint(node_id: UUID) -> list:  # noqa: ARG00
     dependencies=get_auth_deps(),
 )
 async def get_single_thingnode_endpoint(node_id: UUID) -> VirtualStructureAdapterThingNode:
-    try:
-        node = get_single_thingnode(node_id)
-    except DBNotFoundError as exc:
-        logger.info("No ThingNode found for provided UUID (%s)", node_id)
+    node = get_single_thingnode(node_id)
+    if node is None:
+        logger.info("No ThingNode found for provided UUID: %s", node_id)
         raise HTTPException(
-            status_code=404, detail=f"No ThingNode found for provided UUID ({node_id})"
-        ) from exc
+            status_code=404, detail=f"No ThingNode found for provided UUID: {node_id}"
+        )
 
     return node
 
@@ -116,13 +114,11 @@ async def get_source_metadata_endpoint(source_id: UUID) -> list:  # noqa: ARG001
     dependencies=get_auth_deps(),
 )
 async def get_single_source_endpoint(source_id: UUID) -> VirtualStructureAdapterSource:
-    try:
-        source = get_single_source(source_id)
-    except DBNotFoundError as exc:
-        logger.info("No Source found for provided UUID (%s)", source_id)
+    source = get_single_source(source_id)
+    if source is None:
         raise HTTPException(
-            status_code=404, detail=f"No Source found for provided UUID ({source_id})"
-        ) from exc
+            status_code=404, detail=f"No Source found for provided UUID: {source_id}"
+        )
 
     return source
 
@@ -161,12 +157,8 @@ async def get_sink_metadata_endpoint(sink_id: UUID) -> list:  # noqa: ARG001
     dependencies=get_auth_deps(),
 )
 async def get_single_sink_endpoint(sink_id: UUID) -> VirtualStructureAdapterSink:
-    try:
-        sink = get_single_sink(sink_id)
-    except DBNotFoundError as exc:
-        logger.info("No Sink found for provided UUID (%s)", sink_id)
-        raise HTTPException(
-            status_code=404, detail=f"No Sink found for provided UUID ({sink_id})"
-        ) from exc
+    sink = get_single_sink(sink_id)
+    if sink is None:
+        raise HTTPException(status_code=404, detail=f"No Sink found for provided UUID: {sink_id}")
 
     return sink

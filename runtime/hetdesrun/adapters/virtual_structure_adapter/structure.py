@@ -7,6 +7,7 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterSource,
     VirtualStructureAdapterThingNode,
 )
+from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.vst_structure_service import (
     get_children,
     get_single_sink_from_db,
@@ -56,15 +57,23 @@ def get_structure(parent_id: UUID | None = None) -> VirtualStructureAdapterRespo
 
 def get_single_thingnode(
     tn_id: UUID,
-) -> VirtualStructureAdapterThingNode:
-    node = get_single_thingnode_from_db(tn_id)
+) -> VirtualStructureAdapterThingNode | None:
+    try:
+        node = get_single_thingnode_from_db(tn_id)
+    except DBNotFoundError as e:
+        logger.error("Could not retrieve thingnode for ID: %s, due to: %s", tn_id, e)
+        return None
     return VirtualStructureAdapterThingNode.from_structure_service_thingnode(node)
 
 
 def get_single_source(
     src_id: UUID,
-) -> VirtualStructureAdapterSource:
-    source = get_single_source_from_db(src_id)
+) -> VirtualStructureAdapterSource | None:
+    try:
+        source = get_single_source_from_db(src_id)
+    except DBNotFoundError as e:
+        logger.error("Could not retrieve source for ID: %s, due to: %s", src_id, e)
+        return None
     return VirtualStructureAdapterSource.from_structure_service_source(source)
 
 
@@ -77,8 +86,12 @@ def get_filtered_sources(filter_string: str | None) -> list[VirtualStructureAdap
 
 def get_single_sink(
     sink_id: UUID,
-) -> VirtualStructureAdapterSink:
-    sink = get_single_sink_from_db(sink_id)
+) -> VirtualStructureAdapterSink | None:
+    try:
+        sink = get_single_sink_from_db(sink_id)
+    except DBNotFoundError as e:
+        logger.error("Could not retrieve sink for ID: %s, due to: %s", sink_id, e)
+        return None
     return VirtualStructureAdapterSink.from_structure_service_sink(sink)
 
 

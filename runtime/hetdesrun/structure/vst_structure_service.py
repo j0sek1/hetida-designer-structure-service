@@ -82,7 +82,7 @@ def get_single_source_from_db(src_id: UUID) -> Source:
             logger.debug("Source with ID %s found.", src_id)
             return Source.from_orm_model(source)
 
-    logger.error("No Source found for ID %s. Raising DBNotFoundError.", src_id)
+    logger.error("No Source found for ID %s.", src_id)
     raise DBNotFoundError(f"No Source found for ID {src_id}")
 
 

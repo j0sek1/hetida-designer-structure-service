@@ -103,11 +103,11 @@ async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_
 async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_vst_adapter):
     # Currently no metadata is returned, every metadata endpoint should return an empty list
     # regardless of the UUID provided
-    example_uuid = uuid.uuid4()  # Non-existent UUID
+    random_uuid = uuid.uuid4()  # Non-existent UUID
 
     # Test thingnode metadata
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/virtual_structure/thingNodes/{example_uuid}/metadata/"
+        f"/adapters/virtual_structure/thingNodes/{random_uuid}/metadata/"
     )
     assert response.status_code == 200
     resp_obj = response.json()
@@ -115,7 +115,7 @@ async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_v
 
     # Test source metadata
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/virtual_structure/sources/{example_uuid}/metadata/"
+        f"/adapters/virtual_structure/sources/{random_uuid}/metadata/"
     )
     assert response.status_code == 200
     resp_obj = response.json()
@@ -123,7 +123,7 @@ async def test_vst_adapter_get_metadata_from_webservice(async_test_client_with_v
 
     # Test sink metadata
     response = await async_test_client_with_vst_adapter.get(
-        f"/adapters/virtual_structure/sinks/{example_uuid}/metadata/"
+        f"/adapters/virtual_structure/sinks/{random_uuid}/metadata/"
     )
     assert response.status_code == 200
     resp_obj = response.json()
@@ -154,6 +154,22 @@ async def test_vst_adapter_sources_endpoint(async_test_client_with_vst_adapter):
 
 
 @pytest.mark.asyncio
+async def test_vst_adapter_sources_endpoint_with_non_existent_id(
+    async_test_client_with_vst_adapter,
+):
+    random_uuid = uuid.uuid4()  # Non-existent UUID
+    # Without filter string provided
+    response = await async_test_client_with_vst_adapter.get(
+        f"adapters/virtual_structure/sources/{random_uuid}"
+    )
+
+    assert response.status_code == 404
+
+    resp_obj = response.json()
+    assert resp_obj["detail"] == f"No Source found for provided UUID: {random_uuid}"
+
+
+@pytest.mark.asyncio
 async def test_vst_adapter_sinks_endpoint(async_test_client_with_vst_adapter):
     # Without filter string provided
     response = await async_test_client_with_vst_adapter.get("adapters/virtual_structure/sinks")
@@ -177,3 +193,35 @@ async def test_vst_adapter_sinks_endpoint(async_test_client_with_vst_adapter):
         resp_obj["sinks"][0]["name"]
         == "Anomaly score for the energy usage of the pump system in Storage Tank"
     )
+
+
+@pytest.mark.asyncio
+async def test_vst_adapter_sinks_endpoint_with_non_existent_id(
+    async_test_client_with_vst_adapter,
+):
+    random_uuid = uuid.uuid4()  # Non-existent UUID
+    # Without filter string provided
+    response = await async_test_client_with_vst_adapter.get(
+        f"adapters/virtual_structure/sinks/{random_uuid}"
+    )
+
+    assert response.status_code == 404
+
+    resp_obj = response.json()
+    assert resp_obj["detail"] == f"No Sink found for provided UUID: {random_uuid}"
+
+
+@pytest.mark.asyncio
+async def test_vst_adapter_thingnodes_endpoint_with_non_existent_id(
+    async_test_client_with_vst_adapter,
+):
+    random_uuid = uuid.uuid4()  # Non-existent UUID
+    # Without filter string provided
+    response = await async_test_client_with_vst_adapter.get(
+        f"adapters/virtual_structure/thingNodes/{random_uuid}"
+    )
+
+    assert response.status_code == 404
+
+    resp_obj = response.json()
+    assert resp_obj["detail"] == f"No ThingNode found for provided UUID: {random_uuid}"
