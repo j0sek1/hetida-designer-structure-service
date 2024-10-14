@@ -8,6 +8,9 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterThingNode,
 )
 from hetdesrun.adapters.virtual_structure_adapter.structure import (
+    get_single_sink,
+    get_single_source,
+    get_single_thingnode,
     get_structure,
 )
 
@@ -63,3 +66,15 @@ def test_get_structure_with_existing_uuid():
         structure.sinks[0].name
         == "Anomaly score for the energy usage of the pump system in Storage Tank"
     )
+
+
+@pytest.mark.usefixtures("_fill_db")
+def test_get_single_element_functions_with_non_existent_id():
+    random_uuid = uuid.uuid4()  # Non-existent UUID
+
+    source = get_single_source(random_uuid)
+    sink = get_single_sink(random_uuid)
+    thingnode = get_single_thingnode(random_uuid)
+
+    assert source == sink == thingnode
+    assert source is None
