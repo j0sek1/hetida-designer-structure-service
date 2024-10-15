@@ -5,13 +5,10 @@ from sqlalchemy import (
     Boolean,
     Column,
     ForeignKey,
-    ForeignKeyConstraint,
     Index,
-    PrimaryKeyConstraint,
     String,
     Table,
     UniqueConstraint,
-    and_,
 )
 from sqlalchemy.orm import Mapped, declarative_base, relationship
 from sqlalchemy_utils import UUIDType
@@ -22,54 +19,16 @@ Base = declarative_base()
 thingnode_source_association = Table(
     "thingnode_source_association",
     Base.metadata,
-    # Columns for ThingNode and Source relationship
-    Column("thing_node_stakeholder_key", String(36), nullable=False),
-    Column("thing_node_external_id", String(255), nullable=False),
-    Column("source_stakeholder_key", String(36), nullable=False),
-    Column("source_external_id", String(255), nullable=False),
-    # Foreign key constraints to enforce referential integrity
-    ForeignKeyConstraint(
-        ["thing_node_stakeholder_key", "thing_node_external_id"],
-        ["thing_node.stakeholder_key", "thing_node.external_id"],
-    ),
-    ForeignKeyConstraint(
-        ["source_stakeholder_key", "source_external_id"],
-        ["source.stakeholder_key", "source.external_id"],
-    ),
-    # Composite primary key for uniqueness in association
-    PrimaryKeyConstraint(
-        "thing_node_stakeholder_key",
-        "thing_node_external_id",
-        "source_stakeholder_key",
-        "source_external_id",
-    ),
+    Column("thingnode_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
+    Column("source_id", UUIDType(binary=False), ForeignKey("source.id"), primary_key=True),
 )
 
 # Association table between ThingNode and Sink
 thingnode_sink_association = Table(
     "thingnode_sink_association",
     Base.metadata,
-    # Columns for ThingNode and Sink relationship
-    Column("thing_node_stakeholder_key", String(36), nullable=False),
-    Column("thing_node_external_id", String(255), nullable=False),
-    Column("sink_stakeholder_key", String(36), nullable=False),
-    Column("sink_external_id", String(255), nullable=False),
-    # Foreign key constraints to enforce referential integrity
-    ForeignKeyConstraint(
-        ["thing_node_stakeholder_key", "thing_node_external_id"],
-        ["thing_node.stakeholder_key", "thing_node.external_id"],
-    ),
-    ForeignKeyConstraint(
-        ["sink_stakeholder_key", "sink_external_id"],
-        ["sink.stakeholder_key", "sink.external_id"],
-    ),
-    # Composite primary key for uniqueness in association
-    PrimaryKeyConstraint(
-        "thing_node_stakeholder_key",
-        "thing_node_external_id",
-        "sink_stakeholder_key",
-        "sink_external_id",
-    ),
+    Column("thingnode_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
+    Column("sink_id", UUIDType(binary=False), ForeignKey("sink.id"), primary_key=True),
 )
 
 
@@ -132,20 +91,9 @@ class SourceOrm(Base):
     thing_node_external_ids: list[str] = Column(JSON, nullable=True)
 
     # Defines Many-to-Many relationship with ThingNodeOrm
-    # Using lambda for lazy evaluation, allowing resolution of join conditions at runtime
-    # to handle circular dependencies between ThingNodeOrm and SinkOrm.
     thing_nodes: list["ThingNodeOrm"] = relationship(
         "ThingNodeOrm",
         secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        primaryjoin=lambda: and_(
-            SourceOrm.stakeholder_key == thingnode_source_association.c.source_stakeholder_key,
-            SourceOrm.external_id == thingnode_source_association.c.source_external_id,
-        ),
-        secondaryjoin=lambda: and_(
-            ThingNodeOrm.stakeholder_key
-            == thingnode_source_association.c.thing_node_stakeholder_key,
-            ThingNodeOrm.external_id == thingnode_source_association.c.thing_node_external_id,
-        ),
         back_populates="sources",  # Specifies reciprocal relationship in ThingNodeOrm
     )  # type: ignore
 
@@ -196,19 +144,9 @@ class SinkOrm(Base):
     thing_node_external_ids: list[str] = Column(JSON, nullable=True)
 
     # Defines Many-to-Many relationship with ThingNodeOrm
-    # Using lambda for lazy evaluation, allowing resolution of join conditions at runtime
-    # to handle circular dependencies between ThingNodeOrm and SinkOrm.
     thing_nodes: list["ThingNodeOrm"] = relationship(
         "ThingNodeOrm",
         secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        primaryjoin=lambda: and_(
-            SinkOrm.stakeholder_key == thingnode_sink_association.c.sink_stakeholder_key,
-            SinkOrm.external_id == thingnode_sink_association.c.sink_external_id,
-        ),
-        secondaryjoin=lambda: and_(
-            ThingNodeOrm.stakeholder_key == thingnode_sink_association.c.thing_node_stakeholder_key,
-            ThingNodeOrm.external_id == thingnode_sink_association.c.thing_node_external_id,
-        ),
         back_populates="sinks",  # Specifies reciprocal relationship in ThingNodeOrm
     )  # type: ignore
 
@@ -263,37 +201,16 @@ class ThingNodeOrm(Base):
     )
 
     # Defines Many-to-Many relationship with SourceOrm
-    # Using lambda for lazy evaluation, allowing resolution of join conditions at runtime
-    # to handle circular dependencies between ThingNodeOrm and SinkOrm.
     sources: list["SourceOrm"] = relationship(
         "SourceOrm",
         secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        primaryjoin=lambda: and_(
-            ThingNodeOrm.stakeholder_key
-            == thingnode_source_association.c.thing_node_stakeholder_key,
-            ThingNodeOrm.external_id == thingnode_source_association.c.thing_node_external_id,
-        ),
-        secondaryjoin=lambda: and_(
-            SourceOrm.stakeholder_key == thingnode_source_association.c.source_stakeholder_key,
-            SourceOrm.external_id == thingnode_source_association.c.source_external_id,
-        ),
         back_populates="thing_nodes",  # Specifies reciprocal relationship in SourceOrm
     )
 
     # Defines Many-to-Many relationship with SinkOrm
-    # Using lambda for lazy evaluation, allowing resolution of join conditions at runtime
-    # to handle circular dependencies between ThingNodeOrm and SinkOrm.
     sinks: list["SinkOrm"] = relationship(
         "SinkOrm",
         secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        primaryjoin=lambda: and_(
-            ThingNodeOrm.stakeholder_key == thingnode_sink_association.c.thing_node_stakeholder_key,
-            ThingNodeOrm.external_id == thingnode_sink_association.c.thing_node_external_id,
-        ),
-        secondaryjoin=lambda: and_(
-            SinkOrm.stakeholder_key == thingnode_sink_association.c.sink_stakeholder_key,
-            SinkOrm.external_id == thingnode_sink_association.c.sink_external_id,
-        ),
         back_populates="thing_nodes",  # Specifies reciprocal relationship in SinkOrm
     )
 

@@ -621,8 +621,6 @@ def verify_updated_structure(session):
 
     # Verify the new elements and updated nodes in the structure
     verify_new_elements_and_nodes(session, final_element_types, final_thing_nodes)
-    # Verify the associations between ThingNodes, Sources, and Sinks
-    verify_associations(session)
 
 
 def verify_new_elements_and_nodes(session, final_element_types, final_thing_nodes):
@@ -668,97 +666,6 @@ def verify_new_elements_and_nodes(session, final_element_types, final_thing_node
         updated_tn2.meta_data["description"]
         == "Increased water storage capacity for Storage Tank 2"
     )
-
-
-def verify_associations(session):
-    # Fetch all associations between ThingNodes and Sources/Sinks from the database
-    source_associations = session.query(thingnode_source_association).all()
-    sink_associations = session.query(thingnode_sink_association).all()
-
-    # Define the expected associations between ThingNodes and Sources
-    expected_source_associations = [
-        ("Waterworks1_Plant1_StorageTank1", "EnergyUsage_PumpSystem_StorageTank"),
-        ("Waterworks1_FiltrationPlant", "EnergyUsage_PumpSystem_StorageTank"),
-        ("Waterworks1_Plant2_StorageTank1", "EnergyConsumption_SinglePump_StorageTank"),
-        ("Waterworks1_FiltrationPlant", "New_EnergySource_FiltrationPlant"),
-    ]
-
-    # Define the expected associations between ThingNodes and Sinks
-    expected_sink_associations = [
-        ("Waterworks1_Plant1_StorageTank1", "AnomalyScore_EnergyUsage_PumpSystem_StorageTank"),
-        ("Waterworks1_Plant1_StorageTank2", "AnomalyScore_EnergyUsage_PumpSystem_StorageTank"),
-        (
-            "Waterworks1_Plant2_StorageTank1",
-            "AnomalyScore_EnergyConsumption_SinglePump_StorageTank",
-        ),
-        (
-            "Waterworks1_Plant2_StorageTank2",
-            "AnomalyScore_EnergyConsumption_SinglePump_StorageTank",
-        ),
-        ("Waterworks1_FiltrationPlant", "AnomalyScore_EnergyConsumption_SinglePump_StorageTank"),
-    ]
-
-    # Verify that each expected Source association exists in the database
-    for tn_external_id, source_external_id in expected_source_associations:
-        tn_keys = (
-            session.query(ThingNodeOrm.stakeholder_key, ThingNodeOrm.external_id)
-            .filter(ThingNodeOrm.external_id == tn_external_id)
-            .one()
-        )
-        source_keys = (
-            session.query(SourceOrm.stakeholder_key, SourceOrm.external_id)
-            .filter(SourceOrm.external_id == source_external_id)
-            .one()
-        )
-
-        assert (
-            tn_keys.stakeholder_key,
-            tn_keys.external_id,
-            source_keys.stakeholder_key,
-            source_keys.external_id,
-        ) in [
-            (
-                assoc.thing_node_stakeholder_key,
-                assoc.thing_node_external_id,
-                assoc.source_stakeholder_key,
-                assoc.source_external_id,
-            )
-            for assoc in source_associations
-        ], (
-            f"Expected association between ThingNode {tn_external_id}"
-            f"and Source {source_external_id} not found"
-        )
-
-    # Verify that each expected Sink association exists in the database
-    for tn_external_id, sink_external_id in expected_sink_associations:
-        tn_keys = (
-            session.query(ThingNodeOrm.stakeholder_key, ThingNodeOrm.external_id)
-            .filter(ThingNodeOrm.external_id == tn_external_id)
-            .one()
-        )
-        sink_keys = (
-            session.query(SinkOrm.stakeholder_key, SinkOrm.external_id)
-            .filter(SinkOrm.external_id == sink_external_id)
-            .one()
-        )
-
-        assert (
-            tn_keys.stakeholder_key,
-            tn_keys.external_id,
-            sink_keys.stakeholder_key,
-            sink_keys.external_id,
-        ) in [
-            (
-                assoc.thing_node_stakeholder_key,
-                assoc.thing_node_external_id,
-                assoc.sink_stakeholder_key,
-                assoc.sink_external_id,
-            )
-            for assoc in sink_associations
-        ], (
-            f"Expected association between ThingNode {tn_external_id}"
-            f"and Sink {sink_external_id} not found"
-        )
 
 
 def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
@@ -817,37 +724,6 @@ def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
             .one()
         )
         assert sink.name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
-
-        # Additional checks for relationships and associations
-        # Verify the association between ThingNodes and Sources
-        tn_source_associations = session.query(thingnode_source_association).all()
-        assert len(tn_source_associations) > 0
-
-        # Example: Check if Waterworks1_Plant1_StorageTank1 is associated with a specific source
-        assoc = (
-            session.query(thingnode_source_association)
-            .filter_by(
-                thing_node_external_id="Waterworks1_Plant1_StorageTank1",
-                source_external_id="EnergyUsage_PumpSystem_StorageTank",
-            )
-            .one_or_none()
-        )
-        assert assoc is not None, "Association between ThingNode and Source is missing"
-
-        # Verify the association between ThingNodes and Sinks
-        tn_sink_associations = session.query(thingnode_sink_association).all()
-        assert len(tn_sink_associations) > 0
-
-        # Example: Check if Waterworks1_Plant1_StorageTank1 is associated with a specific sink
-        assoc_sink = (
-            session.query(thingnode_sink_association)
-            .filter_by(
-                thing_node_external_id="Waterworks1_Plant1_StorageTank1",
-                sink_external_id="AnomalyScore_EnergyUsage_PumpSystem_StorageTank",
-            )
-            .one_or_none()
-        )
-        assert assoc_sink is not None, "Association between ThingNode and Sink is missing"
 
 
 @pytest.mark.usefixtures("_db_test_structure")

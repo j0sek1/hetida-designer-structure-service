@@ -373,24 +373,17 @@ def orm_get_children(
                 logger.warning("Parent node with id %s not found.", parent_id)
                 return ([], [], [])
 
-            parent_stakeholder_key = parent_node.stakeholder_key
-            parent_external_id = parent_node.external_id
-
             # Fetch Sources associated with this ThingNode
             sources_orm = (
                 session.query(SourceOrm)
                 .join(
                     thingnode_source_association,
                     and_(
-                        SourceOrm.stakeholder_key
-                        == thingnode_source_association.c.source_stakeholder_key,
-                        SourceOrm.external_id == thingnode_source_association.c.source_external_id,
+                        SourceOrm.id == thingnode_source_association.c.source_id,
                     ),
                 )
                 .filter(
-                    thingnode_source_association.c.thing_node_stakeholder_key
-                    == parent_stakeholder_key,
-                    thingnode_source_association.c.thing_node_external_id == parent_external_id,
+                    thingnode_source_association.c.thingnode_id == parent_id,
                 )
                 .all()
             )
@@ -402,15 +395,11 @@ def orm_get_children(
                 .join(
                     thingnode_sink_association,
                     and_(
-                        SinkOrm.stakeholder_key
-                        == thingnode_sink_association.c.sink_stakeholder_key,
-                        SinkOrm.external_id == thingnode_sink_association.c.sink_external_id,
+                        SinkOrm.id == thingnode_sink_association.c.sink_id,
                     ),
                 )
                 .filter(
-                    thingnode_sink_association.c.thing_node_stakeholder_key
-                    == parent_stakeholder_key,
-                    thingnode_sink_association.c.thing_node_external_id == parent_external_id,
+                    thingnode_sink_association.c.thingnode_id == parent_id,
                 )
                 .all()
             )

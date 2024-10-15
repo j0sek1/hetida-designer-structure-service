@@ -164,55 +164,24 @@ def upgrade():
         ),
     )
 
+    # Create thingnode_source_association table
     op.create_table(
         "thingnode_source_association",
-        sa.Column("thing_node_stakeholder_key", sa.String(length=36), nullable=False),
-        sa.Column("thing_node_external_id", sa.String(length=255), nullable=False),
-        sa.Column("source_stakeholder_key", sa.String(length=36), nullable=False),
-        sa.Column("source_external_id", sa.String(length=255), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["thing_node_stakeholder_key", "thing_node_external_id"],
-            ["thing_node.stakeholder_key", "thing_node.external_id"],
-            name="fk_tn_sa_tn_stakeholder_external",
+        sa.Column(
+            "thingnode_id", UUIDType(binary=False), sa.ForeignKey("thing_node.id"), primary_key=True
         ),
-        sa.ForeignKeyConstraint(
-            ["source_stakeholder_key", "source_external_id"],
-            ["source.stakeholder_key", "source.external_id"],
-            name="fk_tn_sa_source_stakeholder_external",
-        ),
-        sa.PrimaryKeyConstraint(
-            "thing_node_stakeholder_key",
-            "thing_node_external_id",
-            "source_stakeholder_key",
-            "source_external_id",
-            name="pk_thingnode_source_association",
+        sa.Column(
+            "source_id", UUIDType(binary=False), sa.ForeignKey("source.id"), primary_key=True
         ),
     )
 
-    # ### Create thingnode_sink_association table ###
+    # Create thingnode_sink_association table
     op.create_table(
         "thingnode_sink_association",
-        sa.Column("thing_node_stakeholder_key", sa.String(length=36), nullable=False),
-        sa.Column("thing_node_external_id", sa.String(length=255), nullable=False),
-        sa.Column("sink_stakeholder_key", sa.String(length=36), nullable=False),
-        sa.Column("sink_external_id", sa.String(length=255), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["thing_node_stakeholder_key", "thing_node_external_id"],
-            ["thing_node.stakeholder_key", "thing_node.external_id"],
-            name="fk_tn_sa_tn_stakeholder_external_sink",
+        sa.Column(
+            "thingnode_id", UUIDType(binary=False), sa.ForeignKey("thing_node.id"), primary_key=True
         ),
-        sa.ForeignKeyConstraint(
-            ["sink_stakeholder_key", "sink_external_id"],
-            ["sink.stakeholder_key", "sink.external_id"],
-            name="fk_tn_sa_sink_stakeholder_external",
-        ),
-        sa.PrimaryKeyConstraint(
-            "thing_node_stakeholder_key",
-            "thing_node_external_id",
-            "sink_stakeholder_key",
-            "sink_external_id",
-            name="pk_thingnode_sink_association",
-        ),
+        sa.Column("sink_id", UUIDType(binary=False), sa.ForeignKey("sink.id"), primary_key=True),
     )
 
     # Create table property_metadata
