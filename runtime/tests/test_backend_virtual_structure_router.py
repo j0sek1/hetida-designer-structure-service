@@ -25,7 +25,7 @@ def mocked_clean_test_db_session_for_vst_router(clean_test_db_engine_for_vst_rou
 
 
 @pytest.mark.asyncio
-async def test_update_structure(async_test_client, mocked_clean_test_db_session_for_vst_router):
+async def test_orm_update_structure(async_test_client, mocked_clean_test_db_session_for_vst_router):
     file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_test.json"
     with open(file_path) as file:
         structure_json = json.load(file)

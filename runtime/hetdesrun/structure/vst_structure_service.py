@@ -13,7 +13,6 @@ from hetdesrun.structure.db.db_structure_service import (
     orm_get_children,
     orm_is_database_empty,
     orm_load_structure_from_json_file,
-    orm_update_structure,
 )
 from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.source_sink_service import (
@@ -162,16 +161,6 @@ def delete_structure() -> None:
         "Wrapper function 'delete_structure' completed. "
         "Successfully deleted the entire structure from the database."
     )
-
-
-def update_structure(
-    complete_structure: CompleteStructure,
-) -> CompleteStructure:
-    """Wrapper function to update or insert the given complete structure into the database."""
-    logger.debug("Calling wrapper function 'update_structure'.")
-    updated_structure = orm_update_structure(complete_structure)
-    logger.debug("Successfully updated or inserted the complete structure into the database.")
-    return updated_structure
 
 
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:

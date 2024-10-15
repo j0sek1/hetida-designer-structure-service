@@ -29,7 +29,6 @@ from hetdesrun.structure.vst_structure_service import (
     get_single_source_from_db,
     get_single_thingnode_from_db,
     is_database_empty,
-    update_structure,
 )
 
 
@@ -196,7 +195,7 @@ def test_update_structure_vsta(mocked_clean_test_db_session):
     complete_structure = CompleteStructure(**data)
 
     # Perform the update, which in this case acts as an insert since the database is empty
-    update_structure(complete_structure)
+    orm_update_structure(complete_structure)
 
     # Open a new session to interact with the database
     with mocked_clean_test_db_session() as session:
@@ -571,7 +570,7 @@ def test_update_with_conflicting_stakeholder_key_vsta(mocked_clean_test_db_sessi
     }
 
     # Insert initial Structure
-    update_structure(CompleteStructure(**initial_structure))
+    orm_update_structure(CompleteStructure(**initial_structure))
 
     # Verify initial structure is in the database
     element_types = get_all_element_types_from_db()
@@ -585,7 +584,7 @@ def test_update_with_conflicting_stakeholder_key_vsta(mocked_clean_test_db_sessi
         DBIntegrityError,
         match=r"Integrity Error while upserting ElementTypeOrm",
     ):
-        update_structure(CompleteStructure(**conflicting_structure))
+        orm_update_structure(CompleteStructure(**conflicting_structure))
 
 
 def test_circular_tn_relation(mocked_clean_test_db_session):
@@ -775,7 +774,7 @@ def test_update_two_root_nodes(mocked_clean_test_db_session):
     }
 
     structure_with_two_root_nodes = CompleteStructure(**structure)
-    update_structure(structure_with_two_root_nodes)
+    orm_update_structure(structure_with_two_root_nodes)
 
 
 def test_validate_source_sink_references(mocked_clean_test_db_session):

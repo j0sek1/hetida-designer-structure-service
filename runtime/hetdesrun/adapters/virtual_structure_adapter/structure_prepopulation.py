@@ -2,6 +2,7 @@ import logging
 
 from hetdesrun.adapters.virtual_structure_adapter.config import get_vst_adapter_config
 from hetdesrun.adapters.virtual_structure_adapter.exceptions import StructurePrepopulationError
+from hetdesrun.structure.db.db_structure_service import orm_update_structure
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
     DBConnectionError,
@@ -14,7 +15,6 @@ from hetdesrun.structure.vst_structure_service import (
     delete_structure,
     is_database_empty,
     load_structure_from_json_file,
-    update_structure,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def prepopulate_structure() -> None:
         )
 
     try:
-        update_structure(complete_structure)
+        orm_update_structure(complete_structure)
     except (DBIntegrityError, DBConnectionError, DBAssociationError, DBUpdateError, DBError) as e:
         logger.error(
             "Update of the structure failed during the prepopulation process: %s",
