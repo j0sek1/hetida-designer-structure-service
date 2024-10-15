@@ -40,6 +40,18 @@ def test_complete_structure_elment_type_not_empty_validator():
         _ = CompleteStructure(element_types=[])
 
 
+def test_complete_structure_duplicate_key_id_validator():
+    file_path = "tests/structure/data/db_test_invalid_structure_no_duplicate_id.json"
+    with open(file_path) as file:
+        structure_json = json.load(file)
+
+    with pytest.raises(
+        ValidationError,
+        match="The stakeholder key and external id pair",
+    ):
+        _ = CompleteStructure(**structure_json)
+
+
 @pytest.fixture()
 def filter_json():
     file_path = "tests/structure/data/test_filter_creation.json"
