@@ -52,6 +52,18 @@ def test_complete_structure_duplicate_key_id_validator():
         _ = CompleteStructure(**structure_json)
 
 
+def test_complete_structure_duplicate_thingnode_external_id_validator():
+    file_path = "tests/structure/data/db_test_no_duplicate_tn_id.json"
+    with open(file_path) as file:
+        structure_json = json.load(file)
+
+    with pytest.raises(
+        ValidationError,
+        match="The thing_node_external_ids attribute",
+    ):
+        _ = CompleteStructure(**structure_json)
+
+
 @pytest.fixture()
 def filter_json():
     file_path = "tests/structure/data/test_filter_creation.json"

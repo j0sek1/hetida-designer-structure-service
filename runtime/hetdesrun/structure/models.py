@@ -374,9 +374,31 @@ class CompleteStructure(BaseModel):
                     raise ValueError(
                         f"The stakeholder key and external id pair: {key_id_pair} "
                         f"exists at least twice in the {element_name} list. "
-                        "Each key-id pair must be unique within its list."
+                        "Each key-id pair must be unique within its list!"
                     )
                 seen.add(key_id_pair)
+        return values
+
+    @root_validator(pre=True)
+    def check_for_duplicate_ids_in_thing_node_external_ids(
+        cls, values: dict[str, Any]
+    ) -> dict[str, Any]:
+        for element_name, element_list in values.items():
+            if element_name in ("element_types", "thing_nodes"):
+                continue
+
+            for element in element_list:
+                seen = set()
+                for parent_id in element["thing_node_external_ids"]:
+                    if parent_id in seen:
+                        raise ValueError(
+                            f"The thing_node_external_ids attribute "
+                            f"of the element with id: {element["external_id"]} "
+                            f"in the {element_name} list, "
+                            f"contains at least the duplicate id: {parent_id}. "
+                            "Each id within thing_node_external_ids must be unique!"
+                        )
+                    seen.add(parent_id)
         return values
 
     @root_validator(pre=True)
