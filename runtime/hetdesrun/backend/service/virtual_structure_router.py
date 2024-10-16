@@ -1,7 +1,9 @@
 import logging
+from secrets import compare_digest
 
 from fastapi import HTTPException, Query, status
 
+from hetdesrun.backend.service.maintenance_router import MaintenancePayload
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
     DBFetchError,
@@ -15,6 +17,7 @@ from hetdesrun.structure.db.structure_service import (
     update_structure,
 )
 from hetdesrun.structure.models import CompleteStructure
+from hetdesrun.webservice.config import get_config
 from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter
 
 logger = logging.getLogger(__name__)
@@ -39,9 +42,26 @@ virtual_structure_router = HandleTrailingSlashAPIRouter(
     responses={status.HTTP_204_NO_CONTENT: {"description": "Successfully updated the structure"}},
 )
 async def update_structure_endpoint(
+    maintenance_payload: MaintenancePayload,
     new_structure: CompleteStructure,
     delete_existing_structure: bool = Query(True, alias="delete_existing_structure"),
 ) -> None:
+    # For security purposes this endpoint can only be accessed
+    # using a maintenance secret
+    configured_maintenance_secret = get_config().maintenance_secret
+    assert configured_maintenance_secret is not None  # for mypy # noqa: S101
+    secret_str = maintenance_payload.maintenance_secret
+
+    if not compare_digest(
+        secret_str.get_secret_value(),
+        configured_maintenance_secret.get_secret_value(),
+    ):
+        logger.error("maintenance secret check failed")
+        raise HTTPException(
+            status_code=403,
+            detail={"authorization_error": "maintenance secret check failed"},
+        )
+
     logger.info("Starting to update the vst structure via the API endpoint")
     if delete_existing_structure and not is_database_empty():
         logger.info("Starting to delete existing structure")
