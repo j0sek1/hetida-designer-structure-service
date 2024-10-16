@@ -2,17 +2,17 @@ import logging
 
 from fastapi import HTTPException, Query, status
 
-from hetdesrun.structure.db.db_structure_service import (
-    delete_structure,
-    is_database_empty,
-    update_structure,
-)
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
     DBFetchError,
     DBIntegrityError,
     DBNotFoundError,
     DBUpdateError,
+)
+from hetdesrun.structure.db.structure_service import (
+    delete_structure,
+    is_database_empty,
+    update_structure,
 )
 from hetdesrun.structure.models import CompleteStructure
 from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter

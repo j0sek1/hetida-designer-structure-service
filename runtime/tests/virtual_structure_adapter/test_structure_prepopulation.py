@@ -7,7 +7,7 @@ from hetdesrun.adapters.virtual_structure_adapter.config import VirtualStructure
 from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import (
     prepopulate_structure,
 )
-from hetdesrun.structure.db.db_structure_service import load_structure_from_json_file
+from hetdesrun.structure.db.structure_service import load_structure_from_json_file
 from hetdesrun.structure.models import CompleteStructure
 
 

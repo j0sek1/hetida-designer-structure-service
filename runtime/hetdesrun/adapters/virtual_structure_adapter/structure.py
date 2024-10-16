@@ -7,7 +7,6 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterSource,
     VirtualStructureAdapterThingNode,
 )
-from hetdesrun.structure.db.db_structure_service import get_children
 from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.source_sink_service import (
     fetch_single_sink_from_db_by_id,
@@ -15,6 +14,7 @@ from hetdesrun.structure.db.source_sink_service import (
     fetch_sinks_by_substring_match,
     fetch_sources_by_substring_match,
 )
+from hetdesrun.structure.db.structure_service import get_children
 from hetdesrun.structure.db.thing_node_service import fetch_single_thing_node_by_id
 
 logger = logging.getLogger(__name__)

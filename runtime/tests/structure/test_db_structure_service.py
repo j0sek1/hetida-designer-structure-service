@@ -15,14 +15,6 @@ from hetdesrun.persistence.structure_service_dbmodels import (
     thingnode_sink_association,
     thingnode_source_association,
 )
-from hetdesrun.structure.db.db_structure_service import (
-    delete_structure,
-    is_database_empty,
-    load_structure_from_json_file,
-    populate_element_type_ids,
-    sort_thing_nodes,
-    update_structure,
-)
 from hetdesrun.structure.db.element_type_service import (
     fetch_element_types,
     search_element_types_by_name,
@@ -39,6 +31,14 @@ from hetdesrun.structure.db.source_sink_service import (
     fetch_sources_by_substring_match,
     upsert_sinks,
     upsert_sources,
+)
+from hetdesrun.structure.db.structure_service import (
+    delete_structure,
+    is_database_empty,
+    load_structure_from_json_file,
+    populate_element_type_ids,
+    sort_thing_nodes,
+    update_structure,
 )
 from hetdesrun.structure.db.thing_node_service import (
     fetch_thing_nodes,
