@@ -215,7 +215,16 @@ def populate_element_type_ids(
                 )
 
 
-def update_structure(complete_structure: CompleteStructure) -> CompleteStructure:
+def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
+    """Writes a given structure to the database.
+       If a structure exists in the database, it is updated.
+
+    Args:
+        complete_structure (CompleteStructure): The structure to be inserted
+        batch_size (int, optional): Number of potentially existing elements
+                                    to retrieve with one query.
+                                    Defaults to 500.
+    """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
         with get_session()() as session, session.begin():
@@ -236,10 +245,10 @@ def update_structure(complete_structure: CompleteStructure) -> CompleteStructure
                 }
 
                 # 2. Batch query existing records
-                existing_element_types = fetch_element_types(session, element_type_keys)
-                existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys)
-                existing_sources = fetch_sources(session, source_keys)
-                existing_sinks = fetch_sinks(session, sink_keys)
+                existing_element_types = fetch_element_types(session, element_type_keys, batch_size)
+                existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys, batch_size)
+                existing_sources = fetch_sources(session, source_keys, batch_size)
+                existing_sinks = fetch_sinks(session, sink_keys, batch_size)
 
             # 3. Upsert ElementTypes
             upsert_element_types(session, complete_structure.element_types, existing_element_types)
@@ -289,10 +298,9 @@ def update_structure(complete_structure: CompleteStructure) -> CompleteStructure
         raise DBError("Unexpected Error while updating or inserting the structure") from e
 
     logger.debug("Completed update or insert operation for the complete structure.")
-    return complete_structure
 
 
-def update_structure_from_file(file_path: str) -> CompleteStructure:
+def update_structure_from_file(file_path: str) -> None:
     """
     Aktualisiert die Struktur basierend auf einer JSON-Datei.
 
@@ -308,10 +316,8 @@ def update_structure_from_file(file_path: str) -> CompleteStructure:
         complete_structure: CompleteStructure = load_structure_from_json_file(file_path)
         logger.debug("Successfully loaded structure from JSON file.")
 
-        updated_structure: CompleteStructure = update_structure(complete_structure)
+        update_structure(complete_structure)
         logger.debug("Successfully updated structure in the database.")
-
-        return updated_structure
 
     except SQLAlchemyError as e:
         logger.error("Database error occurred while updating structure: %s", e)

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_element_types(
-    session: SQLAlchemySession, keys: set[tuple[str, str]]
+    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], ElementTypeOrm]:
     """
     Fetches ElementTypeOrm records from the database based on stakeholder_key and external_id.
@@ -36,7 +36,7 @@ def fetch_element_types(
         return existing_ets_mapping
     try:
         # Loop through keys in batches of size 500 or less
-        for key_batch in batched(keys, ceil(len(keys) / 500)):
+        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
             batch_query = session.query(ElementTypeOrm).filter(
                 tuple_(ElementTypeOrm.stakeholder_key, ElementTypeOrm.external_id).in_(key_batch)
             )
