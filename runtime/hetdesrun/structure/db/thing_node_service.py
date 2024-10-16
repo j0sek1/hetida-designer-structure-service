@@ -1,16 +1,34 @@
 import logging
 from itertools import batched
 from math import ceil
+from uuid import UUID
 
 from sqlalchemy import tuple_
 from sqlalchemy.exc import IntegrityError
 
-from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession
+from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
 from hetdesrun.persistence.structure_service_dbmodels import ElementTypeOrm, ThingNodeOrm
-from hetdesrun.structure.db.exceptions import DBError, DBIntegrityError, DBUpdateError
+from hetdesrun.structure.db.exceptions import (
+    DBError,
+    DBIntegrityError,
+    DBNotFoundError,
+    DBUpdateError,
+)
 from hetdesrun.structure.models import ThingNode
 
 logger = logging.getLogger(__name__)
+
+
+def fetch_single_thing_node_by_id(tn_id: UUID) -> ThingNode:
+    logger.debug("Fetching single ThingNode from database with ID: %s", tn_id)
+    with get_session()() as session:
+        thing_node = session.query(ThingNodeOrm).filter(ThingNodeOrm.id == tn_id).one_or_none()
+        if thing_node:
+            logger.debug("ThingNode with ID %s found.", tn_id)
+            return ThingNode.from_orm_model(thing_node)
+
+    logger.error("No ThingNode found for ID %s. Raising DBNotFoundError.", tn_id)
+    raise DBNotFoundError(f"No ThingNode found for ID {tn_id}")
 
 
 def fetch_thing_nodes(

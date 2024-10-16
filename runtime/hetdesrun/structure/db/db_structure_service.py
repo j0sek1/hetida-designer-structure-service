@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import and_, delete
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
-from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
+from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
     ElementTypeOrm,
     SinkOrm,
@@ -44,7 +44,7 @@ from hetdesrun.structure.models import (
 logger = logging.getLogger(__name__)
 
 
-def orm_load_structure_from_json_file(file_path: str) -> CompleteStructure:
+def load_structure_from_json_file(file_path: str) -> CompleteStructure:
     """
     Loads the structure from a JSON file.
 
@@ -215,7 +215,7 @@ def populate_element_type_ids(
                 )
 
 
-def orm_update_structure(complete_structure: CompleteStructure) -> CompleteStructure:
+def update_structure(complete_structure: CompleteStructure) -> CompleteStructure:
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
         with get_session()() as session, session.begin():
@@ -305,10 +305,10 @@ def update_structure_from_file(file_path: str) -> CompleteStructure:
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
     try:
-        complete_structure: CompleteStructure = orm_load_structure_from_json_file(file_path)
+        complete_structure: CompleteStructure = load_structure_from_json_file(file_path)
         logger.debug("Successfully loaded structure from JSON file.")
 
-        updated_structure: CompleteStructure = orm_update_structure(complete_structure)
+        updated_structure: CompleteStructure = update_structure(complete_structure)
         logger.debug("Successfully updated structure in the database.")
 
         return updated_structure
@@ -321,7 +321,7 @@ def update_structure_from_file(file_path: str) -> CompleteStructure:
         raise
 
 
-def orm_is_database_empty() -> bool:
+def is_database_empty() -> bool:
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
         element_type_exists = session.query(ElementTypeOrm).first() is not None
@@ -336,7 +336,7 @@ def orm_is_database_empty() -> bool:
     return is_empty
 
 
-def orm_get_children(
+def get_children(
     parent_id: UUID | None,
 ) -> tuple[list[ThingNode], list[Source], list[Sink]]:
     """
@@ -412,7 +412,7 @@ def orm_get_children(
         )
 
 
-def orm_delete_structure(session: SQLAlchemySession) -> None:
+def delete_structure() -> None:
     """
     Deletes all structure-related data from the database, including ThingNodes, Sources, Sinks,
     ElementTypes, and their associations.
@@ -430,34 +430,35 @@ def orm_delete_structure(session: SQLAlchemySession) -> None:
     """
     logger.debug("Starting deletion of all structure data from the database.")
 
-    # Define the order of deletion to maintain referential integrity:
-    # Association tables first, followed by dependent ORM classes.
-    deletion_order = [
-        thingnode_source_association,
-        thingnode_sink_association,
-        SourceOrm,
-        SinkOrm,
-        ThingNodeOrm,
-        ElementTypeOrm,
-    ]
+    with get_session()() as session:
+        # Define the order of deletion to maintain referential integrity:
+        # Association tables first, followed by dependent ORM classes.
+        deletion_order = [
+            thingnode_source_association,
+            thingnode_sink_association,
+            SourceOrm,
+            SinkOrm,
+            ThingNodeOrm,
+            ElementTypeOrm,
+        ]
 
-    try:
-        for table in deletion_order:
-            table_name = table.name if hasattr(table, "name") else table.__tablename__  # type: ignore
-            logger.debug("Deleting records from table: %s", table_name)
-            session.execute(delete(table))
-        session.commit()
-        logger.debug("Successfully deleted all structure data from the database.")
+        try:
+            for table in deletion_order:
+                table_name = table.name if hasattr(table, "name") else table.__tablename__  # type: ignore
+                logger.debug("Deleting records from table: %s", table_name)
+                session.execute(delete(table))
+            session.commit()
+            logger.debug("Successfully deleted all structure data from the database.")
 
-    except IntegrityError as e:
-        msg = f"Integrity Error while deleting structure: {str(e)}"
-        logger.error(msg)
-        raise DBIntegrityError(msg) from e
-    except SQLAlchemyError as e:
-        msg = f"Database Error while deleting structure: {str(e)}"
-        logger.error(msg)
-        raise DBError(msg) from e
-    except Exception as e:
-        msg = f"Unexpected Error while deleting structure: {str(e)}"
-        logger.error(msg)
-        raise DBError(msg) from e
+        except IntegrityError as e:
+            msg = f"Integrity Error while deleting structure: {str(e)}"
+            logger.error(msg)
+            raise DBIntegrityError(msg) from e
+        except SQLAlchemyError as e:
+            msg = f"Database Error while deleting structure: {str(e)}"
+            logger.error(msg)
+            raise DBError(msg) from e
+        except Exception as e:
+            msg = f"Unexpected Error while deleting structure: {str(e)}"
+            logger.error(msg)
+            raise DBError(msg) from e

@@ -1,23 +1,87 @@
 import logging
 from itertools import batched
 from math import ceil
+from uuid import UUID
 
 from sqlalchemy import tuple_
 from sqlalchemy.exc import IntegrityError
 
-from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession
+from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
     SinkOrm,
     SourceOrm,
     ThingNodeOrm,
 )
-from hetdesrun.structure.db.exceptions import DBError, DBIntegrityError, DBUpdateError
+from hetdesrun.structure.db.exceptions import (
+    DBError,
+    DBIntegrityError,
+    DBNotFoundError,
+    DBUpdateError,
+)
 from hetdesrun.structure.models import (
     Sink,
     Source,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def fetch_all_sources_from_db() -> list[Source]:
+    logger.debug("Fetching all Sources from the database.")
+    with get_session()() as session:
+        sources = session.query(SourceOrm).all()
+
+    logger.debug("Successfully fetched %d sources from the database.", len(sources))
+    return [Source.from_orm_model(source) for source in sources]
+
+
+def fetch_all_sinks_from_db() -> list[Sink]:
+    logger.debug("Fetching all Sinks from the database.")
+    with get_session()() as session:
+        sinks = session.query(SinkOrm).all()
+
+    logger.debug("Successfully fetched %d sinks from the database.", len(sinks))
+    return [Sink.from_orm_model(sink) for sink in sinks]
+
+
+def fetch_single_sink_from_db_by_id(sink_id: UUID) -> Sink:
+    logger.debug("Fetching single Sink from database with ID: %s", sink_id)
+    with get_session()() as session:
+        sink = session.query(SinkOrm).filter(SinkOrm.id == sink_id).one_or_none()
+        if sink:
+            logger.debug("Sink with ID %s found.", sink_id)
+            return Sink.from_orm_model(sink)
+
+    logger.error("No Sink found for ID %s. Raising DBNotFoundError.", sink_id)
+    raise DBNotFoundError(f"No Sink found for ID {sink_id}")
+
+
+def fetch_single_source_from_db_by_id(src_id: UUID) -> Source:
+    logger.debug("Fetching single Source from database with ID: %s", src_id)
+    with get_session()() as session:
+        source = session.query(SourceOrm).filter(SourceOrm.id == src_id).one_or_none()
+        if source:
+            logger.debug("Source with ID %s found.", src_id)
+            return Source.from_orm_model(source)
+
+    logger.error("No Source found for ID %s.", src_id)
+    raise DBNotFoundError(f"No Source found for ID {src_id}")
+
+
+def fetch_collection_of_sources_from_db_by_id(src_ids: list[UUID]) -> dict[UUID, Source]:
+    logger.debug("Fetching collection of Sources with IDs: %s", src_ids)
+    sources = {src_id: fetch_single_source_from_db_by_id(src_id) for src_id in src_ids}
+
+    logger.debug("Successfully fetched collection of Sources.")
+    return sources
+
+
+def fetch_collection_of_sinks_from_db_by_id(sink_ids: list[UUID]) -> dict[UUID, Sink]:
+    logger.debug("Fetching collection of Sinks with IDs: %s", sink_ids)
+
+    sinks = {sink_id: fetch_single_sink_from_db_by_id(sink_id) for sink_id in sink_ids}
+    logger.debug("Successfully fetched collection of Sinks.")
+    return sinks
 
 
 def fetch_sources(
@@ -101,48 +165,48 @@ def fetch_sinks(
         raise DBError("Unexpected error while fetching SinkOrm") from e
 
 
-def orm_get_sources_by_substring_match(
-    session: SQLAlchemySession, filter_string: str
-) -> list[Source]:
-    try:
-        matching_sources = (
-            session.query(SourceOrm).filter(SourceOrm.name.ilike(f"%{filter_string}%")).all()
-        )
-        logger.debug(
-            "Found %d SourceOrm items matching filter string '%s'.",
-            len(matching_sources),
-            filter_string,
-        )
-        return [Source.from_orm_model(src) for src in matching_sources]
-    except IntegrityError as e:
-        logger.error("Integrity Error while filtering SourceOrm by substring match: %s", e)
-        raise DBIntegrityError(
-            "Integrity Error while filtering SourceOrm by substring match"
-        ) from e
-    except Exception as e:
-        logger.error("Unexpected error while filtering SourceOrm by substring match: %s", e)
-        raise DBError("Unexpected error while filtering SourceOrm by substring match") from e
+def fetch_sources_by_substring_match(filter_string: str) -> list[Source]:
+    with get_session()() as session:
+        try:
+            matching_sources = (
+                session.query(SourceOrm).filter(SourceOrm.name.ilike(f"%{filter_string}%")).all()
+            )
+            logger.debug(
+                "Found %d SourceOrm items matching filter string '%s'.",
+                len(matching_sources),
+                filter_string,
+            )
+            return [Source.from_orm_model(src) for src in matching_sources]
+        except IntegrityError as e:
+            logger.error("Integrity Error while filtering SourceOrm by substring match: %s", e)
+            raise DBIntegrityError(
+                "Integrity Error while filtering SourceOrm by substring match"
+            ) from e
+        except Exception as e:
+            logger.error("Unexpected error while filtering SourceOrm by substring match: %s", e)
+            raise DBError("Unexpected error while filtering SourceOrm by substring match") from e
 
 
-def orm_get_sinks_by_substring_match(session: SQLAlchemySession, filter_string: str) -> list[Sink]:
-    try:
-        matching_sinks = (
-            session.query(SinkOrm).filter(SinkOrm.name.ilike(f"%{filter_string}%")).all()
-        )
-        logger.debug(
-            "Found %d SinkOrm items matching filter string '%s'.",
-            len(matching_sinks),
-            filter_string,
-        )
-        return [Sink.from_orm_model(sink) for sink in matching_sinks]
-    except IntegrityError as e:
-        logger.error("Integrity Error while filtering SinkOrm by substring match: %s", e)
-        raise DBIntegrityError(
-            "Integrity Error while filtering SourceOrm by substring match"
-        ) from e
-    except Exception as e:
-        logger.error("Unexpected error while filtering SinkOrm by substring match: %s", e)
-        raise DBError("Unexpected error while filtering SinkOrm by substring match") from e
+def fetch_sinks_by_substring_match(filter_string: str) -> list[Sink]:
+    with get_session()() as session:
+        try:
+            matching_sinks = (
+                session.query(SinkOrm).filter(SinkOrm.name.ilike(f"%{filter_string}%")).all()
+            )
+            logger.debug(
+                "Found %d SinkOrm items matching filter string '%s'.",
+                len(matching_sinks),
+                filter_string,
+            )
+            return [Sink.from_orm_model(sink) for sink in matching_sinks]
+        except IntegrityError as e:
+            logger.error("Integrity Error while filtering SinkOrm by substring match: %s", e)
+            raise DBIntegrityError(
+                "Integrity Error while filtering SourceOrm by substring match"
+            ) from e
+        except Exception as e:
+            logger.error("Unexpected error while filtering SinkOrm by substring match: %s", e)
+            raise DBError("Unexpected error while filtering SinkOrm by substring match") from e
 
 
 def upsert_sources(

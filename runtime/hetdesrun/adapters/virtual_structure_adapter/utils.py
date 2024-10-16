@@ -2,11 +2,11 @@ import logging
 from uuid import UUID
 
 from hetdesrun.models.wiring import InputWiring, OutputWiring
-from hetdesrun.structure.models import Sink, Source
-from hetdesrun.structure.vst_structure_service import (
-    get_collection_of_sinks_from_db,
-    get_collection_of_sources_from_db,
+from hetdesrun.structure.db.source_sink_service import (
+    fetch_collection_of_sinks_from_db_by_id,
+    fetch_collection_of_sources_from_db_by_id,
 )
+from hetdesrun.structure.models import Sink, Source
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 def get_virtual_sources_and_sinks_from_structure_service(
     input_id_list: list[str], output_id_list: list[str]
 ) -> tuple[dict[UUID, Source], dict[UUID, Sink]]:
-    referenced_sources = get_collection_of_sources_from_db(
+    referenced_sources = fetch_collection_of_sources_from_db_by_id(
         [UUID(input_id) for input_id in input_id_list]
     )
-    referenced_sinks = get_collection_of_sinks_from_db(
+    referenced_sinks = fetch_collection_of_sinks_from_db_by_id(
         [UUID(output_id) for output_id in output_id_list]
     )
 

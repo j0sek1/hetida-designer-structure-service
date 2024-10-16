@@ -2,7 +2,11 @@ import logging
 
 from fastapi import HTTPException, Query, status
 
-from hetdesrun.structure.db.db_structure_service import orm_update_structure
+from hetdesrun.structure.db.db_structure_service import (
+    delete_structure,
+    is_database_empty,
+    update_structure,
+)
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
     DBFetchError,
@@ -11,10 +15,6 @@ from hetdesrun.structure.db.exceptions import (
     DBUpdateError,
 )
 from hetdesrun.structure.models import CompleteStructure
-from hetdesrun.structure.vst_structure_service import (
-    delete_structure,
-    is_database_empty,
-)
 from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ async def update_structure_endpoint(
             logger.error("Structure deletion during an update request failed: %s", e)
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     try:
-        orm_update_structure(new_structure)
+        update_structure(new_structure)
         logger.info("The structure was successfully updated")
     except (DBIntegrityError, DBUpdateError, DBAssociationError, DBFetchError) as e:
         logger.error("Structure update request failed: %s", e)
