@@ -337,6 +337,18 @@ class CompleteStructure(BaseModel):
     sources: list[Source] = Field(default_factory=list, description="All sources of the structure")
     sinks: list[Sink] = Field(default_factory=list, description="All sinks of the structure")
 
+    @classmethod
+    def agnostic_getattr(cls, obj: dict | Any, attr: str) -> Any:
+        """Helper function to make the root validators work when instantiating
+        from a json and from pydantic objects.
+        """
+        # Check if object is dict, if so use get
+        if isinstance(obj, dict):
+            return obj.get(attr)
+
+        # Fallback to getattr
+        return getattr(obj, attr)
+
     @validator("element_types")
     def check_element_types_not_empty(cls, v: list[ElementType]) -> list[ElementType]:
         if not v:
@@ -351,14 +363,14 @@ class CompleteStructure(BaseModel):
 
         nodes = values.get("thing_nodes", [])
         # Create a set of all external_ids in the thing_nodes list
-        external_ids = {node["external_id"] for node in nodes}
+        external_ids = {cls.agnostic_getattr(node, "external_id") for node in nodes}
 
         for node in nodes:
-            parent_ext_id = node.get("parent_external_node_id")
+            parent_ext_id = cls.agnostic_getattr(node, "parent_external_node_id")
             if parent_ext_id is not None and parent_ext_id not in external_ids:
                 # Raise an error if the parent_external_node_id does not exist in the other nodes
                 raise ValueError(
-                    f"Root node '{node.get('name')}' has an invalid "
+                    f"Root node '{cls.agnostic_getattr(node, "name")}' has an invalid "
                     f"parent_external_node_id '{parent_ext_id}' that does "
                     "not reference any existing ThingNode."
                 )
@@ -369,7 +381,10 @@ class CompleteStructure(BaseModel):
         for element_name, element_list in values.items():
             seen = set()
             for element in element_list:
-                key_id_pair = (element["stakeholder_key"], element["external_id"])
+                stakeholder_key = cls.agnostic_getattr(element, "stakeholder_key")
+                external_id = cls.agnostic_getattr(element, "external_id")
+
+                key_id_pair = (stakeholder_key, external_id)
                 if key_id_pair in seen:
                     raise ValueError(
                         f"The stakeholder key and external id pair: {key_id_pair} "
@@ -389,7 +404,8 @@ class CompleteStructure(BaseModel):
 
             for element in element_list:
                 seen = set()
-                for parent_id in element["thing_node_external_ids"]:
+                thing_node_external_ids = cls.agnostic_getattr(element, "thing_node_external_ids")
+                for parent_id in thing_node_external_ids:
                     if parent_id in seen:
                         raise ValueError(
                             f"The thing_node_external_ids attribute "
@@ -409,13 +425,17 @@ class CompleteStructure(BaseModel):
 
         # Identify root nodes.
         # A root node is defined as a node without a parent (parent_external_node_id is None).
-        root_nodes = [node for node in thing_nodes if node.get("parent_external_node_id") is None]
+        root_nodes = [
+            node
+            for node in thing_nodes
+            if cls.agnostic_getattr(node, "parent_external_node_id") is None
+        ]
 
         # Iterate over each root node to validate the hierarchy starting from it.
         for root_node in root_nodes:
             # The expected stakeholder_key for this hierarchy is
             # the stakeholder_key of the root node.
-            expected_stakeholder_key = root_node["stakeholder_key"]
+            expected_stakeholder_key = cls.agnostic_getattr(root_node, "stakeholder_key")
 
             # Initialize a stack for depth-first traversal of the hierarchy.
             stack = [root_node]
@@ -430,7 +450,7 @@ class CompleteStructure(BaseModel):
                 current_node = stack.pop()
 
                 # Get the external_id of the current node for identification.
-                current_external_id = current_node["external_id"]
+                current_external_id = cls.agnostic_getattr(current_node, "external_id")
 
                 # Check if the current node has already been visited.
                 if current_external_id in visited:
@@ -442,19 +462,20 @@ class CompleteStructure(BaseModel):
                 visited.add(current_external_id)
 
                 # Validate the stakeholder_key of the current node.
-                if current_node["stakeholder_key"] != expected_stakeholder_key:
+                current_node_stakeholder_key = cls.agnostic_getattr(current_node, "stakeholder_key")
+                if current_node_stakeholder_key != expected_stakeholder_key:
                     # If the stakeholder_key does not match the expected one, raise a ValueError.
                     raise ValueError(
                         f"Inconsistent stakeholder_key at node {current_external_id}. "
                         f"Expected: {expected_stakeholder_key}, "
-                        f"found: {current_node['stakeholder_key']}"
+                        f"found: {current_node_stakeholder_key}"
                     )
 
                 # Find all child nodes of the current node.
                 child_nodes = [
                     node
                     for node in thing_nodes
-                    if node.get("parent_external_node_id") == current_external_id
+                    if cls.agnostic_getattr(node, "parent_external_node_id") == current_external_id
                 ]
 
                 # Add all child nodes to the stack to continue the traversal.
@@ -468,22 +489,26 @@ class CompleteStructure(BaseModel):
         # by recursively visiting parent nodes.
 
         # Create a dictionary mapping from external_id to the corresponding node for quick access.
-        nodes_by_external_id = {node["external_id"]: node for node in values.get("thing_nodes", [])}
+        nodes_by_external_id = {
+            cls.agnostic_getattr(node, "external_id"): node
+            for node in values.get("thing_nodes", [])
+        }
 
         # Set to keep track of nodes currently being visited to detect circular references.
         visited = set()
 
         # Define a nested function to recursively visit nodes and check for circular references.
         def visit(node: dict[str, Any]) -> None:
+            node_external_id = cls.agnostic_getattr(node, "external_id")
             # If the current node is already in the visited set, a circular reference is detected.
-            if node["external_id"] in visited:
-                raise ValueError(f"Circular reference detected in node {node['external_id']}")
+            if node_external_id in visited:
+                raise ValueError(f"Circular reference detected in node {node_external_id}")
 
             # Mark the current node as visited by adding its external_id to the visited set.
-            visited.add(node["external_id"])
+            visited.add(node_external_id)
 
             # Get the external_id of the parent node.
-            parent_external_id = node.get("parent_external_node_id")
+            parent_external_id = cls.agnostic_getattr(node, "parent_external_node_id")
 
             # If the parent_external_id exists and the parent node is in the
             # nodes_by_external_id dictionary, recursively visit the parent node.
@@ -491,12 +516,12 @@ class CompleteStructure(BaseModel):
                 visit(nodes_by_external_id[parent_external_id])
 
             # After visiting all parent nodes, remove the current node from the visited set.
-            visited.remove(node["external_id"])
+            visited.remove(node_external_id)
 
         # Iterate over all thing_nodes in the input values.
         for node in values.get("thing_nodes", []):
             # If the node has not been visited yet, initiate a visit starting from this node.
-            if node["external_id"] not in visited:
+            if cls.agnostic_getattr(node, "external_id") not in visited:
                 visit(node)
 
         # If no circular references are detected, return the validated values.
@@ -507,26 +532,28 @@ class CompleteStructure(BaseModel):
         # Ensure that all sources and sinks reference valid thing_nodes by checking their
         # thing_node_external_ids against the set of known thing_node IDs.
 
-        thing_node_ids = {node["external_id"] for node in values.get("thing_nodes", [])}
+        thing_node_ids = {
+            cls.agnostic_getattr(node, "external_id") for node in values.get("thing_nodes", [])
+        }
         for source in values.get("sources", []):
             # For each source, check all referenced ThingNode external IDs.
-            for tn_id in source.get("thing_node_external_ids", []):
+            for tn_id in cls.agnostic_getattr(source, "thing_node_external_ids"):
                 # If a ThingNode external ID referenced by the source
                 # does not exist in 'thing_node_ids', raise an error.
                 if tn_id not in thing_node_ids:
                     raise ValueError(
-                        f"Source '{source['external_id']}' references "
+                        f"Source '{cls.agnostic_getattr(source, "external_id")}' references "
                         f"non-existing ThingNode '{tn_id}'."
                     )
 
         for sink in values.get("sinks", []):
             # For each sink, check all referenced ThingNode external IDs.
-            for tn_id in sink.get("thing_node_external_ids", []):
+            for tn_id in cls.agnostic_getattr(sink, "thing_node_external_ids"):
                 # If a ThingNode external ID referenced by the sink
                 # does not exist in 'thing_node_ids', raise an error.
                 if tn_id not in thing_node_ids:
                     raise ValueError(
-                        f"Sink '{sink['external_id']}' references "
+                        f"Sink '{cls.agnostic_getattr(source, "external_id")}' references "
                         f"non-existing ThingNode '{tn_id}'."
                     )
         # If all sources and sinks reference existing ThingNodes, return the validated values.
