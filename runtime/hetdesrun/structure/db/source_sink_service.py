@@ -68,18 +68,46 @@ def fetch_single_source_from_db_by_id(src_id: UUID) -> Source:
     raise DBNotFoundError(f"No Source found for ID {src_id}")
 
 
-def fetch_collection_of_sources_from_db_by_id(src_ids: list[UUID]) -> dict[UUID, Source]:
+def fetch_collection_of_sources_from_db_by_id(
+    src_ids: list[UUID], batch_size: int = 500
+) -> dict[UUID, Source]:
+    sources: dict[UUID, Source] = {}
+    if not src_ids:
+        return sources
+
     logger.debug("Fetching collection of Sources with IDs: %s", src_ids)
-    sources = {src_id: fetch_single_source_from_db_by_id(src_id) for src_id in src_ids}
+    with get_session()() as session:
+        for id_batch in batched(src_ids, ceil(len(src_ids) / batch_size)):
+            batch_query = session.query(SourceOrm).filter(SourceOrm.id.in_(id_batch))
+            batch_results = batch_query.all()
+            for src in batch_results:
+                sources[src.id] = Source.from_orm_model(src)
+
+    if not sources:
+        raise DBNotFoundError(f"No Sources found for IDs {src_ids}")
 
     logger.debug("Successfully fetched collection of Sources.")
     return sources
 
 
-def fetch_collection_of_sinks_from_db_by_id(sink_ids: list[UUID]) -> dict[UUID, Sink]:
-    logger.debug("Fetching collection of Sinks with IDs: %s", sink_ids)
+def fetch_collection_of_sinks_from_db_by_id(
+    sink_ids: list[UUID], batch_size: int = 500
+) -> dict[UUID, Sink]:
+    sinks: dict[UUID, Sink] = {}
+    if not sink_ids:
+        return sinks
 
-    sinks = {sink_id: fetch_single_sink_from_db_by_id(sink_id) for sink_id in sink_ids}
+    logger.debug("Fetching collection of Sinks with IDs: %s", sink_ids)
+    with get_session()() as session:
+        for id_batch in batched(sink_ids, ceil(len(sink_ids) / batch_size)):
+            batch_query = session.query(SinkOrm).filter(SinkOrm.id.in_(id_batch))
+            batch_results = batch_query.all()
+            for sink in batch_results:
+                sinks[sink.id] = Sink.from_orm_model(sink)
+
+    if not sinks:
+        raise DBNotFoundError(f"No Sources found for IDs {sink_ids}")
+
     logger.debug("Successfully fetched collection of Sinks.")
     return sinks
 

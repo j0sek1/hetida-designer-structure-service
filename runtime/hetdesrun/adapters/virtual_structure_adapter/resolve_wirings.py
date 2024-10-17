@@ -70,6 +70,7 @@ def resolve_virtual_structure_wirings(
                 workflow_wiring.input_wirings[idx], virtual_source
             )  # type: ignore
 
+        # Update output wirings
         for idx, virtual_sink in zip(
             output_indices_to_be_updated, virtual_sinks.values(), strict=True
         ):
