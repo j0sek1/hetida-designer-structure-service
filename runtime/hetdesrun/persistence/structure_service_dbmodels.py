@@ -17,24 +17,36 @@ Base = declarative_base()
 
 # Association table between ThingNode and Source
 thingnode_source_association = Table(
-    "thingnode_source_association",
+    "structure_thingnode_source_association",
     Base.metadata,
-    Column("thingnode_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
-    Column("source_id", UUIDType(binary=False), ForeignKey("source.id"), primary_key=True),
+    Column(
+        "thingnode_id",
+        UUIDType(binary=False),
+        ForeignKey("structure_thing_node.id"),
+        primary_key=True,
+    ),
+    Column(
+        "source_id", UUIDType(binary=False), ForeignKey("structure_source.id"), primary_key=True
+    ),
 )
 
 # Association table between ThingNode and Sink
 thingnode_sink_association = Table(
-    "thingnode_sink_association",
+    "structure_thingnode_sink_association",
     Base.metadata,
-    Column("thingnode_id", UUIDType(binary=False), ForeignKey("thing_node.id"), primary_key=True),
-    Column("sink_id", UUIDType(binary=False), ForeignKey("sink.id"), primary_key=True),
+    Column(
+        "thingnode_id",
+        UUIDType(binary=False),
+        ForeignKey("structure_thing_node.id"),
+        primary_key=True,
+    ),
+    Column("sink_id", UUIDType(binary=False), ForeignKey("structure_sink.id"), primary_key=True),
 )
 
 
 # ORM model for ElementType
 class ElementTypeDBModel(Base):
-    __tablename__ = "element_type"
+    __tablename__ = "structure_element_type"
     id: UUIDType = Column(
         UUIDType(binary=False),
         primary_key=True,  # Primary key for unique identification
@@ -75,7 +87,7 @@ class ElementTypeDBModel(Base):
 
 # ORM model for Source
 class SourceDBModel(Base):
-    __tablename__ = "source"
+    __tablename__ = "structure_source"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
     stakeholder_key = Column(String(36), nullable=False)
@@ -128,7 +140,7 @@ class SourceDBModel(Base):
 
 # ORM model for Sink
 class SinkDBModel(Base):
-    __tablename__ = "sink"
+    __tablename__ = "structure_sink"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
     stakeholder_key = Column(String(36), nullable=False)
@@ -181,19 +193,19 @@ class SinkDBModel(Base):
 
 # ORM model for ThingNode
 class ThingNodeDBModel(Base):
-    __tablename__ = "thing_node"
+    __tablename__ = "structure_thing_node"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
     stakeholder_key = Column(String(36), nullable=False)
     name = Column(String(255), index=True, nullable=False, unique=True)
     description = Column(String(1024), nullable=True)
     parent_node_id: UUIDType = Column(
-        UUIDType(binary=False), ForeignKey("thing_node.id"), nullable=True
+        UUIDType(binary=False), ForeignKey("structure_thing_node.id"), nullable=True
     )
     parent_external_node_id = Column(String(255), nullable=True)
     element_type_id: UUIDType = Column(
         UUIDType(binary=False),
-        ForeignKey("element_type.id"),
+        ForeignKey("structure_element_type.id"),
         nullable=False,
     )
     element_type_external_id = Column(String(255), nullable=False)

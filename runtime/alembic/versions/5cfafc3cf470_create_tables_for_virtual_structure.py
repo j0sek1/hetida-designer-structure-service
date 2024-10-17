@@ -45,7 +45,7 @@ def upgrade():
 
     # Create table element_type
     op.create_table(
-        "element_type",
+        "structure_element_type",
         sa.Column(
             "id",
             UUIDType(binary=False),
@@ -67,7 +67,7 @@ def upgrade():
 
     # Create table thing_node
     op.create_table(
-        "thing_node",
+        "structure_thing_node",
         sa.Column(
             "id",
             UUIDType(binary=False),
@@ -84,13 +84,13 @@ def upgrade():
         sa.Column(
             "parent_node_id",
             UUIDType(binary=False),
-            sa.ForeignKey("thing_node.id"),
+            sa.ForeignKey("structure_thing_node.id"),
             nullable=True,
         ),
         sa.Column(
             "element_type_id",
             UUIDType(binary=False),
-            sa.ForeignKey("element_type.id"),
+            sa.ForeignKey("structure_element_type.id"),
             nullable=False,
         ),
         sa.Column("meta_data", sa.JSON(), nullable=True),
@@ -104,7 +104,7 @@ def upgrade():
 
     # Create table source
     op.create_table(
-        "source",
+        "structure_source",
         sa.Column(
             "id",
             UUIDType(binary=False),
@@ -135,7 +135,7 @@ def upgrade():
 
     # Create table sink
     op.create_table(
-        "sink",
+        "structure_sink",
         sa.Column(
             "id",
             UUIDType(binary=False),
@@ -166,22 +166,33 @@ def upgrade():
 
     # Create thingnode_source_association table
     op.create_table(
-        "thingnode_source_association",
+        "structure_thingnode_source_association",
         sa.Column(
-            "thingnode_id", UUIDType(binary=False), sa.ForeignKey("thing_node.id"), primary_key=True
+            "thingnode_id",
+            UUIDType(binary=False),
+            sa.ForeignKey("structure_thing_node.id"),
+            primary_key=True,
         ),
         sa.Column(
-            "source_id", UUIDType(binary=False), sa.ForeignKey("source.id"), primary_key=True
+            "source_id",
+            UUIDType(binary=False),
+            sa.ForeignKey("structure_source.id"),
+            primary_key=True,
         ),
     )
 
     # Create thingnode_sink_association table
     op.create_table(
-        "thingnode_sink_association",
+        "structure_thingnode_sink_association",
         sa.Column(
-            "thingnode_id", UUIDType(binary=False), sa.ForeignKey("thing_node.id"), primary_key=True
+            "thingnode_id",
+            UUIDType(binary=False),
+            sa.ForeignKey("structure_thing_node.id"),
+            primary_key=True,
         ),
-        sa.Column("sink_id", UUIDType(binary=False), sa.ForeignKey("sink.id"), primary_key=True),
+        sa.Column(
+            "sink_id", UUIDType(binary=False), sa.ForeignKey("structure_sink.id"), primary_key=True
+        ),
     )
 
     # Create table property_metadata
@@ -227,7 +238,7 @@ def upgrade():
         sa.Column(
             "element_type_id",
             UUIDType(binary=False),
-            sa.ForeignKey("element_type.id", ondelete="CASCADE"),
+            sa.ForeignKey("structure_element_type.id", ondelete="CASCADE"),
             primary_key=True,
             nullable=False,
         ),
@@ -243,20 +254,20 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table("thingnode_source_association")
+    op.drop_table("structure_thingnode_source_association")
 
-    op.drop_table("thingnode_sink_association")
+    op.drop_table("structure_thingnode_sink_association")
 
     op.drop_table("element_type_to_property_set")
 
-    op.drop_table("sink")
+    op.drop_table("structure_sink")
 
-    op.drop_table("source")
+    op.drop_table("structure_source")
 
-    op.drop_table("thing_node")
+    op.drop_table("structure_thing_node")
 
     op.drop_table("property_metadata")
 
     op.drop_table("property_set")
 
-    op.drop_table("element_type")
+    op.drop_table("structure_element_type")
