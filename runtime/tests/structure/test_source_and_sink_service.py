@@ -11,6 +11,8 @@ from hetdesrun.structure.db.source_sink_service import (
     fetch_collection_of_sources_from_db_by_id,
     fetch_single_sink_from_db_by_id,
     fetch_single_source_from_db_by_id,
+    fetch_sinks_by_substring_match,
+    fetch_sources_by_substring_match,
 )
 
 
@@ -171,3 +173,39 @@ def test_fetch_collection_of_sinks_from_db_by_id(mocked_clean_test_db_session):
         assert (
             fetched_sink.name == expected_sink.name
         ), f"Expected name '{expected_sink.name}', but got '{fetched_sink.name}'."
+
+
+@pytest.mark.usefixtures("_db_test_structure")
+def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
+    result = fetch_sinks_by_substring_match(
+        "Anomaly Score for the energy usage of the pump system in Storage Tan"
+    )
+
+    # Assert that the correct SinkDBModel is returned
+    assert len(result) == 1
+    assert result[0].name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
+
+
+@pytest.mark.usefixtures("_db_test_structure")
+def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session):
+    result = fetch_sinks_by_substring_match("Nonexistent")
+
+    # Assert that no SinkDBModel is returned
+    assert len(result) == 0
+
+
+@pytest.mark.usefixtures("_db_test_structure")
+def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session):
+    result = fetch_sources_by_substring_match("Energy consumption of the waterwor")
+
+    # Assert that the correct SourceDBModel is returned
+    assert len(result) == 1
+    assert result[0].name == "Energy consumption of the waterworks"
+
+
+@pytest.mark.usefixtures("_db_test_structure")
+def test_filter_sources_by_substring_match_no_matches(mocked_clean_test_db_session):
+    result = fetch_sources_by_substring_match("Nonexistent")
+
+    # Assert that no SourceDBModel is returned
+    assert len(result) == 0
