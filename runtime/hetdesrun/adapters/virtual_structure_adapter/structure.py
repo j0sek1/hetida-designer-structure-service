@@ -15,7 +15,7 @@ from hetdesrun.structure.db.source_sink_service import (
     fetch_sources_by_substring_match,
 )
 from hetdesrun.structure.db.structure_service import get_children
-from hetdesrun.structure.db.thing_node_service import fetch_single_thing_node_by_id
+from hetdesrun.structure.db.thing_node_service import fetch_single_thing_node_from_db_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ def get_single_thingnode(
     tn_id: UUID,
 ) -> VirtualStructureAdapterThingNode | None:
     try:
-        node = fetch_single_thing_node_by_id(tn_id)
+        node = fetch_single_thing_node_from_db_by_id(tn_id)
     except DBNotFoundError as e:
         logger.error("Could not retrieve thingnode for ID: %s, due to: %s", tn_id, e)
         return None

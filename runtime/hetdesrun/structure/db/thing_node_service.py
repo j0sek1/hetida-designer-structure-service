@@ -19,7 +19,7 @@ from hetdesrun.structure.models import ThingNode
 logger = logging.getLogger(__name__)
 
 
-def fetch_single_thing_node_by_id(tn_id: UUID) -> ThingNode:
+def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> ThingNode:
     logger.debug("Fetching single ThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
         thing_node = session.query(ThingNodeOrm).filter(ThingNodeOrm.id == tn_id).one_or_none()
