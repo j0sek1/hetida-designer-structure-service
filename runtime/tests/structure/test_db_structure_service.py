@@ -8,10 +8,10 @@ from sqlalchemy.future.engine import Engine
 
 from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
-    ElementTypeOrm,
-    SinkOrm,
-    SourceOrm,
-    ThingNodeOrm,
+    ElementTypeDBModel,
+    SinkDBModel,
+    SourceDBModel,
+    ThingNodeDBModel,
     thingnode_sink_association,
     thingnode_source_association,
 )
@@ -534,10 +534,10 @@ def test_load_structure_from_invalid_json_file_db_service():
 def test_delete_structure_db_service(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Verify that the database is initially populated
-        assert session.query(ElementTypeOrm).count() > 0
-        assert session.query(ThingNodeOrm).count() > 0
-        assert session.query(SourceOrm).count() > 0
-        assert session.query(SinkOrm).count() > 0
+        assert session.query(ElementTypeDBModel).count() > 0
+        assert session.query(ThingNodeDBModel).count() > 0
+        assert session.query(SourceDBModel).count() > 0
+        assert session.query(SinkDBModel).count() > 0
         assert session.query(thingnode_source_association).count() > 0
         assert session.query(thingnode_sink_association).count() > 0
 
@@ -545,10 +545,10 @@ def test_delete_structure_db_service(mocked_clean_test_db_session):
 
     with mocked_clean_test_db_session() as session:
         # Verify that all tables are empty after purging
-        assert session.query(ElementTypeOrm).count() == 0
-        assert session.query(ThingNodeOrm).count() == 0
-        assert session.query(SourceOrm).count() == 0
-        assert session.query(SinkOrm).count() == 0
+        assert session.query(ElementTypeDBModel).count() == 0
+        assert session.query(ThingNodeDBModel).count() == 0
+        assert session.query(SourceDBModel).count() == 0
+        assert session.query(SinkDBModel).count() == 0
         assert session.query(thingnode_source_association).count() == 0
         assert session.query(thingnode_sink_association).count() == 0
 
@@ -578,10 +578,10 @@ def test_update_structure_with_new_elements_db_service():
 
 def verify_initial_structure(session):
     # Fetch all initial elements from the database
-    initial_element_types = session.query(ElementTypeOrm).all()
-    initial_thing_nodes = session.query(ThingNodeOrm).all()
-    initial_sources = session.query(SourceOrm).all()
-    initial_sinks = session.query(SinkOrm).all()
+    initial_element_types = session.query(ElementTypeDBModel).all()
+    initial_thing_nodes = session.query(ThingNodeDBModel).all()
+    initial_sources = session.query(SourceDBModel).all()
+    initial_sinks = session.query(SinkDBModel).all()
 
     # Verify that the initial structure contains the correct number of elements
     assert len(initial_element_types) == 3, "Expected 3 Element Types in the initial structure"
@@ -591,7 +591,9 @@ def verify_initial_structure(session):
 
     # Verify specific attributes of the ThingNodes before the update
     initial_tn = (
-        session.query(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank1").one()
+        session.query(ThingNodeDBModel)
+        .filter_by(external_id="Waterworks1_Plant1_StorageTank1")
+        .one()
     )
     assert (
         initial_tn.meta_data["capacity"] == "5000"
@@ -599,7 +601,9 @@ def verify_initial_structure(session):
     assert initial_tn.meta_data["description"] == "Water storage capacity for Storage Tank 1"
 
     initial_tn2 = (
-        session.query(ThingNodeOrm).filter_by(external_id="Waterworks1_Plant1_StorageTank2").one()
+        session.query(ThingNodeDBModel)
+        .filter_by(external_id="Waterworks1_Plant1_StorageTank2")
+        .one()
     )
     assert (
         initial_tn2.meta_data["capacity"] == "6000"
@@ -609,10 +613,10 @@ def verify_initial_structure(session):
 
 def verify_updated_structure(session):
     # Fetch all elements from the database after the update
-    final_element_types = session.query(ElementTypeOrm).all()
-    final_thing_nodes = session.query(ThingNodeOrm).all()
-    final_sources = session.query(SourceOrm).all()
-    final_sinks = session.query(SinkOrm).all()
+    final_element_types = session.query(ElementTypeDBModel).all()
+    final_thing_nodes = session.query(ThingNodeDBModel).all()
+    final_sources = session.query(SourceDBModel).all()
+    final_sinks = session.query(SinkDBModel).all()
 
     # Verify that the structure now contains the updated number of elements
     assert len(final_element_types) == 4, "Expected 4 Element Types after the update"
@@ -679,10 +683,10 @@ def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
 
     # Ensure the database is empty at the beginning
     with get_session()() as session:
-        assert session.query(ElementTypeOrm).count() == 0
-        assert session.query(ThingNodeOrm).count() == 0
-        assert session.query(SourceOrm).count() == 0
-        assert session.query(SinkOrm).count() == 0
+        assert session.query(ElementTypeDBModel).count() == 0
+        assert session.query(ThingNodeDBModel).count() == 0
+        assert session.query(SourceDBModel).count() == 0
+        assert session.query(SinkDBModel).count() == 0
 
     # Load structure from the file
     complete_structure = load_structure_from_json_file(file_path)
@@ -692,26 +696,26 @@ def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
 
     # Verify that the structure was correctly inserted
     with get_session()() as session:
-        assert session.query(ElementTypeOrm).count() == 3
-        assert session.query(ThingNodeOrm).count() == 7
-        assert session.query(SourceOrm).count() == 3
-        assert session.query(SinkOrm).count() == 3
+        assert session.query(ElementTypeDBModel).count() == 3
+        assert session.query(ThingNodeDBModel).count() == 7
+        assert session.query(SourceDBModel).count() == 3
+        assert session.query(SinkDBModel).count() == 3
 
         # Verify specific ElementType
         waterworks_type = (
-            session.query(ElementTypeOrm).filter_by(external_id="Waterworks_Type").one()
+            session.query(ElementTypeDBModel).filter_by(external_id="Waterworks_Type").one()
         )
         assert waterworks_type.name == "Waterworks"
         assert waterworks_type.description == "Element type for waterworks"
 
         # Verify specific ThingNode
-        waterworks1 = session.query(ThingNodeOrm).filter_by(external_id="Waterworks1").one()
+        waterworks1 = session.query(ThingNodeDBModel).filter_by(external_id="Waterworks1").one()
         assert waterworks1.name == "Waterworks 1"
         assert waterworks1.meta_data["location"] == "Main Site"
 
         # Verify specific Source
         source = (
-            session.query(SourceOrm)
+            session.query(SourceDBModel)
             .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
             .one()
         )
@@ -720,7 +724,7 @@ def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
 
         # Verify specific Sink
         sink = (
-            session.query(SinkOrm)
+            session.query(SinkDBModel)
             .filter_by(external_id="AnomalyScore_EnergyUsage_PumpSystem_StorageTank")
             .one()
         )
@@ -749,16 +753,16 @@ def test_update_structure_no_elements_deleted_db_service():
     # Verify structure after update
     with get_session()() as session:
         # Check the number of elements after update
-        assert session.query(ElementTypeOrm).count() == len(initial_structure.element_types)
-        assert session.query(ThingNodeOrm).count() == len(initial_structure.thing_nodes)
-        assert session.query(SourceOrm).count() == len(initial_structure.sources)
-        assert session.query(SinkOrm).count() == len(initial_structure.sinks)
+        assert session.query(ElementTypeDBModel).count() == len(initial_structure.element_types)
+        assert session.query(ThingNodeDBModel).count() == len(initial_structure.thing_nodes)
+        assert session.query(SourceDBModel).count() == len(initial_structure.sources)
+        assert session.query(SinkDBModel).count() == len(initial_structure.sinks)
 
         # Verify specific elements from the initial structure are still present
         # Element Types
         for element_type in initial_structure.element_types:
             assert (
-                session.query(ElementTypeOrm)
+                session.query(ElementTypeDBModel)
                 .filter_by(external_id=element_type.external_id)
                 .count()
                 == 1
@@ -767,17 +771,21 @@ def test_update_structure_no_elements_deleted_db_service():
         # Thing Nodes
         for thing_node in initial_structure.thing_nodes:
             assert (
-                session.query(ThingNodeOrm).filter_by(external_id=thing_node.external_id).count()
+                session.query(ThingNodeDBModel)
+                .filter_by(external_id=thing_node.external_id)
+                .count()
                 == 1
             )
 
         # Sources
         for source in initial_structure.sources:
-            assert session.query(SourceOrm).filter_by(external_id=source.external_id).count() == 1
+            assert (
+                session.query(SourceDBModel).filter_by(external_id=source.external_id).count() == 1
+            )
 
         # Sinks
         for sink in initial_structure.sinks:
-            assert session.query(SinkOrm).filter_by(external_id=sink.external_id).count() == 1
+            assert session.query(SinkDBModel).filter_by(external_id=sink.external_id).count() == 1
 
 
 def test_is_database_empty_when_empty_db_service(mocked_clean_test_db_session):
@@ -794,13 +802,13 @@ def test_sort_thing_nodes_db_service(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all thing node keys first to pass them to fetch_thing_nodes
         thing_node_keys = {
-            (tn.stakeholder_key, tn.external_id) for tn in session.query(ThingNodeOrm).all()
+            (tn.stakeholder_key, tn.external_id) for tn in session.query(ThingNodeDBModel).all()
         }
 
         # Fetch all thing nodes from the database
         thing_nodes_in_db = fetch_thing_nodes(session, thing_node_keys)
 
-        # Since fetch_thing_nodes returns a dictionary of ThingNodeOrm instances,
+        # Since fetch_thing_nodes returns a dictionary of ThingNodeDBModel instances,
         #  no need to unpack tuples
         thing_nodes_in_db = list(thing_nodes_in_db.values())
 
@@ -845,7 +853,7 @@ def test_sort_thing_nodes_db_service(mocked_clean_test_db_session):
         )
 
         # Ensure the condition where a parent_node_id is not initially in existing_thing_nodes
-        orphan_node = ThingNodeOrm(
+        orphan_node = ThingNodeDBModel(
             external_id="Orphan_StorageTank",
             name="Orphan Storage Tank",
             stakeholder_key="GW",
@@ -874,7 +882,7 @@ def test_fetch_sources_exception_handling_db_service(mocked_clean_test_db_sessio
     with (
         pytest.raises(
             DBError,
-            match=r"Unexpected error while fetching SourceOrm",
+            match=r"Unexpected error while fetching SourceDBModel",
         ),
         mocked_clean_test_db_session() as session,
     ):
@@ -884,9 +892,9 @@ def test_fetch_sources_exception_handling_db_service(mocked_clean_test_db_sessio
 
 def test_populate_element_type_ids_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Create an ElementTypeOrm and add it to the session
+        # Create an ElementTypeDBModel and add it to the session
         element_type_id = uuid.uuid4()
-        element_type_orm = ElementTypeOrm(
+        element_type_orm = ElementTypeDBModel(
             id=element_type_id,
             external_id="type1",
             stakeholder_key="GW",
@@ -953,17 +961,17 @@ def test_populate_element_type_ids_element_type_not_found(mocked_clean_test_db_s
 
 def test_search_element_types_by_name_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add ElementTypeOrms to the session
+        # Add ElementTypeDBModels to the session
         session.add_all(
             [
-                ElementTypeOrm(
+                ElementTypeDBModel(
                     id=uuid.uuid4(),
                     external_id="type1",
                     stakeholder_key="GW",
                     name="Test ElementType",
                     description="Description",
                 ),
-                ElementTypeOrm(
+                ElementTypeDBModel(
                     id=uuid.uuid4(),
                     external_id="type2",
                     stakeholder_key="GW",
@@ -977,24 +985,24 @@ def test_search_element_types_by_name_success(mocked_clean_test_db_session):
         # Search for 'Test'
         result = search_element_types_by_name(session, "Test")
 
-        # Assert that the correct ElementTypeOrm is returned
+        # Assert that the correct ElementTypeDBModel is returned
         assert len(result) == 1
         assert result[0].name == "Test ElementType"
 
 
 def test_search_element_types_by_name_no_matches(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add ElementTypeOrms to the session
+        # Add ElementTypeDBModels to the session
         session.add_all(
             [
-                ElementTypeOrm(
+                ElementTypeDBModel(
                     id=uuid.uuid4(),
                     external_id="type1",
                     stakeholder_key="GW",
                     name="Sample ElementType",
                     description="Description",
                 ),
-                ElementTypeOrm(
+                ElementTypeDBModel(
                     id=uuid.uuid4(),
                     external_id="type2",
                     stakeholder_key="GW",
@@ -1008,7 +1016,7 @@ def test_search_element_types_by_name_no_matches(mocked_clean_test_db_session):
         # Search for 'Nonexistent'
         result = search_element_types_by_name(session, "Nonexistent")
 
-        # Assert that no ElementTypeOrm is returned
+        # Assert that no ElementTypeDBModel is returned
         assert len(result) == 0
 
 
@@ -1031,8 +1039,8 @@ def test_upsert_element_types_success(mocked_clean_test_db_session):
         upsert_element_types(session, elements, existing_elements)
         session.commit()
 
-        # Verify that the ElementTypeOrm was added to the database
-        result = session.query(ElementTypeOrm).filter_by(external_id="type1").one_or_none()
+        # Verify that the ElementTypeDBModel was added to the database
+        result = session.query(ElementTypeDBModel).filter_by(external_id="type1").one_or_none()
         assert result is not None
         assert result.name == "Test ElementType"
 
@@ -1040,10 +1048,10 @@ def test_upsert_element_types_success(mocked_clean_test_db_session):
 @pytest.mark.skip("Session management changed")
 def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add SinkOrms to the session
+        # Add SinkDBModels to the session
         session.add_all(
             [
-                SinkOrm(
+                SinkDBModel(
                     id=uuid.uuid4(),
                     external_id="sink1",
                     stakeholder_key="GW",
@@ -1060,7 +1068,7 @@ def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
                     passthrough_filters=[],
                     thing_node_external_ids=[],
                 ),
-                SinkOrm(
+                SinkDBModel(
                     id=uuid.uuid4(),
                     external_id="sink2",
                     stakeholder_key="GW",
@@ -1084,7 +1092,7 @@ def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
         # Search for 'Test'
         result = fetch_sinks_by_substring_match(session, "Test")
 
-        # Assert that the correct SinkOrm is returned
+        # Assert that the correct SinkDBModel is returned
         assert len(result) == 1
         assert result[0].name == "Test Sink"
 
@@ -1092,9 +1100,9 @@ def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
 @pytest.mark.skip("Session management changed")
 def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add SinkOrms to the session
+        # Add SinkDBModels to the session
         session.add(
-            SinkOrm(
+            SinkDBModel(
                 id=uuid.uuid4(),
                 external_id="sink1",
                 stakeholder_key="GW",
@@ -1117,17 +1125,17 @@ def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session
         # Search for 'Nonexistent'
         result = fetch_sinks_by_substring_match(session, "Nonexistent")
 
-        # Assert that no SinkOrm is returned
+        # Assert that no SinkDBModel is returned
         assert len(result) == 0
 
 
 @pytest.mark.skip("Session management changed")
 def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add SourceOrms to the session
+        # Add SourceDBModels to the session
         session.add_all(
             [
-                SourceOrm(
+                SourceDBModel(
                     id=uuid.uuid4(),
                     external_id="source1",
                     stakeholder_key="GW",
@@ -1144,7 +1152,7 @@ def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session)
                     passthrough_filters=[],
                     thing_node_external_ids=[],
                 ),
-                SourceOrm(
+                SourceDBModel(
                     id=uuid.uuid4(),
                     external_id="source2",
                     stakeholder_key="GW",
@@ -1168,7 +1176,7 @@ def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session)
         # Search for 'Test'
         result = fetch_sources_by_substring_match(session, "Test")
 
-        # Assert that the correct SourceOrm is returned
+        # Assert that the correct SourceDBModel is returned
         assert len(result) == 1
         assert result[0].name == "Test Source"
 
@@ -1176,9 +1184,9 @@ def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session)
 @pytest.mark.skip("Session management changed")
 def test_filter_sources_by_substring_match_no_matches(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add SourceOrms to the session
+        # Add SourceDBModels to the session
         session.add(
-            SourceOrm(
+            SourceDBModel(
                 id=uuid.uuid4(),
                 external_id="source1",
                 stakeholder_key="GW",
@@ -1201,7 +1209,7 @@ def test_filter_sources_by_substring_match_no_matches(mocked_clean_test_db_sessi
         # Search for 'Nonexistent'
         result = fetch_sources_by_substring_match(session, "Nonexistent")
 
-        # Assert that no SourceOrm is returned
+        # Assert that no SourceDBModel is returned
         assert len(result) == 0
 
 
@@ -1233,8 +1241,8 @@ def test_upsert_sinks_success(mocked_clean_test_db_session):
         upsert_sinks(session, [sink], existing_sinks, existing_thing_nodes)
         session.commit()
 
-        # Verify that the SinkOrm was added to the database
-        result = session.query(SinkOrm).filter_by(external_id="sink1").one_or_none()
+        # Verify that the SinkDBModel was added to the database
+        result = session.query(SinkDBModel).filter_by(external_id="sink1").one_or_none()
         assert result is not None
         assert result.name == "Test Sink"
 
@@ -1267,16 +1275,16 @@ def test_upsert_sources_success(mocked_clean_test_db_session):
         upsert_sources(session, [source], existing_sources, existing_thing_nodes)
         session.commit()
 
-        # Verify that the SourceOrm was added to the database
-        result = session.query(SourceOrm).filter_by(external_id="source1").one_or_none()
+        # Verify that the SourceDBModel was added to the database
+        result = session.query(SourceDBModel).filter_by(external_id="source1").one_or_none()
         assert result is not None
         assert result.name == "Test Source"
 
 
 def test_search_thing_nodes_by_name_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add ElementTypeOrm to the session
-        element_type = ElementTypeOrm(
+        # Add ElementTypeDBModel to the session
+        element_type = ElementTypeDBModel(
             id=uuid.uuid4(),
             external_id="type1",
             stakeholder_key="GW",
@@ -1286,10 +1294,10 @@ def test_search_thing_nodes_by_name_success(mocked_clean_test_db_session):
         session.add(element_type)
         session.commit()
 
-        # Add ThingNodeOrms to the session with the element_type
+        # Add ThingNodeDBModels to the session with the element_type
         session.add_all(
             [
-                ThingNodeOrm(
+                ThingNodeDBModel(
                     id=uuid.uuid4(),
                     external_id="node1",
                     stakeholder_key="GW",
@@ -1297,11 +1305,11 @@ def test_search_thing_nodes_by_name_success(mocked_clean_test_db_session):
                     description="Description",
                     parent_node_id=None,
                     parent_external_node_id=None,
-                    element_type_id=element_type.id,  # Link to ElementTypeOrm
+                    element_type_id=element_type.id,  # Link to ElementTypeDBModel
                     element_type_external_id="type1",
                     meta_data={},
                 ),
-                ThingNodeOrm(
+                ThingNodeDBModel(
                     id=uuid.uuid4(),
                     external_id="node2",
                     stakeholder_key="GW",
@@ -1309,7 +1317,7 @@ def test_search_thing_nodes_by_name_success(mocked_clean_test_db_session):
                     description="Description",
                     parent_node_id=None,
                     parent_external_node_id=None,
-                    element_type_id=element_type.id,  # Link to the same ElementTypeOrm
+                    element_type_id=element_type.id,  # Link to the same ElementTypeDBModel
                     element_type_external_id="type1",
                     meta_data={},
                 ),
@@ -1320,15 +1328,15 @@ def test_search_thing_nodes_by_name_success(mocked_clean_test_db_session):
         # Search for 'Test'
         result = search_thing_nodes_by_name(session, "Test")
 
-        # Assert that the correct ThingNodeOrm is returned
+        # Assert that the correct ThingNodeDBModel is returned
         assert len(result) == 1
         assert result[0].name == "Test Node"
 
 
 def test_search_thing_nodes_by_name_no_matches(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Add ElementTypeOrm to the session
-        element_type = ElementTypeOrm(
+        # Add ElementTypeDBModel to the session
+        element_type = ElementTypeDBModel(
             id=uuid.uuid4(),
             external_id="type1",
             stakeholder_key="GW",
@@ -1337,9 +1345,9 @@ def test_search_thing_nodes_by_name_no_matches(mocked_clean_test_db_session):
         )
         session.add(element_type)
         session.commit()
-        # Add ThingNodeOrm to the session
+        # Add ThingNodeDBModel to the session
         session.add(
-            ThingNodeOrm(
+            ThingNodeDBModel(
                 id=uuid.uuid4(),
                 external_id="node1",
                 stakeholder_key="GW",
@@ -1357,16 +1365,16 @@ def test_search_thing_nodes_by_name_no_matches(mocked_clean_test_db_session):
         # Search for 'Nonexistent'
         result = search_thing_nodes_by_name(session, "Nonexistent")
 
-        # Assert that no ThingNodeOrm is returned
+        # Assert that no ThingNodeDBModel is returned
         assert len(result) == 0
 
 
 def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         existing_thing_nodes = {}
-        # Add an ElementTypeOrm to the session
+        # Add an ElementTypeDBModel to the session
         element_type_id = uuid.uuid4()
-        element_type = ElementTypeOrm(
+        element_type = ElementTypeDBModel(
             id=element_type_id,
             external_id="type1",
             stakeholder_key="GW",
@@ -1393,7 +1401,7 @@ def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
         upsert_thing_nodes(session, [node], existing_thing_nodes)
         session.commit()
 
-        # Verify that the ThingNodeOrm was added to the database
-        result = session.query(ThingNodeOrm).filter_by(external_id="node1").one_or_none()
+        # Verify that the ThingNodeDBModel was added to the database
+        result = session.query(ThingNodeDBModel).filter_by(external_id="node1").one_or_none()
         assert result is not None
         assert result.name == "Test Node"

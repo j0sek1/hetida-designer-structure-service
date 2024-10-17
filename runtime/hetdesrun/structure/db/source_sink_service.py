@@ -8,9 +8,9 @@ from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
-    SinkOrm,
-    SourceOrm,
-    ThingNodeOrm,
+    SinkDBModel,
+    SourceDBModel,
+    ThingNodeDBModel,
 )
 from hetdesrun.structure.db.exceptions import (
     DBError,
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def fetch_all_sources_from_db() -> list[Source]:
     logger.debug("Fetching all Sources from the database.")
     with get_session()() as session:
-        sources = session.query(SourceOrm).all()
+        sources = session.query(SourceDBModel).all()
 
     logger.debug("Successfully fetched %d sources from the database.", len(sources))
     return [Source.from_orm_model(source) for source in sources]
@@ -38,7 +38,7 @@ def fetch_all_sources_from_db() -> list[Source]:
 def fetch_all_sinks_from_db() -> list[Sink]:
     logger.debug("Fetching all Sinks from the database.")
     with get_session()() as session:
-        sinks = session.query(SinkOrm).all()
+        sinks = session.query(SinkDBModel).all()
 
     logger.debug("Successfully fetched %d sinks from the database.", len(sinks))
     return [Sink.from_orm_model(sink) for sink in sinks]
@@ -47,7 +47,7 @@ def fetch_all_sinks_from_db() -> list[Sink]:
 def fetch_single_sink_from_db_by_id(sink_id: UUID) -> Sink:
     logger.debug("Fetching single Sink from database with ID: %s", sink_id)
     with get_session()() as session:
-        sink = session.query(SinkOrm).filter(SinkOrm.id == sink_id).one_or_none()
+        sink = session.query(SinkDBModel).filter(SinkDBModel.id == sink_id).one_or_none()
         if sink:
             logger.debug("Sink with ID %s found.", sink_id)
             return Sink.from_orm_model(sink)
@@ -59,7 +59,7 @@ def fetch_single_sink_from_db_by_id(sink_id: UUID) -> Sink:
 def fetch_single_source_from_db_by_id(src_id: UUID) -> Source:
     logger.debug("Fetching single Source from database with ID: %s", src_id)
     with get_session()() as session:
-        source = session.query(SourceOrm).filter(SourceOrm.id == src_id).one_or_none()
+        source = session.query(SourceDBModel).filter(SourceDBModel.id == src_id).one_or_none()
         if source:
             logger.debug("Source with ID %s found.", src_id)
             return Source.from_orm_model(source)
@@ -78,7 +78,7 @@ def fetch_collection_of_sources_from_db_by_id(
     logger.debug("Fetching collection of Sources with IDs: %s", src_ids)
     with get_session()() as session:
         for id_batch in batched(src_ids, ceil(len(src_ids) / batch_size)):
-            batch_query = session.query(SourceOrm).filter(SourceOrm.id.in_(id_batch))
+            batch_query = session.query(SourceDBModel).filter(SourceDBModel.id.in_(id_batch))
             batch_results = batch_query.all()
             for src in batch_results:
                 sources[src.id] = Source.from_orm_model(src)
@@ -100,7 +100,7 @@ def fetch_collection_of_sinks_from_db_by_id(
     logger.debug("Fetching collection of Sinks with IDs: %s", sink_ids)
     with get_session()() as session:
         for id_batch in batched(sink_ids, ceil(len(sink_ids) / batch_size)):
-            batch_query = session.query(SinkOrm).filter(SinkOrm.id.in_(id_batch))
+            batch_query = session.query(SinkDBModel).filter(SinkDBModel.id.in_(id_batch))
             batch_results = batch_query.all()
             for sink in batch_results:
                 sinks[sink.id] = Sink.from_orm_model(sink)
@@ -114,145 +114,154 @@ def fetch_collection_of_sinks_from_db_by_id(
 
 def fetch_sources(
     session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
-) -> dict[tuple[str, str], SourceOrm]:
+) -> dict[tuple[str, str], SourceDBModel]:
     """
-    Fetches SourceOrm records from the database based on stakeholder_key and external_id.
+    Fetches SourceDBModel records from the database based on stakeholder_key and external_id.
 
     Args:
         session (Session): The SQLAlchemy session.
         keys (set[Tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
 
     Returns:
-        Dict[Tuple[str, str], SourceOrm]:
-        A mapping from (stakeholder_key, external_id) to SourceOrm.
+        Dict[Tuple[str, str], SourceDBModel]:
+        A mapping from (stakeholder_key, external_id) to SourceDBModel.
 
     Raises:
         IntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
-    existing_sources_mapping: dict[tuple[str, str], SourceOrm] = {}
+    existing_sources_mapping: dict[tuple[str, str], SourceDBModel] = {}
     if not keys:
         return existing_sources_mapping
     try:
         # Loop through keys in batches of size 500 or less
         for key_batch in batched(keys, ceil(len(keys) / batch_size)):
-            batch_query = session.query(SourceOrm).filter(
-                tuple_(SourceOrm.stakeholder_key, SourceOrm.external_id).in_(key_batch)
+            batch_query = session.query(SourceDBModel).filter(
+                tuple_(SourceDBModel.stakeholder_key, SourceDBModel.external_id).in_(key_batch)
             )
             batch_results = batch_query.all()
             for source in batch_results:
                 key = (source.stakeholder_key, source.external_id)
                 existing_sources_mapping[key] = source
-        logger.debug("Fetched %d SourceOrm items from the database.", len(existing_sources_mapping))
+        logger.debug(
+            "Fetched %d SourceDBModel items from the database.", len(existing_sources_mapping)
+        )
         return existing_sources_mapping
     except IntegrityError as e:
-        logger.error("Integrity Error while fetching SourceOrm: %s", e)
-        raise DBIntegrityError("Integrity Error while fetching SourceOrm") from e
+        logger.error("Integrity Error while fetching SourceDBModel: %s", e)
+        raise DBIntegrityError("Integrity Error while fetching SourceDBModel") from e
     except Exception as e:
-        logger.error("Unexpected error while fetching SourceOrm: %s", e)
-        raise DBError("Unexpected error while fetching SourceOrm") from e
+        logger.error("Unexpected error while fetching SourceDBModel: %s", e)
+        raise DBError("Unexpected error while fetching SourceDBModel") from e
 
 
 def fetch_sinks(
     session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
-) -> dict[tuple[str, str], SinkOrm]:
+) -> dict[tuple[str, str], SinkDBModel]:
     """
-    Fetches SinkOrm records from the database based on stakeholder_key and external_id.
+    Fetches SinkDBModel records from the database based on stakeholder_key and external_id.
 
     Args:
         session (Session): The SQLAlchemy session.
         keys (set[Tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
 
     Returns:
-        Dict[Tuple[str, str], SinkOrm]: A mapping from (stakeholder_key, external_id) to SinkOrm.
+        Dict[Tuple[str, str], SinkDBModel]: A mapping from (stakeholder_key, external_id)
+                                            to SinkDBModel.
 
     Raises:
         IntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
-    existing_sinks_mapping: dict[tuple[str, str], SinkOrm] = {}
+    existing_sinks_mapping: dict[tuple[str, str], SinkDBModel] = {}
     if not keys:
         return existing_sinks_mapping
     try:
         # Loop through keys in batches of size 500 or less
         for key_batch in batched(keys, ceil(len(keys) / batch_size)):
-            batch_query = session.query(SinkOrm).filter(
-                tuple_(SinkOrm.stakeholder_key, SinkOrm.external_id).in_(key_batch)
+            batch_query = session.query(SinkDBModel).filter(
+                tuple_(SinkDBModel.stakeholder_key, SinkDBModel.external_id).in_(key_batch)
             )
             batch_results = batch_query.all()
             for sink in batch_results:
                 key = (sink.stakeholder_key, sink.external_id)
                 existing_sinks_mapping[key] = sink
-        logger.debug("Fetched %d SinkOrm items from the database.", len(existing_sinks_mapping))
+        logger.debug("Fetched %d SinkDBModel items from the database.", len(existing_sinks_mapping))
         return existing_sinks_mapping
     except IntegrityError as e:
-        logger.error("Integrity Error while fetching SinkOrm: %s", e)
-        raise DBIntegrityError("Integrity Error while fetching SinkOrm") from e
+        logger.error("Integrity Error while fetching SinkDBModel: %s", e)
+        raise DBIntegrityError("Integrity Error while fetching SinkDBModel") from e
     except Exception as e:
-        logger.error("Unexpected error while fetching SinkOrm: %s", e)
-        raise DBError("Unexpected error while fetching SinkOrm") from e
+        logger.error("Unexpected error while fetching SinkDBModel: %s", e)
+        raise DBError("Unexpected error while fetching SinkDBModel") from e
 
 
 def fetch_sources_by_substring_match(filter_string: str) -> list[Source]:
     with get_session()() as session:
         try:
             matching_sources = (
-                session.query(SourceOrm).filter(SourceOrm.name.ilike(f"%{filter_string}%")).all()
+                session.query(SourceDBModel)
+                .filter(SourceDBModel.name.ilike(f"%{filter_string}%"))
+                .all()
             )
             logger.debug(
-                "Found %d SourceOrm items matching filter string '%s'.",
+                "Found %d SourceDBModel items matching filter string '%s'.",
                 len(matching_sources),
                 filter_string,
             )
             return [Source.from_orm_model(src) for src in matching_sources]
         except IntegrityError as e:
-            logger.error("Integrity Error while filtering SourceOrm by substring match: %s", e)
+            logger.error("Integrity Error while filtering SourceDBModel by substring match: %s", e)
             raise DBIntegrityError(
-                "Integrity Error while filtering SourceOrm by substring match"
+                "Integrity Error while filtering SourceDBModel by substring match"
             ) from e
         except Exception as e:
-            logger.error("Unexpected error while filtering SourceOrm by substring match: %s", e)
-            raise DBError("Unexpected error while filtering SourceOrm by substring match") from e
+            logger.error("Unexpected error while filtering SourceDBModel by substring match: %s", e)
+            raise DBError(
+                "Unexpected error while filtering SourceDBModel by substring match"
+            ) from e
 
 
 def fetch_sinks_by_substring_match(filter_string: str) -> list[Sink]:
     with get_session()() as session:
         try:
             matching_sinks = (
-                session.query(SinkOrm).filter(SinkOrm.name.ilike(f"%{filter_string}%")).all()
+                session.query(SinkDBModel)
+                .filter(SinkDBModel.name.ilike(f"%{filter_string}%"))
+                .all()
             )
             logger.debug(
-                "Found %d SinkOrm items matching filter string '%s'.",
+                "Found %d SinkDBModel items matching filter string '%s'.",
                 len(matching_sinks),
                 filter_string,
             )
             return [Sink.from_orm_model(sink) for sink in matching_sinks]
         except IntegrityError as e:
-            logger.error("Integrity Error while filtering SinkOrm by substring match: %s", e)
+            logger.error("Integrity Error while filtering SinkDBModel by substring match: %s", e)
             raise DBIntegrityError(
-                "Integrity Error while filtering SourceOrm by substring match"
+                "Integrity Error while filtering SourceDBModel by substring match"
             ) from e
         except Exception as e:
-            logger.error("Unexpected error while filtering SinkOrm by substring match: %s", e)
-            raise DBError("Unexpected error while filtering SinkOrm by substring match") from e
+            logger.error("Unexpected error while filtering SinkDBModel by substring match: %s", e)
+            raise DBError("Unexpected error while filtering SinkDBModel by substring match") from e
 
 
 def upsert_sources(
     session: SQLAlchemySession,
     sources: list[Source],
-    existing_sources: dict[tuple[str, str], SourceOrm],
-    existing_thing_nodes: dict[tuple[str, str], ThingNodeOrm],
+    existing_sources: dict[tuple[str, str], SourceDBModel],
+    existing_thing_nodes: dict[tuple[str, str], ThingNodeDBModel],
 ) -> None:
     """
-    Upserts SourceOrm records using SQLAlchemy's merge and add functionalities.
+    Upserts SourceDBModel records using SQLAlchemy's merge and add functionalities.
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
         sources (List[Source]): The list of Source objects to upsert.
-        existing_sources (Dict[Tuple[str, str], SourceOrm]):
-            Existing SourceOrm objects mapped by (stakeholder_key, external_id).
-        existing_thing_nodes (Dict[Tuple[str, str], ThingNodeOrm]):
-            Existing ThingNodeOrm objects mapped by (stakeholder_key, external_id).
+        existing_sources (Dict[Tuple[str, str], SourceDBModel]):
+            Existing SourceDBModel objects mapped by (stakeholder_key, external_id).
+        existing_thing_nodes (Dict[Tuple[str, str], ThingNodeDBModel]):
+            Existing ThingNodeDBModel objects mapped by (stakeholder_key, external_id).
 
     Raises:
         DBIntegrityError: If an integrity error occurs during the upsert operation.
@@ -265,7 +274,7 @@ def upsert_sources(
                 key = (source.stakeholder_key, source.external_id)
                 db_source = existing_sources.get(key)
                 if db_source:
-                    logger.debug("Updating SourceOrm with key %s.", key)
+                    logger.debug("Updating SourceDBModel with key %s.", key)
                     # Update fields
                     db_source.name = source.name
                     db_source.type = source.type
@@ -288,9 +297,9 @@ def upsert_sources(
                     # Merge the updated source into the session
                     session.merge(db_source)
                 else:
-                    logger.debug("Creating new SourceOrm with key %s.", key)
-                    # Create a new SourceOrm object
-                    new_source = SourceOrm(
+                    logger.debug("Creating new SourceDBModel with key %s.", key)
+                    # Create a new SourceDBModel object
+                    new_source = SourceDBModel(
                         id=source.id,
                         external_id=source.external_id,
                         stakeholder_key=source.stakeholder_key,
@@ -317,29 +326,29 @@ def upsert_sources(
         # Explicitly flush all changes to ensure data is written to the database
         session.flush()
     except IntegrityError as e:
-        logger.error("Integrity Error while upserting SourceOrm: %s", e)
-        raise DBIntegrityError("Integrity Error while upserting SourceOrm") from e
+        logger.error("Integrity Error while upserting SourceDBModel: %s", e)
+        raise DBIntegrityError("Integrity Error while upserting SourceDBModel") from e
     except Exception as e:
-        logger.error("Error while upserting SourceOrm: %s", e)
-        raise DBUpdateError("Error while upserting SourceOrm") from e
+        logger.error("Error while upserting SourceDBModel: %s", e)
+        raise DBUpdateError("Error while upserting SourceDBModel") from e
 
 
 def upsert_sinks(
     session: SQLAlchemySession,
     sinks: list[Sink],
-    existing_sinks: dict[tuple[str, str], SinkOrm],
-    existing_thing_nodes: dict[tuple[str, str], ThingNodeOrm],
+    existing_sinks: dict[tuple[str, str], SinkDBModel],
+    existing_thing_nodes: dict[tuple[str, str], ThingNodeDBModel],
 ) -> None:
     """
-    Upserts SinkOrm records using SQLAlchemy's merge and add functionalities.
+    Upserts SinkDBModel records using SQLAlchemy's merge and add functionalities.
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
         sinks (List[Sink]): The list of Sink objects to upsert.
-        existing_sinks (Dict[Tuple[str, str], SinkOrm]):
-            Existing SinkOrm objects mapped by (stakeholder_key, external_id).
-        existing_thing_nodes (Dict[Tuple[str, str], ThingNodeOrm]):
-            Existing ThingNodeOrm objects mapped by (stakeholder_key, external_id).
+        existing_sinks (Dict[Tuple[str, str], SinkDBModel]):
+            Existing SinkDBModel objects mapped by (stakeholder_key, external_id).
+        existing_thing_nodes (Dict[Tuple[str, str], ThingNodeDBModel]):
+            Existing ThingNodeDBModel objects mapped by (stakeholder_key, external_id).
 
     Raises:
         DBIntegrityError: If an integrity error occurs during the upsert operation.
@@ -352,7 +361,7 @@ def upsert_sinks(
                 key = (sink.stakeholder_key, sink.external_id)
                 db_sink = existing_sinks.get(key)
                 if db_sink:
-                    logger.debug("Updating SinkOrm with key %s.", key)
+                    logger.debug("Updating SinkDBModel with key %s.", key)
                     # Update fields
                     db_sink.name = sink.name
                     db_sink.type = sink.type
@@ -375,9 +384,9 @@ def upsert_sinks(
                     # Merge the updated sink into the session
                     session.merge(db_sink)
                 else:
-                    logger.debug("Creating new SinkOrm with key %s.", key)
-                    # Create a new SinkOrm object
-                    new_sink = SinkOrm(
+                    logger.debug("Creating new SinkDBModel with key %s.", key)
+                    # Create a new SinkDBModel object
+                    new_sink = SinkDBModel(
                         id=sink.id,
                         external_id=sink.external_id,
                         stakeholder_key=sink.stakeholder_key,
@@ -404,8 +413,8 @@ def upsert_sinks(
         # Explicitly flush all changes to ensure data is written to the database
         session.flush()
     except IntegrityError as e:
-        logger.error("Integrity Error while upserting SinkOrm: %s", e)
-        raise DBIntegrityError("Integrity Error while upserting SinkOrm") from e
+        logger.error("Integrity Error while upserting SinkDBModel: %s", e)
+        raise DBIntegrityError("Integrity Error while upserting SinkDBModel") from e
     except Exception as e:
-        logger.error("Error while upserting SinkOrm: %s", e)
-        raise DBUpdateError("Error while upserting SinkOrm") from e
+        logger.error("Error while upserting SinkDBModel: %s", e)
+        raise DBUpdateError("Error while upserting SinkDBModel") from e

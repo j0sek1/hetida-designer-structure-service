@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from hetdesrun.persistence.structure_service_dbmodels import SinkOrm, SourceOrm
+from hetdesrun.persistence.structure_service_dbmodels import SinkDBModel, SourceDBModel
 from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.source_sink_service import (
     fetch_all_sinks_from_db,
@@ -18,7 +18,7 @@ from hetdesrun.structure.db.source_sink_service import (
 def test_fetch_single_source_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch an existing Source ID from the database
-        existing_source = session.query(SourceOrm).first()
+        existing_source = session.query(SourceDBModel).first()
         assert existing_source is not None, "Expected at least one Source in the test database."
         existing_source_id = existing_source.id
 
@@ -36,7 +36,7 @@ def test_fetch_single_source_from_db_by_id(mocked_clean_test_db_session):
 def test_fetch_all_sources_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sources directly from the database using the ORM for comparison
-        expected_sources = session.query(SourceOrm).all()
+        expected_sources = session.query(SourceDBModel).all()
 
     # Use the get_all_sources_from_db function to fetch all sources
     fetched_sources = fetch_all_sources_from_db()
@@ -61,7 +61,7 @@ def test_fetch_all_sources_from_db(mocked_clean_test_db_session):
 def test_fetch_collection_of_sources_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some specific sources directly from the database
-        expected_sources = session.query(SourceOrm).limit(2).all()
+        expected_sources = session.query(SourceDBModel).limit(2).all()
         expected_source_ids = [source.id for source in expected_sources]
 
     # Use the get_collection_of_sources_from_db function to fetch the sources
@@ -93,7 +93,7 @@ def test_fetch_collection_of_sources_from_db_by_id(mocked_clean_test_db_session)
 def test_fetch_single_sink_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch a specific sink directly from the database
-        expected_sink = session.query(SinkOrm).first()
+        expected_sink = session.query(SinkDBModel).first()
         assert expected_sink is not None, "No sinks found in the test database."
 
     # Use the get_single_sink_from_db function to fetch the sink
@@ -120,7 +120,7 @@ def test_fetch_single_sink_from_db_by_id(mocked_clean_test_db_session):
 def test_fetch_all_sinks_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sinks directly from the database
-        expected_sinks = session.query(SinkOrm).all()
+        expected_sinks = session.query(SinkDBModel).all()
         assert len(expected_sinks) > 0, "No sinks found in the test database."
 
     # Use the get_all_sinks_from_db function to fetch all sinks
@@ -148,7 +148,7 @@ def test_fetch_all_sinks_from_db(mocked_clean_test_db_session):
 def test_fetch_collection_of_sinks_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some sinks directly from the database
-        sinks_in_db = session.query(SinkOrm).limit(2).all()
+        sinks_in_db = session.query(SinkDBModel).limit(2).all()
         sink_ids = [sink.id for sink in sinks_in_db]
         assert len(sink_ids) > 0, "No sinks found in the test database."
 

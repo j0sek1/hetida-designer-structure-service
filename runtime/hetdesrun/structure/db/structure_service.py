@@ -8,10 +8,10 @@ from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
 from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
-    ElementTypeOrm,
-    SinkOrm,
-    SourceOrm,
-    ThingNodeOrm,
+    ElementTypeDBModel,
+    SinkDBModel,
+    SourceDBModel,
+    ThingNodeDBModel,
     thingnode_sink_association,
     thingnode_source_association,
 )
@@ -100,7 +100,7 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
 
 
 def sort_thing_nodes(
-    thing_nodes: list[ThingNode], existing_thing_nodes: dict[tuple[str, str], ThingNodeOrm]
+    thing_nodes: list[ThingNode], existing_thing_nodes: dict[tuple[str, str], ThingNodeDBModel]
 ) -> list[ThingNode]:
     """
     Sorts ThingNodes into hierarchical levels and flattens the structure,
@@ -108,7 +108,7 @@ def sort_thing_nodes(
 
     Args:
         thing_nodes (list[ThingNode]): The ThingNodes to sort.
-        existing_thing_nodes (dict[tuple[str, str], ThingNodeOrm]):
+        existing_thing_nodes (dict[tuple[str, str], ThingNodeDBModel]):
             Existing ThingNodes from the database.
 
     Returns:
@@ -191,14 +191,14 @@ def sort_thing_nodes(
 
 
 def populate_element_type_ids(
-    thing_nodes: list[ThingNode], existing_element_types: dict[tuple[str, str], ElementTypeOrm]
+    thing_nodes: list[ThingNode], existing_element_types: dict[tuple[str, str], ElementTypeDBModel]
 ) -> None:
     """
     Sets the element_type_id for each ThingNode based on existing ElementTypes.
 
     Args:
         thing_nodes (list[ThingNode]): The ThingNodes to populate element_type_id.
-        existing_element_types (dict[tuple[str, str], ElementTypeOrm]):
+        existing_element_types (dict[tuple[str, str], ElementTypeDBModel]):
             Existing ElementTypes from the database.
     """
     logger.debug("Populating element_type_id for ThingNodes.")
@@ -330,10 +330,10 @@ def update_structure_from_file(file_path: str) -> None:
 def is_database_empty() -> bool:
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
-        element_type_exists = session.query(ElementTypeOrm).first() is not None
-        thing_node_exists = session.query(ThingNodeOrm).first() is not None
-        source_exists = session.query(SourceOrm).first() is not None
-        sink_exists = session.query(SinkOrm).first() is not None
+        element_type_exists = session.query(ElementTypeDBModel).first() is not None
+        thing_node_exists = session.query(ThingNodeDBModel).first() is not None
+        source_exists = session.query(SourceDBModel).first() is not None
+        sink_exists = session.query(SinkDBModel).first() is not None
         # TODO: Shorten function by only checking for ElementTypes?
 
     is_empty = not (element_type_exists or thing_node_exists or source_exists or sink_exists)
@@ -360,7 +360,9 @@ def get_children(
     with get_session()() as session:
         # Fetch ThingNodes where parent_id matches
         child_nodes_orm = (
-            session.query(ThingNodeOrm).filter(ThingNodeOrm.parent_node_id == parent_id).all()
+            session.query(ThingNodeDBModel)
+            .filter(ThingNodeDBModel.parent_node_id == parent_id)
+            .all()
         )
         logger.debug("Fetched %d child nodes.", len(child_nodes_orm))
 
@@ -372,7 +374,9 @@ def get_children(
         else:
             # Fetch the parent node to get its stakeholder_key and external_id
             parent_node = (
-                session.query(ThingNodeOrm).filter(ThingNodeOrm.id == parent_id).one_or_none()
+                session.query(ThingNodeDBModel)
+                .filter(ThingNodeDBModel.id == parent_id)
+                .one_or_none()
             )
 
             if parent_node is None:
@@ -381,11 +385,11 @@ def get_children(
 
             # Fetch Sources associated with this ThingNode
             sources_orm = (
-                session.query(SourceOrm)
+                session.query(SourceDBModel)
                 .join(
                     thingnode_source_association,
                     and_(
-                        SourceOrm.id == thingnode_source_association.c.source_id,
+                        SourceDBModel.id == thingnode_source_association.c.source_id,
                     ),
                 )
                 .filter(
@@ -397,11 +401,11 @@ def get_children(
 
             # Fetch Sinks associated with this ThingNode
             sinks_orm = (
-                session.query(SinkOrm)
+                session.query(SinkDBModel)
                 .join(
                     thingnode_sink_association,
                     and_(
-                        SinkOrm.id == thingnode_sink_association.c.sink_id,
+                        SinkDBModel.id == thingnode_sink_association.c.sink_id,
                     ),
                 )
                 .filter(
@@ -442,10 +446,10 @@ def delete_structure() -> None:
         deletion_order = [
             thingnode_source_association,
             thingnode_sink_association,
-            SourceOrm,
-            SinkOrm,
-            ThingNodeOrm,
-            ElementTypeOrm,
+            SourceDBModel,
+            SinkDBModel,
+            ThingNodeDBModel,
+            ElementTypeDBModel,
         ]
 
         try:

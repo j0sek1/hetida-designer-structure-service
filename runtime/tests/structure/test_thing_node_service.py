@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from hetdesrun.persistence.structure_service_dbmodels import ThingNodeOrm
+from hetdesrun.persistence.structure_service_dbmodels import ThingNodeDBModel
 from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.thing_node_service import fetch_single_thing_node_from_db_by_id
 
@@ -11,7 +11,7 @@ from hetdesrun.structure.db.thing_node_service import fetch_single_thing_node_fr
 def test_fetch_single_thing_node_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch an existing ThingNode ID
-        existing_tn = session.query(ThingNodeOrm).first()
+        existing_tn = session.query(ThingNodeDBModel).first()
         assert existing_tn is not None, "No ThingNode found in the test database."
 
         # Test retrieving the ThingNode by ID

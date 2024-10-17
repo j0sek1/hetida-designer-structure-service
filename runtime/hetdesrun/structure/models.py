@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field, ValidationError, root_validator, validato
 
 from hetdesrun.adapters.generic_rest.external_types import ExternalType
 from hetdesrun.persistence.structure_service_dbmodels import (
-    ElementTypeOrm,
-    SinkOrm,
-    SourceOrm,
-    ThingNodeOrm,
+    ElementTypeDBModel,
+    SinkDBModel,
+    SourceDBModel,
+    ThingNodeDBModel,
 )
 from hetdesrun.structure.db.exceptions import DBIntegrityError
 
@@ -31,8 +31,8 @@ class ElementType(BaseModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> ElementTypeOrm:
-        return ElementTypeOrm(
+    def to_orm_model(self) -> ElementTypeDBModel:
+        return ElementTypeDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -42,7 +42,7 @@ class ElementType(BaseModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: ElementTypeOrm) -> "ElementType":
+    def from_orm_model(cls, orm_model: ElementTypeDBModel) -> "ElementType":
         try:
             return cls(
                 id=orm_model.id,
@@ -91,8 +91,8 @@ class ThingNode(BaseModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> ThingNodeOrm:
-        return ThingNodeOrm(
+    def to_orm_model(self) -> ThingNodeDBModel:
+        return ThingNodeDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -106,7 +106,7 @@ class ThingNode(BaseModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: ThingNodeOrm) -> "ThingNode":
+    def from_orm_model(cls, orm_model: ThingNodeDBModel) -> "ThingNode":
         try:
             return ThingNode(
                 id=orm_model.id,
@@ -193,8 +193,8 @@ class Source(BaseModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> SourceOrm:
-        return SourceOrm(
+    def to_orm_model(self) -> SourceDBModel:
+        return SourceDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -217,7 +217,7 @@ class Source(BaseModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: SourceOrm) -> "Source":
+    def from_orm_model(cls, orm_model: SourceDBModel) -> "Source":
         return Source(
             id=orm_model.id,
             external_id=orm_model.external_id,
@@ -279,8 +279,8 @@ class Sink(BaseModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> SinkOrm:
-        return SinkOrm(
+    def to_orm_model(self) -> SinkDBModel:
+        return SinkDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -303,7 +303,7 @@ class Sink(BaseModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: SinkOrm) -> "Sink":
+    def from_orm_model(cls, orm_model: SinkDBModel) -> "Sink":
         return Sink(
             id=orm_model.id,
             external_id=orm_model.external_id,

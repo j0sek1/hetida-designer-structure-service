@@ -33,7 +33,7 @@ thingnode_sink_association = Table(
 
 
 # ORM model for ElementType
-class ElementTypeOrm(Base):
+class ElementTypeDBModel(Base):
     __tablename__ = "element_type"
     id: UUIDType = Column(
         UUIDType(binary=False),
@@ -45,7 +45,9 @@ class ElementTypeOrm(Base):
     stakeholder_key = Column(String(36), nullable=False)
     name = Column(String(255), index=True, nullable=False, unique=True)
     description = Column(String(1024), nullable=True)
-    thing_nodes: list["ThingNodeOrm"] = relationship("ThingNodeOrm", back_populates="element_type")
+    thing_nodes: list["ThingNodeDBModel"] = relationship(
+        "ThingNodeDBModel", back_populates="element_type"
+    )
 
     # Constraints and Indexes for optimized search and uniqueness
     __table_args__ = (
@@ -64,7 +66,7 @@ class ElementTypeOrm(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<ElementTypeOrm(id={self.id}, external_id={self.external_id}, "
+            f"<ElementTypeDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, description={self.description}, "
             f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
@@ -72,7 +74,7 @@ class ElementTypeOrm(Base):
 
 
 # ORM model for Source
-class SourceOrm(Base):
+class SourceDBModel(Base):
     __tablename__ = "source"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
@@ -90,11 +92,11 @@ class SourceOrm(Base):
     passthrough_filters: list[dict] | None = Column(JSON, nullable=True)
     thing_node_external_ids: list[str] = Column(JSON, nullable=True)
 
-    # Defines Many-to-Many relationship with ThingNodeOrm
-    thing_nodes: list["ThingNodeOrm"] = relationship(
-        "ThingNodeOrm",
+    # Defines Many-to-Many relationship with ThingNodeDBModel
+    thing_nodes: list["ThingNodeDBModel"] = relationship(
+        "ThingNodeDBModel",
         secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="sources",  # Specifies reciprocal relationship in ThingNodeOrm
+        back_populates="sources",  # Specifies reciprocal relationship in ThingNodeDBModel
     )  # type: ignore
 
     __table_args__ = (
@@ -112,7 +114,7 @@ class SourceOrm(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<SourceOrm(id={self.id}, external_id={self.external_id}, "
+            f"<SourceDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, type={self.type}, visible={self.visible}, "
             f"display_path={self.display_path}, "
@@ -125,7 +127,7 @@ class SourceOrm(Base):
 
 
 # ORM model for Sink
-class SinkOrm(Base):
+class SinkDBModel(Base):
     __tablename__ = "sink"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
@@ -143,11 +145,11 @@ class SinkOrm(Base):
     passthrough_filters: list[dict] | None = Column(JSON, nullable=True)
     thing_node_external_ids: list[str] = Column(JSON, nullable=True)
 
-    # Defines Many-to-Many relationship with ThingNodeOrm
-    thing_nodes: list["ThingNodeOrm"] = relationship(
-        "ThingNodeOrm",
+    # Defines Many-to-Many relationship with ThingNodeDBModel
+    thing_nodes: list["ThingNodeDBModel"] = relationship(
+        "ThingNodeDBModel",
         secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="sinks",  # Specifies reciprocal relationship in ThingNodeOrm
+        back_populates="sinks",  # Specifies reciprocal relationship in ThingNodeDBModel
     )  # type: ignore
 
     __table_args__ = (
@@ -165,7 +167,7 @@ class SinkOrm(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<SinkOrm(id={self.id}, external_id={self.external_id}, "
+            f"<SinkDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, type={self.type}, visible={self.visible}, "
             f"display_path={self.display_path}, "
@@ -178,7 +180,7 @@ class SinkOrm(Base):
 
 
 # ORM model for ThingNode
-class ThingNodeOrm(Base):
+class ThingNodeDBModel(Base):
     __tablename__ = "thing_node"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
@@ -196,22 +198,22 @@ class ThingNodeOrm(Base):
     )
     element_type_external_id = Column(String(255), nullable=False)
     meta_data = Column(JSON, nullable=True)
-    element_type: Mapped["ElementTypeOrm"] = relationship(
-        "ElementTypeOrm", back_populates="thing_nodes", uselist=False
+    element_type: Mapped["ElementTypeDBModel"] = relationship(
+        "ElementTypeDBModel", back_populates="thing_nodes", uselist=False
     )
 
-    # Defines Many-to-Many relationship with SourceOrm
-    sources: list["SourceOrm"] = relationship(
-        "SourceOrm",
+    # Defines Many-to-Many relationship with SourceDBModel
+    sources: list["SourceDBModel"] = relationship(
+        "SourceDBModel",
         secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in SourceOrm
+        back_populates="thing_nodes",  # Specifies reciprocal relationship in SourceDBModel
     )
 
-    # Defines Many-to-Many relationship with SinkOrm
-    sinks: list["SinkOrm"] = relationship(
-        "SinkOrm",
+    # Defines Many-to-Many relationship with SinkDBModel
+    sinks: list["SinkDBModel"] = relationship(
+        "SinkDBModel",
         secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in SinkOrm
+        back_populates="thing_nodes",  # Specifies reciprocal relationship in SinkDBModel
     )
 
     # Constraints and Indexes for optimized search and uniqueness
@@ -231,7 +233,7 @@ class ThingNodeOrm(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<ThingNodeOrm(id={self.id}, external_id={self.external_id}, "
+            f"<ThingNodeDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, description={self.description}, "
             f"parent_node_id={self.parent_node_id}, "
