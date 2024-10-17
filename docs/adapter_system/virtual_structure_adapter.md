@@ -290,13 +290,13 @@ If an environment variable is set both directly and in `HD_VST_ADAPTER_ENVIRONME
 The following is a list of all environment variables available to configure the virtual structure adapter.  
 "default" refers to the behavior occurring if the variable is not set:  
 
-* `VST_ADAPTER_ACTIVE` (default `True`): Whether the adapter is active (registered in the designer application)
-* `VST_ADAPTER_SERVICE_IN_RUNTIME` (default `True`): Whether the adapter is part of the backend or the runtime
-* `PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP` (default `False`): Set to `True` if you wish to provide a structure for the adapter at designer startup
-* `PREPOPULATE_VST_ADAPTER_VIA_FILE` (default `False`): Whether to load the structure from a JSON-file or not
-* `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a JSON defining a structure to this variable
-* `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a filepath pointing to a JSON-file containing the structure
-* `COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP` (default `True`): This option controls whether a potentially existing structure in the database is removed during startup. When set to `True` (default), the existing structure is deleted entirely before the new structure specified in `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` is inserted. If set to `False`, the existing structure is retained and updated. New elements from the provided JSON structure will be added, and existing elements will be updated. Existing elements not specified in the new JSON structure will remain unchanged. To fully replace an existing structure, it must first be deleted, before inserting the new one
+* `VST_ADAPTER_ACTIVE` (default `True`): Whether the adapter is active (registered in the designer application).
+* `VST_ADAPTER_SERVICE_IN_RUNTIME` (default `True`): Whether the adapter is part of the backend or the runtime.
+* `PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP` (default `False`): Set to `True` if you wish to provide a structure for the adapter at designer startup.
+* `PREPOPULATE_VST_ADAPTER_VIA_FILE` (default `False`): Whether to load the structure from a JSON-file or not.
+* `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a JSON defining a structure to this variable.
+* `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a filepath pointing to a JSON-file containing the structure.
+* `COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP` (default `True`): This option controls whether a potentially existing structure in the database is removed during startup of the backend, provided that prepopulation is enabled. When set to `True` (default), the existing structure is deleted entirely before the new structure specified in `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` is inserted. If set to `False`, the existing structure is retained and updated. New elements from the provided JSON structure will be added, and existing elements will be updated. Existing elements not specified in the new JSON structure will remain unchanged. To fully replace an existing structure, it must first be deleted, before inserting the new one.
 
 ## Technical Information
 
