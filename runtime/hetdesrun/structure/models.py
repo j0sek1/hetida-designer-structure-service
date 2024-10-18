@@ -15,14 +15,56 @@ from hetdesrun.persistence.structure_service_dbmodels import (
 from hetdesrun.structure.db.exceptions import DBIntegrityError
 
 
-class ElementType(BaseModel):
+class FilterType(str, Enum):
+    free_text = "free_text"
+
+
+class Filter(BaseModel):
+    name: str = Field(..., description="Name of the filter")
+    internal_name: str = Field(
+        default="",
+        description="Name used to identify the filter in the input or output wiring",
+    )
+    type: FilterType = Field(..., description="Type of the filter")  # noqa: A003
+    required: bool = Field(..., description="Indicates if the filter is required")
+
+    @root_validator(pre=True)
+    def set_internal_name(cls, values: dict) -> dict:
+        # Internally the designer requires an identifier for the filter
+        # that has to be separated by underscores
+        # Hence, an internal name is created for the wiring resoultion
+        # performed by the virtual structure adapter
+        values["internal_name"] = "_".join(values["name"].strip().lower().split())
+        return values
+
+    @validator("name")
+    def no_empty_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("The name of the filter must be set")
+        return value
+
+
+class StructureServiceCommonFieldsModel(BaseModel):
+    """All 4 basic classes ElementType, ThingNode, Source and Sink
+    have the attributes defined in this class.
+    """
+
+    external_id: str = Field(..., description="Externally provided unique identifier")
+    stakeholder_key: str = Field(..., description="Stakeholder key for the entity")
+    name: str = Field(..., description="Unique name of the entity")
+
+    @validator("external_id", "stakeholder_key", "name")
+    def check_not_empty(cls, v: str, field: Field) -> str:  # type: ignore
+        if not v:
+            raise ValueError(f"The {field.name.replace('_', ' ')} cannot be empty.")  # type: ignore
+        return v
+
+
+class ElementType(StructureServiceCommonFieldsModel):
     id: UUID = Field(
         default_factory=uuid.uuid4,
         description="The primary key for the ElementType table",
     )
-    external_id: str = Field(..., description="Externally provided unique identifier")
-    stakeholder_key: str = Field(..., description="Stakeholder key for the ElementType")
-    name: str = Field(..., description="Unique name of the ElementType")
     description: str | None = Field(None, description="Description of the ElementType")
     thing_nodes: list["ThingNode"] = Field(
         default_factory=list, description="List of associated ThingNodes"
@@ -59,14 +101,11 @@ class ElementType(BaseModel):
             raise DBIntegrityError(msg) from e
 
 
-class ThingNode(BaseModel):
+class ThingNode(StructureServiceCommonFieldsModel):
     id: UUID = Field(
         default_factory=uuid.uuid4,
         description="The primary key for the ThingNode table",
     )
-    external_id: str = Field(..., description="Externally provided unique identifier")
-    stakeholder_key: str = Field(..., description="Stakeholder key for the Thing Node")
-    name: str = Field(..., description="Unique name of the Thing Node")
     description: str = Field("", description="Description of the Thing Node")
     parent_node_id: UUID | None = Field(
         None, description="Parent node UUID if this is a child node"
@@ -128,40 +167,8 @@ class ThingNode(BaseModel):
             raise DBIntegrityError(msg) from e
 
 
-class FilterType(str, Enum):
-    free_text = "free_text"
-
-
-class Filter(BaseModel):
-    name: str = Field(..., description="Name of the filter")
-    internal_name: str = Field(
-        default="",
-        description="Name used to identify the filter in the input or output wiring",
-    )
-    type: FilterType = Field(..., description="Type of the filter")  # noqa: A003
-    required: bool = Field(..., description="Indicates if the filter is required")
-
-    @root_validator(pre=True)
-    def set_internal_name(cls, values: dict) -> dict:
-        # Internally the designer requires an identifier for the filter
-        # that has to be separated by underscores
-        # Hence, an internal name is created for the wiring resoultion
-        # performed by the virtual structure adapter
-        values["internal_name"] = "_".join(values["name"].strip().lower().split())
-        return values
-
-    @validator("name")
-    def no_empty_name(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("The name of the filter must be set")
-        return value
-
-
-class Source(BaseModel):
+class Source(StructureServiceCommonFieldsModel):
     id: UUID = Field(default_factory=uuid.uuid4, description="Unique identifier for the source")  # noqa: A003
-    external_id: str = Field(..., description="Externally provided unique identifier")
-    stakeholder_key: str = Field(..., description="Stakeholder key for the Source")
-    name: str = Field(..., description="Name of the source")
     type: ExternalType = Field(..., description="Type of the source")  # noqa: A003
     visible: bool = Field(True, description="Visibility of the source")
     display_path: str = Field(
@@ -243,11 +250,8 @@ class Source(BaseModel):
         return v
 
 
-class Sink(BaseModel):
+class Sink(StructureServiceCommonFieldsModel):
     id: UUID = Field(default_factory=uuid.uuid4, description="Unique identifier for the sink")  # noqa: A003
-    external_id: str = Field(..., description="Externally provided unique identifier")
-    stakeholder_key: str = Field(..., description="Stakeholder key for the Sink")
-    name: str = Field(..., description="Name of the sink")
     type: ExternalType = Field(..., description="Type of the sink")  # noqa: A003
     visible: bool = Field(True, description="Visibility of the sink")
     display_path: str = Field(

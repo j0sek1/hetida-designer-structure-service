@@ -3,7 +3,24 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from hetdesrun.structure.models import CompleteStructure, Filter
+from hetdesrun.structure.models import (
+    CompleteStructure,
+    ElementType,
+    Filter,
+    Source,
+    ThingNode,
+)
+
+
+def test_external_id_stakeholder_key_name_non_empty():
+    with pytest.raises(ValueError, match="The external id cannot be empty"):
+        ElementType(external_id="", stakeholder_key="valid_key", name="TestElement")
+
+    with pytest.raises(ValueError, match="The stakeholder key cannot be empty"):
+        ThingNode(external_id="valid_id", stakeholder_key="", name="TestThingNode")
+
+    with pytest.raises(ValueError, match="The name cannot be empty"):
+        Source(external_id="valid_id", stakeholder_key="valid_key", name="")
 
 
 def test_complete_structure_initialization_from_json():
