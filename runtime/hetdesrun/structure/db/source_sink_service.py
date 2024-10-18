@@ -52,7 +52,7 @@ def fetch_single_sink_from_db_by_id(sink_id: UUID) -> Sink:
             logger.debug("Sink with ID %s found.", sink_id)
             return Sink.from_orm_model(sink)
 
-    logger.error("No Sink found for ID %s. Raising DBNotFoundError.", sink_id)
+    logger.error("No Sink found for ID %s.", sink_id)
     raise DBNotFoundError(f"No Sink found for ID {sink_id}")
 
 
