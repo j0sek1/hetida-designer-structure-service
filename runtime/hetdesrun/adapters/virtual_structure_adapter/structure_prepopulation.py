@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def prepopulate_structure() -> None:
-    """This function handles the population of the virtual structure adapter
-    with a user defined structure, if one is provided.
+    """Handles the population of the virtual structure adapter
+    with a user defined structure.
     """
     # Set the structure for prepopulation
     if get_vst_adapter_config().prepopulate_virtual_structure_adapter_via_file:
@@ -40,12 +40,12 @@ def prepopulate_structure() -> None:
                 "Error during the prepopulation process: %s", e
             ) from e
     else:
-        complete_structure = (
-            get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter  # type: ignore
-        )
         logger.info(
             "Prepopulating the virtual structure adapter via the environment variable "
             "'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'"
+        )
+        complete_structure = (
+            get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter  # type: ignore
         )
 
     # Overwrite structure if configured

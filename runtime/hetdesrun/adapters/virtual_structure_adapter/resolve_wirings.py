@@ -44,7 +44,7 @@ def update_wirings(
 def resolve_virtual_structure_wirings(
     workflow_wiring: WorkflowWiring,
 ) -> None:
-    """Takes a WorkflowWiring and finds all vst sources and sinks to be replaced,
+    """Takes a WorkflowWiring, finds all vst sources and sinks to be replaced,
     retrieves their referenced sources and sinks to be inserted
     and calls the function to actually replace the input and output wirings."""
 

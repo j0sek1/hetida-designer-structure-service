@@ -47,7 +47,7 @@ async def update_structure_endpoint(
     delete_existing_structure: bool = Query(True, alias="delete_existing_structure"),
 ) -> None:
     # For security purposes this endpoint can only be accessed
-    # using a maintenance secret
+    # with a maintenance secret
     configured_maintenance_secret = get_config().maintenance_secret
     assert configured_maintenance_secret is not None  # for mypy # noqa: S101
     secret_str = maintenance_payload.maintenance_secret
@@ -56,7 +56,7 @@ async def update_structure_endpoint(
         secret_str.get_secret_value(),
         configured_maintenance_secret.get_secret_value(),
     ):
-        logger.error("maintenance secret check failed")
+        logger.error("Maintenance secret check failed")
         raise HTTPException(
             status_code=403,
             detail={"authorization_error": "maintenance secret check failed"},
