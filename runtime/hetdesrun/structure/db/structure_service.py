@@ -205,9 +205,17 @@ def populate_element_type_ids(
     Sets the element_type_id for each ThingNode based on existing ElementTypes.
 
     Args:
-        thing_nodes (list[ThingNode]): The ThingNodes to populate element_type_id.
+        thing_nodes (list[ThingNode]): The ThingNodes to populate with element_type_id.
         existing_element_types (dict[tuple[str, str], ElementTypeDBModel]):
-            Existing ElementTypes from the database.
+            Existing ElementTypes from the database, mapped by (stakeholder_key, external_id).
+
+    Raises:
+        KeyError: If a ThingNode has an element_type_external_id that does not exist in
+                  existing_element_types.
+
+    Note:
+        If no matching ElementType is found for a ThingNode, a warning is logged, and
+        element_type_id remains unset.
     """
     logger.debug("Populating element_type_id for ThingNodes.")
     for tn in thing_nodes:
@@ -224,14 +232,22 @@ def populate_element_type_ids(
 
 
 def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
-    """Writes a given structure to the database.
-       If a structure exists in the database, it is updated.
+    """
+    Writes a given structure to the database, updating records if they exist.
 
     Args:
-        complete_structure (CompleteStructure): The structure to be inserted
-        batch_size (int, optional): Number of potentially existing elements
-                                    to retrieve with one query.
-                                    Defaults to 500.
+        complete_structure (CompleteStructure): The structure to be inserted or updated.
+        batch_size (int, optional): Number of elements to retrieve per query, default is 500.
+
+    Returns:
+        None
+
+    Raises:
+        DBIntegrityError: If an integrity error occurs during the database operation.
+        DBConnectionError: If a database connection error (e.g., operational error) occurs.
+        DBAssociationError: If there is an issue with entity associations.
+        DBUpdateError: If an error occurs specifically during an update operation.
+        DBError: For any other general database error.
     """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
@@ -310,13 +326,17 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
 
 def update_structure_from_file(file_path: str) -> None:
     """
-    Aktualisiert die Struktur basierend auf einer JSON-Datei.
+    Updates the structure in the database based on a JSON file.
 
     Args:
-        file_path (str): Der Pfad zur JSON-Datei, die die Struktur definiert.
+        file_path (str): The path to the JSON file defining the structure.
 
     Returns:
-        CompleteStructure: Die aktualisierte Struktur nach dem Updaten.
+        None
+
+    Raises:
+        DBError: If an unexpected error occurs during the update.
+        SQLAlchemyError: If a database-specific error occurs.
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
@@ -336,6 +356,16 @@ def update_structure_from_file(file_path: str) -> None:
 
 
 def is_database_empty() -> bool:
+    """
+    Checks if the database is empty by verifying the presence of records
+    in the ElementType, ThingNode, Source, and Sink tables.
+
+    Returns:
+        bool: True if the database is empty; False otherwise.
+
+    Raises:
+        SQLAlchemyError: If a database-specific error occurs during the query.
+    """
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
         element_type_exists = session.query(ElementTypeDBModel).first() is not None
