@@ -27,6 +27,15 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_all_sources_from_db() -> list[Source]:
+    """
+    Fetches all Source records from the database.
+
+    Returns:
+        list[Source]: A list of all Source objects.
+
+    Raises:
+        DBNotFoundError: If no sources are found in the database.
+    """
     logger.debug("Fetching all Sources from the database.")
     with get_session()() as session:
         sources = session.query(SourceDBModel).all()
@@ -36,6 +45,15 @@ def fetch_all_sources_from_db() -> list[Source]:
 
 
 def fetch_all_sinks_from_db() -> list[Sink]:
+    """
+    Fetches all Sink records from the database.
+
+    Returns:
+        list[Sink]: A list of all Sink objects.
+
+    Raises:
+        DBNotFoundError: If no sinks are found in the database.
+    """
     logger.debug("Fetching all Sinks from the database.")
     with get_session()() as session:
         sinks = session.query(SinkDBModel).all()
@@ -45,6 +63,18 @@ def fetch_all_sinks_from_db() -> list[Sink]:
 
 
 def fetch_single_sink_from_db_by_id(sink_id: UUID) -> Sink:
+    """
+    Fetches a single Sink record from the database by its unique ID.
+
+    Args:
+        sink_id (UUID): The unique identifier of the Sink.
+
+    Returns:
+        Sink: The Sink object matching the given ID.
+
+    Raises:
+        DBNotFoundError: If no Sink with the specified ID is found.
+    """
     logger.debug("Fetching single Sink from database with ID: %s", sink_id)
     with get_session()() as session:
         sink = session.query(SinkDBModel).filter(SinkDBModel.id == sink_id).one_or_none()
@@ -57,6 +87,18 @@ def fetch_single_sink_from_db_by_id(sink_id: UUID) -> Sink:
 
 
 def fetch_single_source_from_db_by_id(src_id: UUID) -> Source:
+    """
+    Fetches a single Source record from the database by its unique ID.
+
+    Args:
+        src_id (UUID): The unique identifier of the Source.
+
+    Returns:
+        Source: The Source object matching the given ID.
+
+    Raises:
+        DBNotFoundError: If no Source with the specified ID is found.
+    """
     logger.debug("Fetching single Source from database with ID: %s", src_id)
     with get_session()() as session:
         source = session.query(SourceDBModel).filter(SourceDBModel.id == src_id).one_or_none()
@@ -71,6 +113,19 @@ def fetch_single_source_from_db_by_id(src_id: UUID) -> Source:
 def fetch_collection_of_sources_from_db_by_id(
     src_ids: list[UUID], batch_size: int = 500
 ) -> dict[UUID, Source]:
+    """
+    Fetches a collection of Source records from the database by their unique IDs.
+
+    Args:
+        src_ids (list[UUID]): A list of unique identifiers for the Sources.
+        batch_size (int): The number of records to fetch in each batch. Default is 500.
+
+    Returns:
+        dict[UUID, Source]: A mapping of Source IDs to Source objects.
+
+    Raises:
+        DBNotFoundError: If no Sources with the specified IDs are found.
+    """
     sources: dict[UUID, Source] = {}
     if not src_ids:
         return sources
@@ -93,6 +148,19 @@ def fetch_collection_of_sources_from_db_by_id(
 def fetch_collection_of_sinks_from_db_by_id(
     sink_ids: list[UUID], batch_size: int = 500
 ) -> dict[UUID, Sink]:
+    """
+    Fetches a collection of Sink records from the database by their unique IDs.
+
+    Args:
+        sink_ids (list[UUID]): A list of unique identifiers for the Sinks.
+        batch_size (int): The number of records to fetch in each batch. Default is 500.
+
+    Returns:
+        dict[UUID, Sink]: A mapping of Sink IDs to Sink objects.
+
+    Raises:
+        DBNotFoundError: If no Sinks with the specified IDs are found.
+    """
     sinks: dict[UUID, Sink] = {}
     if not sink_ids:
         return sinks
@@ -119,15 +187,15 @@ def fetch_sources(
     Fetches SourceDBModel records from the database based on stakeholder_key and external_id.
 
     Args:
-        session (Session): The SQLAlchemy session.
-        keys (set[Tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
+        session (SQLAlchemySession): The SQLAlchemy session.
+        keys (set[tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
 
     Returns:
-        Dict[Tuple[str, str], SourceDBModel]:
+        dict[tuple[str, str], SourceDBModel]:
         A mapping from (stakeholder_key, external_id) to SourceDBModel.
 
     Raises:
-        IntegrityError: If an integrity error occurs during the database operation.
+        DBIntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
     existing_sources_mapping: dict[tuple[str, str], SourceDBModel] = {}
@@ -162,15 +230,15 @@ def fetch_sinks(
     Fetches SinkDBModel records from the database based on stakeholder_key and external_id.
 
     Args:
-        session (Session): The SQLAlchemy session.
-        keys (set[Tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
+        session (SQLAlchemySession): The SQLAlchemy session.
+        keys (set[tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
 
     Returns:
-        Dict[Tuple[str, str], SinkDBModel]: A mapping from (stakeholder_key, external_id)
+        dict[tuple[str, str], SinkDBModel]: A mapping from (stakeholder_key, external_id)
                                             to SinkDBModel.
 
     Raises:
-        IntegrityError: If an integrity error occurs during the database operation.
+        DBIntegrityError: If an integrity error occurs during the database operation.
         DBError: If any other database error occurs.
     """
     existing_sinks_mapping: dict[tuple[str, str], SinkDBModel] = {}
@@ -197,6 +265,20 @@ def fetch_sinks(
 
 
 def fetch_sources_by_substring_match(filter_string: str) -> list[Source]:
+    """
+    Fetches SourceDBModel records where the name partially or fully matches
+    the provided filter string.
+
+    Args:
+        filter_string (str): The substring to match in SourceDBModel names.
+
+    Returns:
+        list[Source]: A list of Source objects matching the filter string.
+
+    Raises:
+        DBIntegrityError: If an integrity error occurs during the database operation.
+        DBError: If any other database error occurs.
+    """
     with get_session()() as session:
         try:
             matching_sources = (
@@ -223,6 +305,20 @@ def fetch_sources_by_substring_match(filter_string: str) -> list[Source]:
 
 
 def fetch_sinks_by_substring_match(filter_string: str) -> list[Sink]:
+    """
+    Fetches SinkDBModel records where the name partially or fully matches
+    the provided filter string.
+
+    Args:
+        filter_string (str): The substring to match in SinkDBModel names.
+
+    Returns:
+        list[Sink]: A list of Sink objects matching the filter string.
+
+    Raises:
+        DBIntegrityError: If an integrity error occurs during the database operation.
+        DBError: If any other database error occurs.
+    """
     with get_session()() as session:
         try:
             matching_sinks = (
@@ -257,10 +353,10 @@ def upsert_sources(
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
-        sources (List[Source]): The list of Source objects to upsert.
-        existing_sources (Dict[Tuple[str, str], SourceDBModel]):
+        sources (list[Source]): The list of Source objects to upsert.
+        existing_sources (dict[tuple[str, str], SourceDBModel]):
             Existing SourceDBModel objects mapped by (stakeholder_key, external_id).
-        existing_thing_nodes (Dict[Tuple[str, str], ThingNodeDBModel]):
+        existing_thing_nodes (dict[tuple[str, str], ThingNodeDBModel]):
             Existing ThingNodeDBModel objects mapped by (stakeholder_key, external_id).
 
     Raises:
@@ -344,10 +440,10 @@ def upsert_sinks(
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
-        sinks (List[Sink]): The list of Sink objects to upsert.
-        existing_sinks (Dict[Tuple[str, str], SinkDBModel]):
+        sinks (list[Sink]): The list of Sink objects to upsert.
+        existing_sinks (dict[tuple[str, str], SinkDBModel]):
             Existing SinkDBModel objects mapped by (stakeholder_key, external_id).
-        existing_thing_nodes (Dict[Tuple[str, str], ThingNodeDBModel]):
+        existing_thing_nodes (dict[tuple[str, str], ThingNodeDBModel]):
             Existing ThingNodeDBModel objects mapped by (stakeholder_key, external_id).
 
     Raises:
