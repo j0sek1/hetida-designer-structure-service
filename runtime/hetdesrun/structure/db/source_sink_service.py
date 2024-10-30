@@ -202,7 +202,7 @@ def fetch_sources(
     if not keys:
         return existing_sources_mapping
     try:
-        # Loop through keys in batches of size 500 or less
+        # Loop through keys in batches of size <batch_size> or less
         for key_batch in batched(keys, ceil(len(keys) / batch_size)):
             batch_query = session.query(SourceDBModel).filter(
                 tuple_(SourceDBModel.stakeholder_key, SourceDBModel.external_id).in_(key_batch)
@@ -245,7 +245,7 @@ def fetch_sinks(
     if not keys:
         return existing_sinks_mapping
     try:
-        # Loop through keys in batches of size 500 or less
+        # Loop through keys in batches of size <batch_size> or less
         for key_batch in batched(keys, ceil(len(keys) / batch_size)):
             batch_query = session.query(SinkDBModel).filter(
                 tuple_(SinkDBModel.stakeholder_key, SinkDBModel.external_id).in_(key_batch)
