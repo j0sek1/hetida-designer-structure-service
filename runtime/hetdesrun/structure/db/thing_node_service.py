@@ -20,6 +20,18 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> ThingNode:
+    """
+    Fetches a single ThingNode from the database by its unique ID.
+
+    Args:
+        tn_id (UUID): The unique identifier of the ThingNode.
+
+    Returns:
+        ThingNode: The ThingNode object matching the given ID.
+
+    Raises:
+        DBNotFoundError: If no ThingNode with the specified ID is found.
+    """
     logger.debug("Fetching single ThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
         thing_node = (
@@ -122,12 +134,16 @@ def upsert_thing_nodes(
 ) -> None:
     """
     Upserts ThingNodeDBModel records using SQLAlchemy's merge functionality.
+    Creates new records if they do not exist.
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
         thing_nodes (List[ThingNode]): The list of ThingNode objects to upsert.
         existing_thing_nodes (Dict[Tuple[str, str], ThingNodeDBModel]):
             Existing ThingNodeDBModel objects mapped by (stakeholder_key, external_id).
+
+    Returns:
+    None
 
     Raises:
         DBIntegrityError: If an integrity error occurs during the upsert operation.
