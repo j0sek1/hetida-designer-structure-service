@@ -21,10 +21,10 @@ def fetch_element_types(
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
-        keys (Set[Tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
+        keys (Set[tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
 
     Returns:
-        Dict[Tuple[str, str], ElementTypeDBModel]:
+        dict[tuple[str, str], ElementTypeDBModel]:
             A mapping from (stakeholder_key, external_id) to ElementTypeDBModel.
 
     Raises:
@@ -69,7 +69,7 @@ def search_element_types_by_name(
         name_query (str): The name or partial name to search for.
 
     Returns:
-        List[ElementTypeDBModel]: A list of ElementTypeDBModel records matching the name query.
+        list[ElementTypeDBModel]: A list of ElementTypeDBModel records matching the name query.
 
     Raises:
         DBIntegrityError: If an integrity error occurs during the database operation.
@@ -105,8 +105,8 @@ def upsert_element_types(
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
-        elements (List[ElementType]): The list of ElementType objects to upsert.
-        existing_elements (Dict[Tuple[str, str], ElementTypeDBModel]):
+        elements (list[ElementType]): The list of ElementType objects to upsert.
+        existing_elements (dict[tuple[str, str], ElementTypeDBModel]):
             Existing ElementTypeDBModel objects mapped by (stakeholder_key, external_id).
 
     Raises:
