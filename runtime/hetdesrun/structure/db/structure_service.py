@@ -3,6 +3,7 @@ import logging
 from collections import defaultdict, deque
 from uuid import UUID
 
+from pydantic import ValidationError
 from sqlalchemy import and_, delete
 from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 
@@ -88,6 +89,13 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         raise DBParsingError(
             f"Error converting JSON data to CompleteStructure from file {file_path}: {str(e)}"
         ) from e
+
+    except ValidationError as e:
+        # Raised if JSON data doesn't match expected fields or formats in CompleteStructure;
+        logger.error(
+            "Validation error while creating CompleteStructure from %s: %s", file_path, str(e)
+        )
+        raise DBParsingError(f"Validation error for JSON data in file {file_path}: {str(e)}") from e
 
     except Exception as e:
         # Catch any other unexpected exceptions and raise a general DBError
