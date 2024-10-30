@@ -55,7 +55,7 @@ def fetch_thing_nodes(
     if not keys:
         return existing_tns_mapping
     try:
-        # Loop through keys in batches of size 500 or less
+        # Loop through keys in batches of size <batch_size> or less
         for key_batch in batched(keys, ceil(len(keys) / batch_size)):
             batch_query = session.query(ThingNodeDBModel).filter(
                 tuple_(ThingNodeDBModel.stakeholder_key, ThingNodeDBModel.external_id).in_(

@@ -35,7 +35,7 @@ def fetch_element_types(
     if not keys:
         return existing_ets_mapping
     try:
-        # Loop through keys in batches of size 500 or less
+        # Loop through keys in batches of size <batch_size> or less
         for key_batch in batched(keys, ceil(len(keys) / batch_size)):
             batch_query = session.query(ElementTypeDBModel).filter(
                 tuple_(ElementTypeDBModel.stakeholder_key, ElementTypeDBModel.external_id).in_(
