@@ -129,32 +129,30 @@ def upsert_element_types(
         DBUpdateError: If any other error occurs during the upsert operation.
     """
     try:
-        # Prevents SQLAlchemy from flushing the session automatically during the upsert
-        with session.no_autoflush:
-            for element in elements:
-                key = (element.stakeholder_key, element.external_id)
-                db_element = existing_elements.get(key)
-                if db_element:
-                    logger.debug("Updating StructureServiceElementTypeDBModel with key %s.", key)
-                    # Update fields
-                    db_element.name = element.name
-                    db_element.description = element.description
-                    # Merge the updated element into the session
-                    session.merge(db_element)
-                else:
-                    logger.debug(
-                        "Creating new StructureServiceElementTypeDBModel with key %s.", key
-                    )
-                    # Create a new StructureServiceElementTypeDBModel object
-                    new_element = StructureServiceElementTypeDBModel(
-                        id=element.id,
-                        external_id=element.external_id,
-                        stakeholder_key=element.stakeholder_key,
-                        name=element.name,
-                        description=element.description,
-                    )
-                    # Add the new element to the session
-                    session.add(new_element)
+        for element in elements:
+            key = (element.stakeholder_key, element.external_id)
+            db_element = existing_elements.get(key)
+            if db_element:
+                logger.debug("Updating StructureServiceElementTypeDBModel with key %s.", key)
+                # Update fields
+                db_element.name = element.name
+                db_element.description = element.description
+                # Merge the updated element into the session
+                session.merge(db_element)
+            else:
+                logger.debug(
+                    "Creating new StructureServiceElementTypeDBModel with key %s.", key
+                )
+                # Create a new StructureServiceElementTypeDBModel object
+                new_element = StructureServiceElementTypeDBModel(
+                    id=element.id,
+                    external_id=element.external_id,
+                    stakeholder_key=element.stakeholder_key,
+                    name=element.name,
+                    description=element.description,
+                )
+                # Add the new element to the session
+                session.add(new_element)
         # Explicitly flush all changes to ensure data is written to the database
         session.flush()
     except IntegrityError as e:

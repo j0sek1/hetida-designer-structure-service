@@ -170,69 +170,66 @@ def upsert_thing_nodes(
         DBUpdateError: If any other error occurs during the upsert operation.
     """
     try:
-        # Prevents SQLAlchemy from flushing the session automatically,
-        # which could cause foreign key issues.
-        with session.no_autoflush:
-            for node in thing_nodes:
-                key = (node.stakeholder_key, node.external_id)
-                db_node = existing_thing_nodes.get(key)
+        for node in thing_nodes:
+            key = (node.stakeholder_key, node.external_id)
+            db_node = existing_thing_nodes.get(key)
 
-                # Ensure the related StructureServiceElementType exists before
-                # attempting to update or create StructureServiceThingNode.
-                # This avoids foreign key constraint violations.
-                element_type = (
-                    session.query(StructureServiceElementTypeDBModel)
-                    .filter_by(
-                        external_id=node.element_type_external_id,
-                        stakeholder_key=node.stakeholder_key,
-                    )
-                    .first()
+            # Ensure the related StructureServiceElementType exists before
+            # attempting to update or create StructureServiceThingNode.
+            # This avoids foreign key constraint violations.
+            element_type = (
+                session.query(StructureServiceElementTypeDBModel)
+                .filter_by(
+                    external_id=node.element_type_external_id,
+                    stakeholder_key=node.stakeholder_key,
                 )
-                if not element_type:
-                    # If the StructureServiceElementType doesn't exist,
-                    # skip updating or creating the StructureServiceThingNode.
-                    logger.warning(
-                        "StructureServiceElementType with key (%s, %s) not found for "
-                        "StructureServiceThingNode %s. Skipping update.",
-                        node.stakeholder_key,
-                        node.element_type_external_id,
-                        node.name,
-                    )
-                    continue  # Skipping this node as the StructureServiceElementType is missing.
+                .first()
+            )
+            if not element_type:
+                # If the StructureServiceElementType doesn't exist,
+                # skip updating or creating the StructureServiceThingNode.
+                logger.warning(
+                    "StructureServiceElementType with key (%s, %s) not found for "
+                    "StructureServiceThingNode %s. Skipping update.",
+                    node.stakeholder_key,
+                    node.element_type_external_id,
+                    node.name,
+                )
+                continue  # Skipping this node as the StructureServiceElementType is missing.
 
-                if db_node:
-                    # Update existing StructureServiceThingNode if
-                    # it already exists in the database.
-                    logger.debug("Updating StructureServiceThingNodeDBModel with key %s.", key)
-                    db_node.name = node.name
-                    db_node.description = node.description
-                    db_node.element_type_id = (
-                        element_type.id
-                    )  # Assign the correct StructureServiceElementType relationship.
-                    db_node.meta_data = node.meta_data
-                    db_node.parent_node_id = node.parent_node_id
-                    db_node.parent_external_node_id = node.parent_external_node_id
+            if db_node:
+                # Update existing StructureServiceThingNode if
+                # it already exists in the database.
+                logger.debug("Updating StructureServiceThingNodeDBModel with key %s.", key)
+                db_node.name = node.name
+                db_node.description = node.description
+                db_node.element_type_id = (
+                    element_type.id
+                )  # Assign the correct StructureServiceElementType relationship.
+                db_node.meta_data = node.meta_data
+                db_node.parent_node_id = node.parent_node_id
+                db_node.parent_external_node_id = node.parent_external_node_id
 
-                    session.merge(
-                        db_node
-                    )  # Merge the updated data into the existing StructureServiceThingNode.
-                else:
-                    # Create a new StructureServiceThingNode if
-                    # it doesn't already exist in the database.
-                    logger.debug("Creating new StructureServiceThingNodeDBModel with key %s.", key)
-                    new_node = StructureServiceThingNodeDBModel(
-                        id=node.id,
-                        external_id=node.external_id,
-                        stakeholder_key=node.stakeholder_key,
-                        name=node.name,
-                        description=node.description,
-                        parent_node_id=node.parent_node_id,
-                        parent_external_node_id=node.parent_external_node_id,
-                        element_type=element_type,
-                        element_type_external_id=node.element_type_external_id,
-                        meta_data=node.meta_data,
-                    )
-                    session.add(new_node)  # Add the new StructureServiceThingNode to the session.
+                session.merge(
+                    db_node
+                )  # Merge the updated data into the existing StructureServiceThingNode.
+            else:
+                # Create a new StructureServiceThingNode if
+                # it doesn't already exist in the database.
+                logger.debug("Creating new StructureServiceThingNodeDBModel with key %s.", key)
+                new_node = StructureServiceThingNodeDBModel(
+                    id=node.id,
+                    external_id=node.external_id,
+                    stakeholder_key=node.stakeholder_key,
+                    name=node.name,
+                    description=node.description,
+                    parent_node_id=node.parent_node_id,
+                    parent_external_node_id=node.parent_external_node_id,
+                    element_type=element_type,
+                    element_type_external_id=node.element_type_external_id,
+                    meta_data=node.meta_data,
+                )
+                session.add(new_node)  # Add the new StructureServiceThingNode to the session.
 
         # Explicitly flush all changes at once to ensure data is written to the database.
         session.flush()
