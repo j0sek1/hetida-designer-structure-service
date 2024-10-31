@@ -4,11 +4,12 @@ from hetdesrun.adapters.virtual_structure_adapter.utils import (
 )
 from hetdesrun.models.adapter_data import RefIdType
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
-from hetdesrun.structure.models import Sink, Source
+from hetdesrun.structure.models import StructureServiceSink, StructureServiceSource
 
 
 def update_wirings(
-    wiring: InputWiring | OutputWiring, source_or_sink: Source | Sink
+    wiring: InputWiring | OutputWiring,
+    source_or_sink: StructureServiceSource | StructureServiceSink,
 ) -> InputWiring | OutputWiring:
     """
     Updates Input- or OutputWiring objects that contain information about sources or sinks
@@ -30,7 +31,7 @@ def update_wirings(
     else:
         wiring.ref_id = (
             source_or_sink.source_id
-            if isinstance(source_or_sink, Source)
+            if isinstance(source_or_sink, StructureServiceSource)
             else source_or_sink.sink_id
         )
 

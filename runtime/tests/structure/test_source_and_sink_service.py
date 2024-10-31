@@ -2,7 +2,10 @@ import uuid
 
 import pytest
 
-from hetdesrun.persistence.structure_service_dbmodels import SinkDBModel, SourceDBModel
+from hetdesrun.persistence.structure_service_dbmodels import (
+    StructureServiceSinkDBModel,
+    StructureServiceSourceDBModel,
+)
 from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.source_sink_service import (
     fetch_all_sinks_from_db,
@@ -19,16 +22,20 @@ from hetdesrun.structure.db.source_sink_service import (
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_single_source_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        # Fetch an existing Source ID from the database
-        existing_source = session.query(SourceDBModel).first()
-        assert existing_source is not None, "Expected at least one Source in the test database."
+        # Fetch an existing StructureServiceSource ID from the database
+        existing_source = session.query(StructureServiceSourceDBModel).first()
+        assert (
+            existing_source is not None
+        ), "Expected at least one StructureServiceSource in the test database."
         existing_source_id = existing_source.id
 
-        # Test retrieving the Source by its ID
+        # Test retrieving the StructureServiceSource by its ID
         fetched_source = fetch_single_source_from_db_by_id(existing_source_id)
-        assert fetched_source.id == existing_source_id, f"Expected Source ID {existing_source_id}."
+        assert (
+            fetched_source.id == existing_source_id
+        ), f"Expected StructureServiceSource ID {existing_source_id}."
 
-        # Test that a non-existent Source raises a DBNotFoundError
+        # Test that a non-existent StructureServiceSource raises a DBNotFoundError
         non_existent_id = uuid.uuid4()
         with pytest.raises(DBNotFoundError):
             fetch_single_source_from_db_by_id(non_existent_id)
@@ -38,7 +45,7 @@ def test_fetch_single_source_from_db_by_id(mocked_clean_test_db_session):
 def test_fetch_all_sources_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sources directly from the database using the ORM for comparison
-        expected_sources = session.query(SourceDBModel).all()
+        expected_sources = session.query(StructureServiceSourceDBModel).all()
 
     # Use the get_all_sources_from_db function to fetch all sources
     fetched_sources = fetch_all_sources_from_db()
@@ -56,14 +63,14 @@ def test_fetch_all_sources_from_db(mocked_clean_test_db_session):
         )
         assert (
             matched_source is not None
-        ), f"Source with ID {expected_source.id} was expected but not found."
+        ), f"StructureServiceSource with ID {expected_source.id} was expected but not found."
 
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_collection_of_sources_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some specific sources directly from the database
-        expected_sources = session.query(SourceDBModel).limit(2).all()
+        expected_sources = session.query(StructureServiceSourceDBModel).limit(2).all()
         expected_source_ids = [source.id for source in expected_sources]
 
     # Use the get_collection_of_sources_from_db function to fetch the sources
@@ -77,25 +84,26 @@ def test_fetch_collection_of_sources_from_db_by_id(mocked_clean_test_db_session)
 
     # Verify that each expected source is in the fetched sources dictionary
     for expected_source in expected_sources:
-        assert (
-            expected_source.id in fetched_sources
-        ), f"Source with ID {expected_source.id} was expected but not found in the fetched sources."
+        assert expected_source.id in fetched_sources, (
+            f"StructureServiceSource with ID {expected_source.id} "
+            "was expected but not found in the fetched sources."
+        )
 
         # Verify that the fetched source matches the expected source
         fetched_source = fetched_sources[expected_source.id]
         assert (
             fetched_source.external_id == expected_source.external_id
-        ), f"Source with ID {expected_source.id} has mismatched external_id."
+        ), f"StructureServiceSource with ID {expected_source.id} has mismatched external_id."
         assert (
             fetched_source.name == expected_source.name
-        ), f"Source with ID {expected_source.id} has mismatched name."
+        ), f"StructureServiceSource with ID {expected_source.id} has mismatched name."
 
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_single_sink_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch a specific sink directly from the database
-        expected_sink = session.query(SinkDBModel).first()
+        expected_sink = session.query(StructureServiceSinkDBModel).first()
         assert expected_sink is not None, "No sinks found in the test database."
 
     # Use the get_single_sink_from_db function to fetch the sink
@@ -114,7 +122,9 @@ def test_fetch_single_sink_from_db_by_id(mocked_clean_test_db_session):
 
     # Test that fetching a non-existent sink raises DBNotFoundError
     non_existent_sink_id = uuid.UUID("00000000-0000-0000-0000-000000000000")
-    with pytest.raises(DBNotFoundError, match=f"No Sink found for ID {non_existent_sink_id}"):
+    with pytest.raises(
+        DBNotFoundError, match=f"No StructureServiceSink found for ID {non_existent_sink_id}"
+    ):
         fetch_single_sink_from_db_by_id(non_existent_sink_id)
 
 
@@ -122,7 +132,7 @@ def test_fetch_single_sink_from_db_by_id(mocked_clean_test_db_session):
 def test_fetch_all_sinks_from_db(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all sinks directly from the database
-        expected_sinks = session.query(SinkDBModel).all()
+        expected_sinks = session.query(StructureServiceSinkDBModel).all()
         assert len(expected_sinks) > 0, "No sinks found in the test database."
 
     # Use the get_all_sinks_from_db function to fetch all sinks
@@ -150,7 +160,7 @@ def test_fetch_all_sinks_from_db(mocked_clean_test_db_session):
 def test_fetch_collection_of_sinks_from_db_by_id(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch some sinks directly from the database
-        sinks_in_db = session.query(SinkDBModel).limit(2).all()
+        sinks_in_db = session.query(StructureServiceSinkDBModel).limit(2).all()
         sink_ids = [sink.id for sink in sinks_in_db]
         assert len(sink_ids) > 0, "No sinks found in the test database."
 
@@ -181,7 +191,7 @@ def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
         "Anomaly Score for the energy usage of the pump system in Storage Tan"
     )
 
-    # Assert that the correct SinkDBModel is returned
+    # Assert that the correct StructureServiceSinkDBModel is returned
     assert len(result) == 1
     assert result[0].name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
 
@@ -190,7 +200,7 @@ def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
 def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session):
     result = fetch_sinks_by_substring_match("Nonexistent")
 
-    # Assert that no SinkDBModel is returned
+    # Assert that no StructureServiceSinkDBModel is returned
     assert len(result) == 0
 
 
@@ -198,7 +208,7 @@ def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session
 def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session):
     result = fetch_sources_by_substring_match("Energy consumption of the waterwor")
 
-    # Assert that the correct SourceDBModel is returned
+    # Assert that the correct StructureServiceSourceDBModel is returned
     assert len(result) == 1
     assert result[0].name == "Energy consumption of the waterworks"
 
@@ -207,5 +217,5 @@ def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session)
 def test_filter_sources_by_substring_match_no_matches(mocked_clean_test_db_session):
     result = fetch_sources_by_substring_match("Nonexistent")
 
-    # Assert that no SourceDBModel is returned
+    # Assert that no StructureServiceSourceDBModel is returned
     assert len(result) == 0

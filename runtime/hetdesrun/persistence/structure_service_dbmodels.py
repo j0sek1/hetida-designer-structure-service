@@ -45,7 +45,7 @@ thingnode_sink_association = Table(
 
 
 # ORM model for ElementType
-class ElementTypeDBModel(Base):
+class StructureServiceElementTypeDBModel(Base):
     __tablename__ = "structure_element_type"
     id: UUIDType = Column(
         UUIDType(binary=False),
@@ -57,8 +57,8 @@ class ElementTypeDBModel(Base):
     stakeholder_key = Column(String(36), nullable=False)
     name = Column(String(255), index=True, nullable=False, unique=True)
     description = Column(String(1024), nullable=True)
-    thing_nodes: list["ThingNodeDBModel"] = relationship(
-        "ThingNodeDBModel", back_populates="element_type"
+    thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
+        "StructureServiceThingNodeDBModel", back_populates="element_type"
     )
 
     # Constraints and Indexes for optimized search and uniqueness
@@ -78,7 +78,7 @@ class ElementTypeDBModel(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<ElementTypeDBModel(id={self.id}, external_id={self.external_id}, "
+            f"<StructureServiceElementTypeDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, description={self.description}, "
             f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
@@ -86,7 +86,7 @@ class ElementTypeDBModel(Base):
 
 
 # ORM model for Source
-class SourceDBModel(Base):
+class StructureServiceSourceDBModel(Base):
     __tablename__ = "structure_source"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
@@ -104,11 +104,12 @@ class SourceDBModel(Base):
     passthrough_filters: list[dict] | None = Column(JSON, nullable=True)
     thing_node_external_ids: list[str] = Column(JSON, nullable=True)
 
-    # Defines Many-to-Many relationship with ThingNodeDBModel
-    thing_nodes: list["ThingNodeDBModel"] = relationship(
-        "ThingNodeDBModel",
+    # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
+    thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
+        "StructureServiceThingNodeDBModel",
         secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="sources",  # Specifies reciprocal relationship in ThingNodeDBModel
+        back_populates="sources",  # Specifies reciprocal relationship in
+        # StructureServiceThingNodeDBModel
     )  # type: ignore
 
     __table_args__ = (
@@ -126,7 +127,7 @@ class SourceDBModel(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<SourceDBModel(id={self.id}, external_id={self.external_id}, "
+            f"<StructureServiceSourceDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, type={self.type}, visible={self.visible}, "
             f"display_path={self.display_path}, "
@@ -139,7 +140,7 @@ class SourceDBModel(Base):
 
 
 # ORM model for Sink
-class SinkDBModel(Base):
+class StructureServiceSinkDBModel(Base):
     __tablename__ = "structure_sink"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
@@ -157,11 +158,12 @@ class SinkDBModel(Base):
     passthrough_filters: list[dict] | None = Column(JSON, nullable=True)
     thing_node_external_ids: list[str] = Column(JSON, nullable=True)
 
-    # Defines Many-to-Many relationship with ThingNodeDBModel
-    thing_nodes: list["ThingNodeDBModel"] = relationship(
-        "ThingNodeDBModel",
+    # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
+    thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
+        "StructureServiceThingNodeDBModel",
         secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="sinks",  # Specifies reciprocal relationship in ThingNodeDBModel
+        back_populates="sinks",  # Specifies reciprocal relationship in
+        # StructureServiceThingNodeDBModel
     )  # type: ignore
 
     __table_args__ = (
@@ -179,7 +181,7 @@ class SinkDBModel(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<SinkDBModel(id={self.id}, external_id={self.external_id}, "
+            f"<StructureServiceSinkDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, type={self.type}, visible={self.visible}, "
             f"display_path={self.display_path}, "
@@ -192,7 +194,7 @@ class SinkDBModel(Base):
 
 
 # ORM model for ThingNode
-class ThingNodeDBModel(Base):
+class StructureServiceThingNodeDBModel(Base):
     __tablename__ = "structure_thing_node"
     id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
     external_id = Column(String(255), nullable=False)
@@ -210,22 +212,24 @@ class ThingNodeDBModel(Base):
     )
     element_type_external_id = Column(String(255), nullable=False)
     meta_data = Column(JSON, nullable=True)
-    element_type: Mapped["ElementTypeDBModel"] = relationship(
-        "ElementTypeDBModel", back_populates="thing_nodes", uselist=False
+    element_type: Mapped["StructureServiceElementTypeDBModel"] = relationship(
+        "StructureServiceElementTypeDBModel", back_populates="thing_nodes", uselist=False
     )
 
-    # Defines Many-to-Many relationship with SourceDBModel
-    sources: list["SourceDBModel"] = relationship(
-        "SourceDBModel",
+    # Defines Many-to-Many relationship with StructureServiceSourceDBModel
+    sources: list["StructureServiceSourceDBModel"] = relationship(
+        "StructureServiceSourceDBModel",
         secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in SourceDBModel
+        back_populates="thing_nodes",  # Specifies reciprocal relationship in
+        # StructureServiceSourceDBModel
     )
 
-    # Defines Many-to-Many relationship with SinkDBModel
-    sinks: list["SinkDBModel"] = relationship(
-        "SinkDBModel",
+    # Defines Many-to-Many relationship with StructureServiceSinkDBModel
+    sinks: list["StructureServiceSinkDBModel"] = relationship(
+        "StructureServiceSinkDBModel",
         secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in SinkDBModel
+        back_populates="thing_nodes",  # Specifies reciprocal relationship in
+        # StructureServiceSinkDBModel
     )
 
     # Constraints and Indexes for optimized search and uniqueness
@@ -245,7 +249,7 @@ class ThingNodeDBModel(Base):
 
     def __repr__(self) -> str:
         return (
-            f"<ThingNodeDBModel(id={self.id}, external_id={self.external_id}, "
+            f"<StructureServiceThingNodeDBModel(id={self.id}, external_id={self.external_id}, "
             f"stakeholder_key={self.stakeholder_key}, "
             f"name={self.name}, description={self.description}, "
             f"parent_node_id={self.parent_node_id}, "

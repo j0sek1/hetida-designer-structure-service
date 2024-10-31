@@ -6,14 +6,14 @@ from hetdesrun.structure.db.source_sink_service import (
     fetch_collection_of_sinks_from_db_by_id,
     fetch_collection_of_sources_from_db_by_id,
 )
-from hetdesrun.structure.models import Sink, Source
+from hetdesrun.structure.models import StructureServiceSink, StructureServiceSource
 
 logger = logging.getLogger(__name__)
 
 
 def get_virtual_sources_and_sinks_from_structure_service(
     input_id_list: list[str], output_id_list: list[str]
-) -> tuple[dict[UUID, Source], dict[UUID, Sink]]:
+) -> tuple[dict[UUID, StructureServiceSource], dict[UUID, StructureServiceSink]]:
     referenced_sources = fetch_collection_of_sources_from_db_by_id(
         [UUID(input_id) for input_id in input_id_list]
     )

@@ -4,7 +4,11 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from hetdesrun.adapters.generic_rest.external_types import ExternalType
-from hetdesrun.structure.models import Sink, Source, ThingNode
+from hetdesrun.structure.models import (
+    StructureServiceSink,
+    StructureServiceSource,
+    StructureServiceThingNode,
+)
 
 
 class VirtualStructureAdapterThingNode(BaseModel):
@@ -15,7 +19,7 @@ class VirtualStructureAdapterThingNode(BaseModel):
 
     @classmethod
     def from_structure_service_thingnode(
-        cls, struct_tn: ThingNode
+        cls, struct_tn: StructureServiceThingNode
     ) -> "VirtualStructureAdapterThingNode":
         return cls(
             id=struct_tn.id,
@@ -37,7 +41,9 @@ class VirtualStructureAdapterSource(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service_source(cls, source: Source) -> "VirtualStructureAdapterSource":
+    def from_structure_service_source(
+        cls, source: StructureServiceSource
+    ) -> "VirtualStructureAdapterSource":
         return cls(
             id=source.id,
             thingNodeId=source.id,
@@ -64,7 +70,9 @@ class VirtualStructureAdapterSink(BaseModel):
     filters: dict[str, dict] | None = {}
 
     @classmethod
-    def from_structure_service_sink(cls, sink: Sink) -> "VirtualStructureAdapterSink":
+    def from_structure_service_sink(
+        cls, sink: StructureServiceSink
+    ) -> "VirtualStructureAdapterSink":
         return cls(
             id=sink.id,
             thingNodeId=sink.id,

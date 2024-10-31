@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field, ValidationError, root_validator, validato
 
 from hetdesrun.adapters.generic_rest.external_types import ExternalType
 from hetdesrun.persistence.structure_service_dbmodels import (
-    ElementTypeDBModel,
-    SinkDBModel,
-    SourceDBModel,
-    ThingNodeDBModel,
+    StructureServiceElementTypeDBModel,
+    StructureServiceSinkDBModel,
+    StructureServiceSourceDBModel,
+    StructureServiceThingNodeDBModel,
 )
 from hetdesrun.structure.db.exceptions import DBIntegrityError
 
@@ -45,7 +45,8 @@ class Filter(BaseModel):
 
 
 class StructureServiceCommonFieldsModel(BaseModel):
-    """All 4 basic classes ElementType, ThingNode, Source and Sink
+    """All 4 basic classes StructureServiceElementType, StructureServiceThingNode,
+    StructureServiceSource and StructureServiceSink
     have the attributes defined in this class.
     """
 
@@ -60,21 +61,23 @@ class StructureServiceCommonFieldsModel(BaseModel):
         return v
 
 
-class ElementType(StructureServiceCommonFieldsModel):
+class StructureServiceElementType(StructureServiceCommonFieldsModel):
     id: UUID = Field(
         default_factory=uuid.uuid4,
-        description="The primary key for the ElementType table",
+        description="The primary key for the StructureServiceElementType table",
     )
-    description: str | None = Field(None, description="Description of the ElementType")
-    thing_nodes: list["ThingNode"] = Field(
-        default_factory=list, description="List of associated ThingNodes"
+    description: str | None = Field(
+        None, description="Description of the StructureServiceElementType"
+    )
+    thing_nodes: list["StructureServiceThingNode"] = Field(
+        default_factory=list, description="List of associated StructureServiceThingNodes"
     )
 
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> ElementTypeDBModel:
-        return ElementTypeDBModel(
+    def to_orm_model(self) -> StructureServiceElementTypeDBModel:
+        return StructureServiceElementTypeDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -84,7 +87,9 @@ class ElementType(StructureServiceCommonFieldsModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: ElementTypeDBModel) -> "ElementType":
+    def from_orm_model(
+        cls, orm_model: StructureServiceElementTypeDBModel
+    ) -> "StructureServiceElementType":
         try:
             return cls(
                 id=orm_model.id,
@@ -101,10 +106,10 @@ class ElementType(StructureServiceCommonFieldsModel):
             raise DBIntegrityError(msg) from e
 
 
-class ThingNode(StructureServiceCommonFieldsModel):
+class StructureServiceThingNode(StructureServiceCommonFieldsModel):
     id: UUID = Field(
         default_factory=uuid.uuid4,
-        description="The primary key for the ThingNode table",
+        description="The primary key for the StructureServiceThingNode table",
     )
     description: str = Field("", description="Description of the Thing Node")
     parent_node_id: UUID | None = Field(
@@ -118,7 +123,8 @@ class ThingNode(StructureServiceCommonFieldsModel):
     # It is necessary because at the time of json-creation the real UUID
     # corresponding to the element types external ID is unknown
     element_type_id: UUID = Field(
-        default_factory=uuid.uuid4, description="Foreign key to the ElementType table"
+        default_factory=uuid.uuid4,
+        description="Foreign key to the StructureServiceElementType table",
     )
     element_type_external_id: str = Field(
         ..., description="Externally provided unique identifier for the element type"
@@ -130,8 +136,8 @@ class ThingNode(StructureServiceCommonFieldsModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> ThingNodeDBModel:
-        return ThingNodeDBModel(
+    def to_orm_model(self) -> StructureServiceThingNodeDBModel:
+        return StructureServiceThingNodeDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -145,9 +151,11 @@ class ThingNode(StructureServiceCommonFieldsModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: ThingNodeDBModel) -> "ThingNode":
+    def from_orm_model(
+        cls, orm_model: StructureServiceThingNodeDBModel
+    ) -> "StructureServiceThingNode":
         try:
-            return ThingNode(
+            return StructureServiceThingNode(
                 id=orm_model.id,
                 external_id=orm_model.external_id,
                 stakeholder_key=orm_model.stakeholder_key,
@@ -167,7 +175,7 @@ class ThingNode(StructureServiceCommonFieldsModel):
             raise DBIntegrityError(msg) from e
 
 
-class Source(StructureServiceCommonFieldsModel):
+class StructureServiceSource(StructureServiceCommonFieldsModel):
     id: UUID = Field(default_factory=uuid.uuid4, description="Unique identifier for the source")  # noqa: A003
     type: ExternalType = Field(..., description="Type of the source")  # noqa: A003
     visible: bool = Field(True, description="Visibility of the source")
@@ -181,7 +189,7 @@ class Source(StructureServiceCommonFieldsModel):
         None, description="Passthrough filters for the source"
     )
     adapter_key: str = Field(..., description="Adapter key or identifier")
-    source_id: str = Field(..., description="Referenced HD Source identifier")
+    source_id: str = Field(..., description="Referenced HD StructureServiceSource identifier")
     ref_key: str | None = Field(
         None,
         description="Key of the referenced metadatum, only used for sources of type metadata(any)",
@@ -191,7 +199,9 @@ class Source(StructureServiceCommonFieldsModel):
         description="ID of the thingnode in the mapped adapter hierarchy,"
         " which the mapped source references if source has type metadata(any)",
     )
-    meta_data: dict[str, Any] | None = Field(None, description="Optional metadata for the Source")
+    meta_data: dict[str, Any] | None = Field(
+        None, description="Optional metadata for the StructureServiceSource"
+    )
     thing_node_external_ids: list[str] | None = Field(
         None,
         description="List of externally provided unique identifiers for the thing nodes",
@@ -200,8 +210,8 @@ class Source(StructureServiceCommonFieldsModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> SourceDBModel:
-        return SourceDBModel(
+    def to_orm_model(self) -> StructureServiceSourceDBModel:
+        return StructureServiceSourceDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -224,8 +234,8 @@ class Source(StructureServiceCommonFieldsModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: SourceDBModel) -> "Source":
-        return Source(
+    def from_orm_model(cls, orm_model: StructureServiceSourceDBModel) -> "StructureServiceSource":
+        return StructureServiceSource(
             id=orm_model.id,
             external_id=orm_model.external_id,
             stakeholder_key=orm_model.stakeholder_key,
@@ -250,7 +260,7 @@ class Source(StructureServiceCommonFieldsModel):
         return v
 
 
-class Sink(StructureServiceCommonFieldsModel):
+class StructureServiceSink(StructureServiceCommonFieldsModel):
     id: UUID = Field(default_factory=uuid.uuid4, description="Unique identifier for the sink")  # noqa: A003
     type: ExternalType = Field(..., description="Type of the sink")  # noqa: A003
     visible: bool = Field(True, description="Visibility of the sink")
@@ -264,7 +274,7 @@ class Sink(StructureServiceCommonFieldsModel):
         None, description="Passthrough filters for the sink"
     )
     adapter_key: str = Field(..., description="Adapter key or identifier")
-    sink_id: str = Field(..., description="Referenced HD Sink identifier")
+    sink_id: str = Field(..., description="Referenced HD StructureServiceSink identifier")
     ref_key: str | None = Field(
         None,
         description="Key of the referenced metadatum, only used for sinks of type metadata(any)",
@@ -274,7 +284,9 @@ class Sink(StructureServiceCommonFieldsModel):
         description="ID of the thingnode in the mapped adapter hierarchy,"
         " which the mapped source references if sink has type metadata(any)",
     )
-    meta_data: dict[str, Any] | None = Field(None, description="Optional metadata for the Sink")
+    meta_data: dict[str, Any] | None = Field(
+        None, description="Optional metadata for the StructureServiceSink"
+    )
     thing_node_external_ids: list[str] | None = Field(
         None,
         description="List of externally provided unique identifiers for the thing nodes",
@@ -283,8 +295,8 @@ class Sink(StructureServiceCommonFieldsModel):
     class Config:
         orm_mode = True
 
-    def to_orm_model(self) -> SinkDBModel:
-        return SinkDBModel(
+    def to_orm_model(self) -> StructureServiceSinkDBModel:
+        return StructureServiceSinkDBModel(
             id=self.id,
             external_id=self.external_id,
             stakeholder_key=self.stakeholder_key,
@@ -307,8 +319,8 @@ class Sink(StructureServiceCommonFieldsModel):
         )
 
     @classmethod
-    def from_orm_model(cls, orm_model: SinkDBModel) -> "Sink":
-        return Sink(
+    def from_orm_model(cls, orm_model: StructureServiceSinkDBModel) -> "StructureServiceSink":
+        return StructureServiceSink(
             id=orm_model.id,
             external_id=orm_model.external_id,
             stakeholder_key=orm_model.stakeholder_key,
@@ -334,12 +346,18 @@ class Sink(StructureServiceCommonFieldsModel):
 
 
 class CompleteStructure(BaseModel):
-    element_types: list[ElementType] = Field(..., description="All element types of the structure")
-    thing_nodes: list[ThingNode] = Field(
+    element_types: list[StructureServiceElementType] = Field(
+        ..., description="All element types of the structure"
+    )
+    thing_nodes: list[StructureServiceThingNode] = Field(
         default_factory=list, description="All thingnodes of the structure"
     )
-    sources: list[Source] = Field(default_factory=list, description="All sources of the structure")
-    sinks: list[Sink] = Field(default_factory=list, description="All sinks of the structure")
+    sources: list[StructureServiceSource] = Field(
+        default_factory=list, description="All sources of the structure"
+    )
+    sinks: list[StructureServiceSink] = Field(
+        default_factory=list, description="All sinks of the structure"
+    )
 
     @classmethod
     def agnostic_getattr(cls, obj: dict | Any, attr: str) -> Any:
@@ -354,10 +372,13 @@ class CompleteStructure(BaseModel):
         return getattr(obj, attr)
 
     @validator("element_types")
-    def check_element_types_not_empty(cls, v: list[ElementType]) -> list[ElementType]:
+    def check_element_types_not_empty(
+        cls, v: list[StructureServiceElementType]
+    ) -> list[StructureServiceElementType]:
         if not v:
             raise ValueError(
-                "The structure must include at least one ElementType object to be valid."
+                "The structure must include at least one "
+                "StructureServiceElementType object to be valid."
             )
         return v
 
@@ -376,7 +397,7 @@ class CompleteStructure(BaseModel):
                 raise ValueError(
                     f"Root node '{cls.agnostic_getattr(node, "name")}' has an invalid "
                     f"parent_external_node_id '{parent_ext_id}' that does "
-                    "not reference any existing ThingNode."
+                    "not reference any existing StructureServiceThingNode."
                 )
         return values
 
@@ -540,25 +561,27 @@ class CompleteStructure(BaseModel):
             cls.agnostic_getattr(node, "external_id") for node in values.get("thing_nodes", [])
         }
         for source in values.get("sources", []):
-            # For each source, check all referenced ThingNode external IDs.
+            # For each source, check all referenced StructureServiceThingNode external IDs.
             for tn_id in cls.agnostic_getattr(source, "thing_node_external_ids"):
-                # If a ThingNode external ID referenced by the source
+                # If a StructureServiceThingNode external ID referenced by the source
                 # does not exist in 'thing_node_ids', raise an error.
                 if tn_id not in thing_node_ids:
                     raise ValueError(
-                        f"Source '{cls.agnostic_getattr(source, "external_id")}' references "
-                        f"non-existing ThingNode '{tn_id}'."
+                        f"StructureServiceSource '{cls.agnostic_getattr(source, "external_id")}' "
+                        f"references non-existing StructureServiceThingNode '{tn_id}'."
                     )
 
         for sink in values.get("sinks", []):
-            # For each sink, check all referenced ThingNode external IDs.
+            # For each sink, check all referenced StructureServiceThingNode external IDs.
             for tn_id in cls.agnostic_getattr(sink, "thing_node_external_ids"):
-                # If a ThingNode external ID referenced by the sink
+                # If a StructureServiceThingNode external ID referenced by the sink
                 # does not exist in 'thing_node_ids', raise an error.
                 if tn_id not in thing_node_ids:
                     raise ValueError(
-                        f"Sink '{cls.agnostic_getattr(source, "external_id")}' references "
-                        f"non-existing ThingNode '{tn_id}'."
+                        f"StructureServiceSink '{cls.agnostic_getattr(source, 'external_id')}' "
+                        f"references non-existing StructureServiceThingNode '{tn_id}'."
                     )
-        # If all sources and sinks reference existing ThingNodes, return the validated values.
+
+        # If all sources and sinks reference existing StructureServiceThingNodes,
+        # return the validated values.
         return values
