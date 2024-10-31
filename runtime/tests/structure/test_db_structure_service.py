@@ -540,6 +540,13 @@ def test_load_structure_from_invalid_json_file_db_service():
         load_structure_from_json_file("tests/structure/data/db_test_structure_malformed.json")
 
 
+def test_load_structure_from_json_with_invalid_data_db_service():
+    invalid_structure_path = "tests/structure/data/db_test_structure_invalid_data.json"
+    with pytest.raises(DBParsingError) as exc_info:
+        load_structure_from_json_file(invalid_structure_path)
+    assert "Validation error" in str(exc_info.value)
+
+
 @pytest.mark.usefixtures("_db_test_structure")
 def test_delete_structure_db_service(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
