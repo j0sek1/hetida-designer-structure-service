@@ -228,8 +228,6 @@ def upsert_thing_nodes(
         if new_records:
             session.bulk_save_objects(new_records)
 
-        session.flush()
-
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceThingNodeDBModel: %s", e)
         raise DBIntegrityError(

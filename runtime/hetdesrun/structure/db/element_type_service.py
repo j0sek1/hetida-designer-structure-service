@@ -145,8 +145,7 @@ def upsert_element_types(
                     description=element.description,
                 )
                 session.add(new_element)
-        # Explicitly flush all changes to ensure data is written to the database
-        session.flush()
+
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceElementTypeDBModel: %s", e)
         raise DBIntegrityError(

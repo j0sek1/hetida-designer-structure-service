@@ -477,9 +477,6 @@ def upsert_sources(
                     if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
                 ]
 
-        # Explicitly flush all changes to ensure data is written to the database
-        session.flush()
-
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSourceDBModel: %s", e)
         raise DBIntegrityError(
@@ -567,8 +564,7 @@ def upsert_sinks(
                     for tn_external_id in sink.thing_node_external_ids or []
                     if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
                 ]
-        # Explicitly flush all changes to ensure data is written to the database
-        session.flush()
+
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBIntegrityError("Integrity Error while upserting StructureServiceSinkDBModel") from e
