@@ -66,7 +66,7 @@ def set_sqlite_pragma(dbapi_connection: SQLite3Connection, connection_record) ->
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_thing_node_hierarchy_db_service(mocked_clean_test_db_session):  # noqa: PLR0915
+def test_thing_node_hierarchy(mocked_clean_test_db_session):  # noqa: PLR0915
     """
     Tests the hierarchy and relationships of StructureServiceThingNodes, StructureServiceSources,
     and StructureServiceSinks in the database.
@@ -274,7 +274,7 @@ def test_thing_node_hierarchy_db_service(mocked_clean_test_db_session):  # noqa:
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_element_types_db_service(mocked_clean_test_db_session):
+def test_fetch_all_element_types(mocked_clean_test_db_session):
     # Start a session with the mocked, clean test database
     with mocked_clean_test_db_session() as session:
         # Define the keys for the expected element types
@@ -318,7 +318,7 @@ def test_fetch_all_element_types_db_service(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_thing_nodes_db_service(mocked_clean_test_db_session):
+def test_fetch_all_thing_nodes(mocked_clean_test_db_session):
     # Start a session to interact with the database
     with mocked_clean_test_db_session() as session:
         # Define the keys for the expected StructureServiceThingNodes
@@ -383,7 +383,7 @@ def test_fetch_all_thing_nodes_db_service(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_sources_db_service(mocked_clean_test_db_session):
+def test_fetch_all_sources(mocked_clean_test_db_session):
     # Start a session to interact with the database
     with mocked_clean_test_db_session() as session:
         # Define the keys for the expected StructureServiceSources
@@ -433,7 +433,7 @@ def test_fetch_all_sources_db_service(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_sinks_db_service(mocked_clean_test_db_session):
+def test_fetch_all_sinks(mocked_clean_test_db_session):
     # Start a session to interact with the database
     with mocked_clean_test_db_session() as session:
         # Define the keys for the expected StructureServiceSinks
@@ -489,7 +489,7 @@ def test_fetch_all_sinks_db_service(mocked_clean_test_db_session):
 ### Structure Helper Functions
 
 
-def test_load_structure_from_json_file_db_service(db_test_structure_file_path):
+def test_load_structure_from_json_file(db_test_structure_file_path):
     # Load the structure from the JSON file using the load_structure_from_json_file function
     complete_structure = load_structure_from_json_file(db_test_structure_file_path)
 
@@ -533,14 +533,14 @@ def test_load_structure_from_json_file_db_service(db_test_structure_file_path):
     ), "Loaded structure does not match the expected structure"
 
 
-def test_load_structure_from_invalid_json_file_db_service():
+def test_load_structure_from_invalid_json_file():
     with pytest.raises(FileNotFoundError):
         load_structure_from_json_file("non_existent_file.json")
     with pytest.raises(DBParsingError):
         load_structure_from_json_file("tests/structure/data/db_test_structure_malformed.json")
 
 
-def test_load_structure_from_json_with_invalid_data_db_service():
+def test_load_structure_from_json_with_invalid_data():
     invalid_structure_path = "tests/structure/data/db_test_structure_invalid_data.json"
     with pytest.raises(DBParsingError) as exc_info:
         load_structure_from_json_file(invalid_structure_path)
@@ -548,7 +548,7 @@ def test_load_structure_from_json_with_invalid_data_db_service():
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_delete_structure_db_service(mocked_clean_test_db_session):
+def test_delete_structure(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Verify that the database is initially populated
         assert session.query(StructureServiceElementTypeDBModel).count() > 0
@@ -571,7 +571,7 @@ def test_delete_structure_db_service(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_update_structure_with_new_elements_db_service():
+def test_update_structure_with_new_elements():
     # This test checks the update functionality of the update_structure function.
     # It starts with an existing structure in the database, then updates it with new elements
     # from a JSON file and verifies that the structure in the database reflects these updates.
@@ -690,7 +690,7 @@ def verify_new_elements_and_nodes(session, final_element_types, final_thing_node
     )
 
 
-def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
+def test_update_structure_from_file(mocked_clean_test_db_session):
     # This test specifically checks the insert functionality of the update_structure function.
     # It starts with an empty database and verifies that the structure from the JSON file is
     # correctly inserted into the database.
@@ -755,7 +755,7 @@ def test_update_structure_from_file_db_service(mocked_clean_test_db_session):
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_update_structure_no_elements_deleted_db_service():
+def test_update_structure_no_elements_deleted():
     # This test ensures that no elements are deleted when updating the structure
     # with a new JSON file that omits some elements. It verifies that the total number of elements
     # remains unchanged and that specific elements from the original structure are still present.
@@ -825,17 +825,17 @@ def test_update_structure_no_elements_deleted_db_service():
             )
 
 
-def test_is_database_empty_when_empty_db_service(mocked_clean_test_db_session):
+def test_is_database_empty_when_empty(mocked_clean_test_db_session):
     assert is_database_empty(), "Database should be empty but is not."
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_is_database_empty_when_not_empty_db_service(mocked_clean_test_db_session):
+def test_is_database_empty_when_not_empty(mocked_clean_test_db_session):
     assert not is_database_empty(), "Database should not be empty but it is."
 
 
 @pytest.mark.usefixtures("_db_test_unordered_structure")
-def test_sort_thing_nodes_db_service(mocked_clean_test_db_session):
+def test_sort_thing_nodes(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
         # Fetch all thing node keys first to pass them to fetch_thing_nodes
         thing_node_keys = {
@@ -914,7 +914,7 @@ def test_sort_thing_nodes_db_service(mocked_clean_test_db_session):
         ), "Orphan node should not be included in the sorted list"
 
 
-def test_fetch_sources_exception_handling_db_service(mocked_clean_test_db_session):
+def test_fetch_sources_exception_handling(mocked_clean_test_db_session):
     # Create an invalid key tuple that will break the query
     invalid_keys = {("invalid_stakeholder_key",)}
 
