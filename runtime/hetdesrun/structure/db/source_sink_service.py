@@ -397,7 +397,7 @@ def upsert_sources(
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """
-    Upserts StructureServiceSourceDBModel records using SQLAlchemy's merge and add functionalities.
+    Upserts StructureServiceSourceDBModel records using SQLAlchemy's add_all functionality.
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
@@ -417,6 +417,7 @@ def upsert_sources(
         for source in sources:
             key = (source.stakeholder_key, source.external_id)
             db_source = existing_sources.get(key)
+
             if db_source:
                 logger.debug("Updating StructureServiceSourceDBModel with key %s.", key)
                 # Update fields
@@ -430,19 +431,21 @@ def upsert_sources(
                 db_source.ref_id = source.ref_id
                 db_source.meta_data = source.meta_data
                 db_source.preset_filters = source.preset_filters
-                db_source.passthrough_filters = source.passthrough_filters
-                # Update relationships
-                db_source.thing_nodes = []
-                for tn_external_id in source.thing_node_external_ids or []:
-                    tn_key = (source.stakeholder_key, tn_external_id)
-                    db_thing_node = existing_thing_nodes.get(tn_key)
-                    if db_thing_node:
-                        db_source.thing_nodes.append(db_thing_node)
-                # Merge the updated source into the session
-                session.merge(db_source)
+                db_source.passthrough_filters = (
+                    [f.dict() for f in source.passthrough_filters]
+                    if source.passthrough_filters
+                    else None
+                )
+
+                # Clear and set relationships
+                db_source.thing_nodes = [
+                    existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
+                    for tn_external_id in source.thing_node_external_ids or []
+                    if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
+                ]
             else:
                 logger.debug("Creating new StructureServiceSourceDBModel with key %s.", key)
-                # Create a new StructureServiceSourceDBModel object
+                # Create a new instance
                 new_source = StructureServiceSourceDBModel(
                     id=source.id,
                     external_id=source.external_id,
@@ -457,18 +460,26 @@ def upsert_sources(
                     ref_id=source.ref_id,
                     meta_data=source.meta_data,
                     preset_filters=source.preset_filters,
-                    passthrough_filters=source.passthrough_filters,  # type: ignore
+                    passthrough_filters=(
+                        [f.dict() for f in source.passthrough_filters]
+                        if source.passthrough_filters
+                        else None
+                    ),
                 )
-                # Set relationships
-                for tn_external_id in source.thing_node_external_ids or []:
-                    tn_key = (source.stakeholder_key, tn_external_id)
-                    db_thing_node = existing_thing_nodes.get(tn_key)
-                    if db_thing_node:
-                        new_source.thing_nodes.append(db_thing_node)
-                # Add the new source to the session
+
+                # Add the new source to the session immediately
                 session.add(new_source)
+
+                # Only now assign relationships
+                new_source.thing_nodes = [
+                    existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
+                    for tn_external_id in source.thing_node_external_ids or []
+                    if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
+                ]
+
         # Explicitly flush all changes to ensure data is written to the database
         session.flush()
+
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSourceDBModel: %s", e)
         raise DBIntegrityError(
@@ -486,11 +497,11 @@ def upsert_sinks(
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """
-    Upserts StructureServiceSinkDBModel records using SQLAlchemy's merge and add functionalities.
+    Upserts StructureServiceSinkDBModel records efficiently.
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
-        sinks (list[Sink]): The list of Sink objects to upsert.
+        sinks (list[StructureServiceSink]): The list of Sink objects to upsert.
         existing_sinks (dict[tuple[str, str], StructureServiceSinkDBModel]):
             Existing StructureServiceSinkDBModel objects mapped by (stakeholder_key, external_id).
         existing_thing_nodes (dict[tuple[str, str], StructureServiceThingNodeDBModel]):
@@ -507,7 +518,6 @@ def upsert_sinks(
             db_sink = existing_sinks.get(key)
             if db_sink:
                 logger.debug("Updating StructureServiceSinkDBModel with key %s.", key)
-                # Update fields
                 db_sink.name = sink.name
                 db_sink.type = sink.type
                 db_sink.visible = sink.visible
@@ -518,19 +528,18 @@ def upsert_sinks(
                 db_sink.ref_id = sink.ref_id
                 db_sink.meta_data = sink.meta_data
                 db_sink.preset_filters = sink.preset_filters
-                db_sink.passthrough_filters = sink.passthrough_filters
-                # Update relationships
-                db_sink.thing_nodes = []
-                for tn_external_id in sink.thing_node_external_ids or []:
-                    tn_key = (sink.stakeholder_key, tn_external_id)
-                    db_thing_node = existing_thing_nodes.get(tn_key)
-                    if db_thing_node:
-                        db_sink.thing_nodes.append(db_thing_node)
-                # Merge the updated sink into the session
-                session.merge(db_sink)
+                db_sink.passthrough_filters = (
+                    [f.dict() for f in sink.passthrough_filters]
+                    if sink.passthrough_filters
+                    else None
+                )
+                db_sink.thing_nodes = [
+                    existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
+                    for tn_external_id in sink.thing_node_external_ids or []
+                    if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
+                ]
             else:
                 logger.debug("Creating new StructureServiceSinkDBModel with key %s.", key)
-                # Create a new StructureServiceSinkDBModel object
                 new_sink = StructureServiceSinkDBModel(
                     id=sink.id,
                     external_id=sink.external_id,
@@ -545,16 +554,19 @@ def upsert_sinks(
                     ref_id=sink.ref_id,
                     meta_data=sink.meta_data,
                     preset_filters=sink.preset_filters,
-                    passthrough_filters=sink.passthrough_filters,  # type: ignore
+                    passthrough_filters=(
+                        [f.dict() for f in sink.passthrough_filters]
+                        if sink.passthrough_filters
+                        else None
+                    ),
                 )
-                # Set relationships
-                for tn_external_id in sink.thing_node_external_ids or []:
-                    tn_key = (sink.stakeholder_key, tn_external_id)
-                    db_thing_node = existing_thing_nodes.get(tn_key)
-                    if db_thing_node:
-                        new_sink.thing_nodes.append(db_thing_node)
-                # Add the new sink to the session
                 session.add(new_sink)
+
+                new_sink.thing_nodes = [
+                    existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
+                    for tn_external_id in sink.thing_node_external_ids or []
+                    if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
+                ]
         # Explicitly flush all changes to ensure data is written to the database
         session.flush()
     except IntegrityError as e:

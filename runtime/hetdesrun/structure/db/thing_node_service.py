@@ -3,7 +3,7 @@ from itertools import batched
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import tuple_
+from sqlalchemy import select, tuple_
 from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
@@ -150,44 +150,48 @@ def upsert_thing_nodes(
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """
-    Upserts StructureServiceThingNodeDBModel records using SQLAlchemy's merge functionality.
+    Upserts StructureServiceThingNodeDBModel records efficiently using bulk operations.
     Creates new records if they do not exist.
 
     Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        thing_nodes (List[StructureServiceThingNode]):
-            The list of StructureServiceThingNode objects to upsert.
-        existing_thing_nodes (Dict[Tuple[str, str], StructureServiceThingNodeDBModel]):
-            Existing StructureServiceThingNodeDBModel objects
-            mapped by (stakeholder_key, external_id).
-
-
-    Returns:
-    None
+        session (SQLAlchemySession):
+            The SQLAlchemy session used for database transactions.
+        thing_nodes (list[StructureServiceThingNode]):
+            A list of `StructureServiceThingNode` objects to upsert into the database.
+        existing_thing_nodes (dict[tuple[str, str], StructureServiceThingNodeDBModel]):
+            A dictionary of existing `StructureServiceThingNodeDBModel` objects, mapped by
+            `(stakeholder_key, external_id)` tuples.
 
     Raises:
-        DBIntegrityError: If an integrity error occurs during the upsert operation.
-        DBUpdateError: If any other error occurs during the upsert operation.
+        DBIntegrityError:
+            If an integrity error occurs during the upsert operation, such as a unique constraint
+            violation.
+        DBUpdateError:
+            If any other error occurs during the upsert operation.
     """
+
     try:
+        required_keys = {
+            (node.stakeholder_key, node.element_type_external_id) for node in thing_nodes
+        }
+        element_type_stmt = select(StructureServiceElementTypeDBModel).where(
+            tuple_(
+                StructureServiceElementTypeDBModel.stakeholder_key,
+                StructureServiceElementTypeDBModel.external_id,
+            ).in_(required_keys)
+        )
+        element_types = {
+            (et.stakeholder_key, et.external_id): et
+            for et in session.execute(element_type_stmt).scalars().all()
+        }
+
+        new_records = []
         for node in thing_nodes:
             key = (node.stakeholder_key, node.external_id)
             db_node = existing_thing_nodes.get(key)
 
-            # Ensure the related StructureServiceElementType exists before
-            # attempting to update or create StructureServiceThingNode.
-            # This avoids foreign key constraint violations.
-            element_type = (
-                session.query(StructureServiceElementTypeDBModel)
-                .filter_by(
-                    external_id=node.element_type_external_id,
-                    stakeholder_key=node.stakeholder_key,
-                )
-                .first()
-            )
+            element_type = element_types.get((node.stakeholder_key, node.element_type_external_id))
             if not element_type:
-                # If the StructureServiceElementType doesn't exist,
-                # skip updating or creating the StructureServiceThingNode.
                 logger.warning(
                     "StructureServiceElementType with key (%s, %s) not found for "
                     "StructureServiceThingNode %s. Skipping update.",
@@ -195,52 +199,42 @@ def upsert_thing_nodes(
                     node.element_type_external_id,
                     node.name,
                 )
-                continue  # Skipping this node as the StructureServiceElementType is missing.
+                continue
 
             if db_node:
-                # Update existing StructureServiceThingNode if
-                # it already exists in the database.
                 logger.debug("Updating StructureServiceThingNodeDBModel with key %s.", key)
                 db_node.name = node.name
                 db_node.description = node.description
-                db_node.element_type_id = (
-                    element_type.id
-                )  # Assign the correct StructureServiceElementType relationship.
+                db_node.element_type_id = element_type.id
                 db_node.meta_data = node.meta_data
                 db_node.parent_node_id = node.parent_node_id
                 db_node.parent_external_node_id = node.parent_external_node_id
-
-                session.merge(
-                    db_node
-                )  # Merge the updated data into the existing StructureServiceThingNode.
             else:
-                # Create a new StructureServiceThingNode if
-                # it doesn't already exist in the database.
-                logger.debug("Creating new StructureServiceThingNodeDBModel with key %s.", key)
-                new_node = StructureServiceThingNodeDBModel(
-                    id=node.id,
-                    external_id=node.external_id,
-                    stakeholder_key=node.stakeholder_key,
-                    name=node.name,
-                    description=node.description,
-                    parent_node_id=node.parent_node_id,
-                    parent_external_node_id=node.parent_external_node_id,
-                    element_type=element_type,
-                    element_type_external_id=node.element_type_external_id,
-                    meta_data=node.meta_data,
+                new_records.append(
+                    StructureServiceThingNodeDBModel(
+                        id=node.id,
+                        external_id=node.external_id,
+                        stakeholder_key=node.stakeholder_key,
+                        name=node.name,
+                        description=node.description,
+                        parent_node_id=node.parent_node_id,
+                        parent_external_node_id=node.parent_external_node_id,
+                        element_type_id=element_type.id,
+                        element_type_external_id=node.element_type_external_id,
+                        meta_data=node.meta_data,
+                    )
                 )
-                session.add(new_node)  # Add the new StructureServiceThingNode to the session.
 
-        # Explicitly flush all changes at once to ensure data is written to the database.
+        if new_records:
+            session.bulk_save_objects(new_records)
+
         session.flush()
 
     except IntegrityError as e:
-        # Handle IntegrityErrors, typically caused by foreign key or unique constraint violations.
         logger.error("Integrity Error while upserting StructureServiceThingNodeDBModel: %s", e)
         raise DBIntegrityError(
             "Integrity Error while upserting StructureServiceThingNodeDBModel"
         ) from e
     except Exception as e:
-        # Handle any other general exceptions that occur during the upsert process.
         logger.error("Error while upserting StructureServiceThingNodeDBModel: %s", e)
         raise DBUpdateError("Error while upserting StructureServiceThingNodeDBModel") from e

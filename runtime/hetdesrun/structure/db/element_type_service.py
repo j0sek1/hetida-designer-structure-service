@@ -113,13 +113,12 @@ def upsert_element_types(
     existing_elements: dict[tuple[str, str], StructureServiceElementTypeDBModel],
 ) -> None:
     """
-    Upserts StructureServiceElementTypeDBModel records using
-    SQLAlchemy's merge and add functionalities.
+    Upserts StructureServiceElementTypeDBModel records efficiently.
 
     Args:
         session (SQLAlchemySession): The SQLAlchemy session.
         elements (list[StructureServiceElementType]): The list of StructureServiceElementType
-        objects to upsert.
+            objects to upsert.
         existing_elements (dict[tuple[str, str], StructureServiceElementTypeDBModel]):
             Existing StructureServiceElementTypeDBModel objects
             mapped by (stakeholder_key, external_id).
@@ -134,16 +133,10 @@ def upsert_element_types(
             db_element = existing_elements.get(key)
             if db_element:
                 logger.debug("Updating StructureServiceElementTypeDBModel with key %s.", key)
-                # Update fields
                 db_element.name = element.name
                 db_element.description = element.description
-                # Merge the updated element into the session
-                session.merge(db_element)
             else:
-                logger.debug(
-                    "Creating new StructureServiceElementTypeDBModel with key %s.", key
-                )
-                # Create a new StructureServiceElementTypeDBModel object
+                logger.debug("Creating new StructureServiceElementTypeDBModel with key %s.", key)
                 new_element = StructureServiceElementTypeDBModel(
                     id=element.id,
                     external_id=element.external_id,
@@ -151,7 +144,6 @@ def upsert_element_types(
                     name=element.name,
                     description=element.description,
                 )
-                # Add the new element to the session
                 session.add(new_element)
         # Explicitly flush all changes to ensure data is written to the database
         session.flush()

@@ -71,7 +71,7 @@ def test_thing_node_hierarchy_db_service(mocked_clean_test_db_session):  # noqa:
     Tests the hierarchy and relationships of StructureServiceThingNodes, StructureServiceSources,
     and StructureServiceSinks in the database.
 
-    This test verifies that the expected number of StructureServiceElementTypes, 
+    This test verifies that the expected number of StructureServiceElementTypes,
     StructureServiceThingNodes, StructureServiceSources, and StructureServiceSinks
     are present in the database after the test structure is loaded.
     """
