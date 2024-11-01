@@ -18,3 +18,10 @@ class ReproducibilityReference(BaseModel):
             if ts.tzinfo != datetime.timezone.utc:
                 raise ValueError("The execution start timestamp must be in UTC")
         return ts
+
+
+class StructureServiceMetadataReference(BaseModel):
+    metadata_by_id: dict[str, dict] | None = Field(
+        None,
+        description="Maps the metadata of virtual sources to the IDs of their referenced sources",
+    )
