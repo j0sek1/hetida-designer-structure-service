@@ -25,6 +25,7 @@ from hetdesrun.structure.db.exceptions import (
     DBConnectionError,
     DBError,
     DBIntegrityError,
+    DBNotFoundError,
     DBParsingError,
     DBUpdateError,
 )
@@ -73,32 +74,27 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         return complete_structure
 
     except FileNotFoundError:
-        # If the file is not found, log an error and re-raise the exception
         logger.error("File not found: %s", file_path)
         raise
 
     except json.JSONDecodeError as e:
-        # If there is a JSON parsing error, raise a specific DBParsingError
         logger.error("JSON parsing error in file %s: %s", file_path, str(e))
         raise DBParsingError(f"Error parsing JSON structure in file {file_path}: {str(e)}") from e
 
     except TypeError as e:
-        # If there is a TypeError while converting JSON data to CompleteStructure,
-        # raise a DBParsingError
         logger.error("Type error while creating CompleteStructure from %s: %s", file_path, str(e))
         raise DBParsingError(
             f"Error converting JSON data to CompleteStructure from file {file_path}: {str(e)}"
         ) from e
 
     except ValidationError as e:
-        # Raised if JSON data doesn't match expected fields or formats in CompleteStructure;
+        # Raised if JSON data doesn't match expected fields or formats in CompleteStructure
         logger.error(
             "Validation error while creating CompleteStructure from %s: %s", file_path, str(e)
         )
         raise DBParsingError(f"Validation error for JSON data in file {file_path}: {str(e)}") from e
 
     except Exception as e:
-        # Catch any other unexpected exceptions and raise a general DBError
         logger.error(
             "Unexpected error while loading or parsing structure from %s: %s", file_path, str(e)
         )
@@ -442,8 +438,12 @@ def get_children(
             )
 
             if parent_node is None:
-                logger.warning("Parent node with id %s not found.", parent_id)
-                return ([], [], [])
+                logger.error(
+                    "The prodived ID %s has no corresponding node in the database", parent_id
+                )
+                raise DBNotFoundError(
+                    f"The prodived ID {parent_id} has no corresponding node in the database"
+                )
 
             # Fetch StructureServiceSources associated with this StructureServiceThingNode
             sources_orm = (

@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 
+from hetdesrun.adapters.exceptions import AdapterHandlingException
 from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterResponse,
     VirtualStructureAdapterSink,
@@ -30,7 +31,11 @@ def get_children_from_structure_service(
     """Retrieves all children of the node with the given parent_id.
     And returns their respective structure-representation (for the frontend).
     """
-    thing_nodes, sources, sinks = get_children(parent_id)
+    try:
+        thing_nodes, sources, sinks = get_children(parent_id)
+    except DBNotFoundError:
+        raise
+
     struct_thing_nodes = [
         VirtualStructureAdapterThingNode.from_structure_service_thingnode(node)
         for node in thing_nodes
@@ -44,7 +49,10 @@ def get_children_from_structure_service(
 
 
 def get_structure(parent_id: UUID | None = None) -> VirtualStructureAdapterResponse:
-    nodes, sources, sinks = get_children_from_structure_service(parent_id)
+    try:
+        nodes, sources, sinks = get_children_from_structure_service(parent_id)
+    except DBNotFoundError as e:
+        raise AdapterHandlingException(str(e)) from e
 
     return VirtualStructureAdapterResponse(
         id="vst-adapter",

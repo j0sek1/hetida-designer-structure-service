@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from hetdesrun.adapters.exceptions import AdapterHandlingException
 from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterSink,
     VirtualStructureAdapterSource,
@@ -29,12 +30,12 @@ def test_get_structure_with_none():
 
 @pytest.mark.usefixtures("_fill_db")
 def test_get_structure_with_non_existent_uuid():
-    structure = get_structure(uuid.uuid4())
-
-    # Verify that an empty structure response object is returned
-    assert structure.thingNodes == []
-    assert structure.sources == []
-    assert structure.sinks == []
+    non_existent_uuid = uuid.uuid4()
+    with pytest.raises(
+        AdapterHandlingException,
+        match=f"The prodived ID {non_existent_uuid} has no corresponding node in the database",
+    ):
+        _ = get_structure(non_existent_uuid)
 
 
 @pytest.mark.usefixtures("_fill_db")
