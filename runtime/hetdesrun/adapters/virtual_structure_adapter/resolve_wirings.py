@@ -1,9 +1,11 @@
+from hetdesrun.adapters.exceptions import AdapterHandlingException
 from hetdesrun.adapters.virtual_structure_adapter.utils import (
     get_enumerated_ids_of_vst_sources_or_sinks,
     get_virtual_sources_and_sinks_from_structure_service,
 )
 from hetdesrun.models.adapter_data import RefIdType
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
+from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.models import StructureServiceSink, StructureServiceSource
 
 
@@ -59,9 +61,14 @@ def resolve_virtual_structure_wirings(
     )
 
     if input_ref_ids or output_ref_ids:
-        virtual_sources, virtual_sinks = get_virtual_sources_and_sinks_from_structure_service(
-            input_ref_ids, output_ref_ids
-        )
+        try:
+            virtual_sources, virtual_sinks = get_virtual_sources_and_sinks_from_structure_service(
+                input_ref_ids, output_ref_ids
+            )
+        except DBNotFoundError as e:
+            raise AdapterHandlingException(
+                f"An error occurred during the wiring resolution: {str(e)}"
+            ) from e
 
         # Update input wirings
         for idx, virtual_source in zip(

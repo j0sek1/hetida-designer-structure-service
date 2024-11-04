@@ -6,6 +6,7 @@ from fastapi import HTTPException, Query, status
 from hetdesrun.backend.service.maintenance_router import MaintenancePayload
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
+    DBError,
     DBFetchError,
     DBIntegrityError,
     DBNotFoundError,
@@ -67,7 +68,7 @@ async def update_structure_endpoint(
         logger.info("Starting to delete existing structure")
         try:
             delete_structure()
-        except DBIntegrityError as e:
+        except (DBIntegrityError, DBError) as e:
             logger.error("Structure deletion during an update request failed: %s", e)
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     try:

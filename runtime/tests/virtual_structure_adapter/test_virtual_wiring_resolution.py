@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from hetdesrun.adapters.exceptions import AdapterHandlingException
 from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterSink,
     VirtualStructureAdapterSource,
@@ -10,7 +11,6 @@ from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
     resolve_virtual_structure_wirings,
 )
 from hetdesrun.models.wiring import InputWiring, OutputWiring, WorkflowWiring
-from hetdesrun.structure.db.exceptions import DBNotFoundError
 from hetdesrun.structure.db.source_sink_service import (
     fetch_all_sinks_from_db,
     fetch_all_sources_from_db,
@@ -126,7 +126,9 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
 
     wf_wiring = WorkflowWiring(input_wirings=[input_wiring])
 
-    with pytest.raises(DBNotFoundError):
+    with pytest.raises(
+        AdapterHandlingException, match="An error occurred during the wiring resolution"
+    ):
         resolve_virtual_structure_wirings(wf_wiring)
 
 

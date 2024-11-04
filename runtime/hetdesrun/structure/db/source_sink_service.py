@@ -431,11 +431,7 @@ def upsert_sources(
                 db_source.ref_id = source.ref_id
                 db_source.meta_data = source.meta_data
                 db_source.preset_filters = source.preset_filters
-                db_source.passthrough_filters = (
-                    [f.dict() for f in source.passthrough_filters]
-                    if source.passthrough_filters
-                    else None
-                )
+                db_source.passthrough_filters = source.passthrough_filters
 
                 # Clear and set relationships
                 db_source.thing_nodes = [
@@ -460,11 +456,7 @@ def upsert_sources(
                     ref_id=source.ref_id,
                     meta_data=source.meta_data,
                     preset_filters=source.preset_filters,
-                    passthrough_filters=(
-                        [f.dict() for f in source.passthrough_filters]
-                        if source.passthrough_filters
-                        else None
-                    ),
+                    passthrough_filters=source.passthrough_filters,  # type: ignore
                 )
 
                 # Add the new source to the session immediately
@@ -525,11 +517,7 @@ def upsert_sinks(
                 db_sink.ref_id = sink.ref_id
                 db_sink.meta_data = sink.meta_data
                 db_sink.preset_filters = sink.preset_filters
-                db_sink.passthrough_filters = (
-                    [f.dict() for f in sink.passthrough_filters]
-                    if sink.passthrough_filters
-                    else None
-                )
+                db_sink.passthrough_filters = sink.passthrough_filters
                 db_sink.thing_nodes = [
                     existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
                     for tn_external_id in sink.thing_node_external_ids or []
@@ -551,11 +539,7 @@ def upsert_sinks(
                     ref_id=sink.ref_id,
                     meta_data=sink.meta_data,
                     preset_filters=sink.preset_filters,
-                    passthrough_filters=(
-                        [f.dict() for f in sink.passthrough_filters]
-                        if sink.passthrough_filters
-                        else None
-                    ),
+                    passthrough_filters=sink.passthrough_filters,  # type: ignore
                 )
                 session.add(new_sink)
 
