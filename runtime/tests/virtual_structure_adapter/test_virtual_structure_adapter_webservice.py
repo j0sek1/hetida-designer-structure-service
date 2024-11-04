@@ -47,8 +47,8 @@ async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_
     for expected_thing_nodes_count, expected_sinks_count, expected_sources_count in [
         (1, 0, 0),  # First level: root thingnode with no sinks or sources
         (2, 0, 0),  # Second level: two child thingnodes
-        (1, 0, 0),  # Third level: one child thingnode under previous node
-        (0, 1, 3),  # Final level: leaf node with sinks and sources
+        (1, 0, 0),  # Third level: one child thingnode
+        (0, 1, 3),  # Final level: leaf thingnode with sinks and sources
     ]:
         # Fetch the structure using the current node ID as the parentId
         response = await async_test_client_with_vst_adapter.get(
