@@ -221,10 +221,6 @@ def populate_element_type_ids(
             Existing StructureServiceElementTypes from the database,
             mapped by (stakeholder_key, external_id).
 
-    Raises:
-        KeyError: If a StructureServiceThingNode has an element_type_external_id
-        that does not exist in existing_element_types.
-
     Note:
         If no matching StructureServiceElementType is found for a StructureServiceThingNode,
         a warning is logged, and element_type_id remains unset.
