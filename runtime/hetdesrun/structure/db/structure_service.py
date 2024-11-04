@@ -24,6 +24,7 @@ from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
     DBConnectionError,
     DBError,
+    DBFetchError,
     DBIntegrityError,
     DBNotFoundError,
     DBParsingError,
@@ -240,6 +241,10 @@ def populate_element_type_ids(
                     key,
                     tn.external_id,
                 )
+                raise ValueError(
+                    f"No StructureServiceElementType found for the key {key}. "
+                    f"Cannot set element_type_id for StructureServiceThingNode {tn.external_id}."
+                )
 
 
 def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
@@ -409,76 +414,84 @@ def get_children(
             `parent_id` is None.
     """
 
-    logger.debug("Fetching children for parent_id: %s", parent_id)
+    try:
+        logger.debug("Fetching children for parent_id: %s", parent_id)
 
-    with get_session()() as session:
-        # Fetch StructureServiceThingNodes where parent_id matches
-        child_nodes_orm = (
-            session.query(StructureServiceThingNodeDBModel)
-            .filter(StructureServiceThingNodeDBModel.parent_node_id == parent_id)
-            .all()
-        )
-        logger.debug("Fetched %d child nodes.", len(child_nodes_orm))
-
-        if parent_id is None:
-            # Handle root nodes separately if needed
-            logger.debug("Fetching sources and sinks for root nodes.")
-            sources_orm = []
-            sinks_orm = []
-        else:
-            # Fetch the parent node to get its stakeholder_key and external_id
-            parent_node = (
+        with get_session()() as session:
+            # Fetch StructureServiceThingNodes where parent_id matches
+            child_nodes_orm = (
                 session.query(StructureServiceThingNodeDBModel)
-                .filter(StructureServiceThingNodeDBModel.id == parent_id)
-                .one_or_none()
-            )
-
-            if parent_node is None:
-                logger.error(
-                    "The prodived ID %s has no corresponding node in the database", parent_id
-                )
-                raise DBNotFoundError(
-                    f"The prodived ID {parent_id} has no corresponding node in the database"
-                )
-
-            # Fetch StructureServiceSources associated with this StructureServiceThingNode
-            sources_orm = (
-                session.query(StructureServiceSourceDBModel)
-                .join(
-                    thingnode_source_association,
-                    and_(
-                        StructureServiceSourceDBModel.id
-                        == thingnode_source_association.c.source_id,
-                    ),
-                )
-                .filter(
-                    thingnode_source_association.c.thingnode_id == parent_id,
-                )
+                .filter(StructureServiceThingNodeDBModel.parent_node_id == parent_id)
                 .all()
             )
-            logger.debug("Fetched %d sources.", len(sources_orm))
+            logger.debug("Fetched %d child nodes.", len(child_nodes_orm))
 
-            # Fetch StructureServiceSinks associated with this StructureServiceThingNode
-            sinks_orm = (
-                session.query(StructureServiceSinkDBModel)
-                .join(
-                    thingnode_sink_association,
-                    and_(
-                        StructureServiceSinkDBModel.id == thingnode_sink_association.c.sink_id,
-                    ),
+            if parent_id is None:
+                # Handle root nodes separately if needed
+                logger.debug("Fetching sources and sinks for root nodes.")
+                sources_orm = []
+                sinks_orm = []
+            else:
+                # Fetch the parent node to get its stakeholder_key and external_id
+                parent_node = (
+                    session.query(StructureServiceThingNodeDBModel)
+                    .filter(StructureServiceThingNodeDBModel.id == parent_id)
+                    .one_or_none()
                 )
-                .filter(
-                    thingnode_sink_association.c.thingnode_id == parent_id,
+
+                if parent_node is None:
+                    logger.error(
+                        "The prodived ID %s has no corresponding node in the database", parent_id
+                    )
+                    raise DBNotFoundError(
+                        f"The prodived ID {parent_id} has no corresponding node in the database"
+                    )
+
+                # Fetch StructureServiceSources associated with this StructureServiceThingNode
+                sources_orm = (
+                    session.query(StructureServiceSourceDBModel)
+                    .join(
+                        thingnode_source_association,
+                        and_(
+                            StructureServiceSourceDBModel.id
+                            == thingnode_source_association.c.source_id,
+                        ),
+                    )
+                    .filter(
+                        thingnode_source_association.c.thingnode_id == parent_id,
+                    )
+                    .all()
                 )
-                .all()
+                logger.debug("Fetched %d sources.", len(sources_orm))
+
+                # Fetch StructureServiceSinks associated with this StructureServiceThingNode
+                sinks_orm = (
+                    session.query(StructureServiceSinkDBModel)
+                    .join(
+                        thingnode_sink_association,
+                        and_(
+                            StructureServiceSinkDBModel.id == thingnode_sink_association.c.sink_id,
+                        ),
+                    )
+                    .filter(
+                        thingnode_sink_association.c.thingnode_id == parent_id,
+                    )
+                    .all()
+                )
+                logger.debug("Fetched %d sinks.", len(sinks_orm))
+
+            return (
+                [StructureServiceThingNode.from_orm_model(node) for node in child_nodes_orm],
+                [StructureServiceSource.from_orm_model(source) for source in sources_orm],
+                [StructureServiceSink.from_orm_model(sink) for sink in sinks_orm],
             )
-            logger.debug("Fetched %d sinks.", len(sinks_orm))
-
-        return (
-            [StructureServiceThingNode.from_orm_model(node) for node in child_nodes_orm],
-            [StructureServiceSource.from_orm_model(source) for source in sources_orm],
-            [StructureServiceSink.from_orm_model(sink) for sink in sinks_orm],
+    except IntegrityError as e:
+        logger.error(
+            "Integrity error while fetching children for parent_id %s: %s", parent_id, str(e)
         )
+        raise DBIntegrityError(
+            f"Integrity error while fetching children for parent_id {parent_id}"
+        ) from e
 
 
 def delete_structure() -> None:
