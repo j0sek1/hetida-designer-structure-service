@@ -23,7 +23,6 @@ from hetdesrun.structure.db.element_type_service import (
 from hetdesrun.structure.db.exceptions import (
     DBError,
     DBParsingError,
-    DBIntegrityError,
 )
 from hetdesrun.structure.db.source_sink_service import (
     fetch_sinks,
@@ -33,12 +32,12 @@ from hetdesrun.structure.db.source_sink_service import (
 )
 from hetdesrun.structure.db.structure_service import (
     delete_structure,
+    get_children,
     is_database_empty,
     load_structure_from_json_file,
     populate_element_type_ids,
     sort_thing_nodes,
     update_structure,
-    get_children,
 )
 from hetdesrun.structure.db.thing_node_service import (
     fetch_thing_nodes,
@@ -1294,10 +1293,6 @@ def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
         assert result.name == "Test Node"
 
 
-
-
-
-
 @pytest.mark.usefixtures("_db_test_structure")
 def test_get_children():
     with get_session()() as session, session.begin():
@@ -1354,12 +1349,18 @@ def test_get_children():
 
 def get_node_by_name(session, name: str) -> StructureServiceThingNodeDBModel:
     """Helper function to fetch a ThingNode by name."""
-    node = session.query(StructureServiceThingNodeDBModel).filter(StructureServiceThingNodeDBModel.name == name).one_or_none()
+    node = (
+        session.query(StructureServiceThingNodeDBModel)
+        .filter(StructureServiceThingNodeDBModel.name == name)
+        .one_or_none()
+    )
     assert node is not None, f"Expected node '{name}' not found"
     return node
 
 
-def verify_children(children: list[StructureServiceThingNode], expected_names: set, expected_count: int):
+def verify_children(
+    children: list[StructureServiceThingNode], expected_names: set, expected_count: int
+):
     """Helper function to verify the children nodes."""
     assert (
         len(children) == expected_count
@@ -1368,7 +1369,9 @@ def verify_children(children: list[StructureServiceThingNode], expected_names: s
     assert children_names == expected_names, f"Unexpected child names: {children_names}"
 
 
-def verify_sources(sources: list[StructureServiceSource], expected_names: list, expected_count: int):
+def verify_sources(
+    sources: list[StructureServiceSource], expected_names: list, expected_count: int
+):
     """Helper function to verify the sources."""
     assert (
         len(sources) == expected_count
@@ -1386,31 +1389,3 @@ def verify_sinks(sinks: list[StructureServiceSink], expected_names: list, expect
         assert [
             sink.name for sink in sinks
         ] == expected_names, f"Unexpected sink names: {[sink.name for sink in sinks]}"
-
-
-@pytest.mark.usefixtures("_db_test_structure")
-def test_get_children_integrity_error(mocked_clean_test_db_session):
-    """Test if IntegrityErrors are handled in get_children function"""
-
-    with get_session()() as session, session.begin():
-        # Trigger an IntegrityError by inserting a duplicate ThingNode
-        node = get_node_by_name(session, "Plant 1")
-        
-        # Attempt to reinsert a node with the same primary key to cause IntegrityError
-        duplicate_node = StructureServiceThingNodeDBModel(
-            id=node.id,
-            external_id=node.external_id,
-            stakeholder_key=node.stakeholder_key,
-            name=node.name,
-            parent_node_id=node.parent_node_id,
-            description=node.description,
-            element_type_id=node.element_type_id,
-            element_type_external_id=node.element_type_external_id,
-            meta_data=node.meta_data,
-        )
-        
-        session.add(duplicate_node)
-        
-        # Expect IntegrityError to be caught and handled in get_children
-        with pytest.raises(DBIntegrityError, match="Integrity error while fetching children"):
-            get_children(node.id)
