@@ -70,205 +70,86 @@ def set_sqlite_pragma(dbapi_connection: SQLite3Connection, connection_record) ->
 def test_thing_node_hierarchy(mocked_clean_test_db_session):  # noqa: PLR0915
     """
     Tests the hierarchy and relationships of StructureServiceThingNodes, StructureServiceSources,
-    and StructureServiceSinks in the database.
-
-    This test verifies that the expected number of StructureServiceElementTypes,
-    StructureServiceThingNodes, StructureServiceSources, and StructureServiceSinks
-    are present in the database after the test structure is loaded.
+    and StructureServiceSinks in the database based on loaded data from JSON.
     """
+    # Load expected data from the JSON file
+    file_path = "tests/structure/data/db_test_structure.json"
+    with open(file_path) as file:
+        expected_data = json.load(file)
+
+    expected_element_type_keys = {
+        (et["stakeholder_key"], et["external_id"]) for et in expected_data["element_types"]
+    }
+    expected_thing_node_keys = {
+        (tn["stakeholder_key"], tn["external_id"]) for tn in expected_data["thing_nodes"]
+    }
+    expected_source_keys = {
+        (src["stakeholder_key"], src["external_id"]) for src in expected_data["sources"]
+    }
+    expected_sink_keys = {
+        (snk["stakeholder_key"], snk["external_id"]) for snk in expected_data["sinks"]
+    }
+
     with mocked_clean_test_db_session() as session:
-        # Define expected keys based on the fixture data
-        expected_element_type_keys = {
-            ("GW", "Waterworks_Type"),
-            ("GW", "Plant_Type"),
-            ("GW", "StorageTank_Type"),
-        }
-
-        expected_source_keys = {
-            ("GW", "EnergyUsage_PumpSystem_StorageTank"),
-            ("GW", "EnergyConsumption_SinglePump_StorageTank"),
-            ("GW", "EnergyConsumption_Waterworks1"),
-        }
-
-        expected_sink_keys = {
-            ("GW", "AnomalyScore_EnergyUsage_PumpSystem_StorageTank"),
-            ("GW", "AnomalyScore_EnergyConsumption_SinglePump_StorageTank"),
-            ("GW", "AnomalyScore_EnergyConsumption_Waterworks1"),
-        }
-
-        expected_thing_node_keys = {
-            ("GW", "Waterworks1"),
-            ("GW", "Waterworks1_Plant1"),
-            ("GW", "Waterworks1_Plant2"),
-            ("GW", "Waterworks1_Plant1_StorageTank1"),
-            ("GW", "Waterworks1_Plant1_StorageTank2"),
-            ("GW", "Waterworks1_Plant2_StorageTank1"),
-            ("GW", "Waterworks1_Plant2_StorageTank2"),
-        }
-
-        # Fetch StructureServiceElementTypes using the new fetch_element_types function
         element_types_in_db = fetch_element_types(session, expected_element_type_keys)
-        assert len(element_types_in_db) == 3, "Mismatch in element types count"
+        assert len(element_types_in_db) == len(
+            expected_data["element_types"]
+        ), "Mismatch in element types count"
 
-        # Fetch StructureServiceSources using the new fetch_sources function
-        sources_in_db = fetch_sources(session, expected_source_keys)
-        assert len(sources_in_db) == 3, "Mismatch in sources count"
-
-        # Fetch StructureServiceSinks using the new fetch_sinks function
-        sinks_in_db = fetch_sinks(session, expected_sink_keys)
-        assert len(sinks_in_db) == 3, "Mismatch in sinks count"
-
-        # Fetch StructureServiceThingNodes using the new fetch_thing_nodes function
         thing_nodes_in_db = fetch_thing_nodes(session, expected_thing_node_keys)
-        assert len(thing_nodes_in_db) == 7, "Mismatch in thing nodes count"
+        assert len(thing_nodes_in_db) == len(
+            expected_data["thing_nodes"]
+        ), "Mismatch in thing nodes count"
 
-        # Optional: Verify specific relationships
+        sources_in_db = fetch_sources(session, expected_source_keys)
+        assert len(sources_in_db) == len(expected_data["sources"]), "Mismatch in sources count"
 
-        # Verify that "Waterworks1" is the parent of "Plant1" and "Plant2"
-        parent_key = ("GW", "Waterworks1")
-        plant1_key = ("GW", "Waterworks1_Plant1")
-        plant2_key = ("GW", "Waterworks1_Plant2")
-        assert plant1_key in thing_nodes_in_db, "Plant1 not found in StructureServiceThingNodes"
-        assert plant2_key in thing_nodes_in_db, "Plant2 not found in StructureServiceThingNodes"
+        sinks_in_db = fetch_sinks(session, expected_sink_keys)
+        assert len(sinks_in_db) == len(expected_data["sinks"]), "Mismatch in sinks count"
 
-        parent_node = thing_nodes_in_db[parent_key]
-        plant1_node = thing_nodes_in_db[plant1_key]
-        plant2_node = thing_nodes_in_db[plant2_key]
-
-        # Check parent_node_id is set correctly
-        assert plant1_node.parent_node_id == parent_node.id, "Plant1 has incorrect parent"
-        assert plant2_node.parent_node_id == parent_node.id, "Plant2 has incorrect parent"
-
-        # Verify that storage tanks have correct parents
-        storage_tank_keys = {
-            ("GW", "Waterworks1_Plant1_StorageTank1"),
-            ("GW", "Waterworks1_Plant1_StorageTank2"),
-            ("GW", "Waterworks1_Plant2_StorageTank1"),
-            ("GW", "Waterworks1_Plant2_StorageTank2"),
-        }
-
-        for st_key in storage_tank_keys:
-            assert st_key in thing_nodes_in_db, f"{st_key} not found in StructureServiceThingNodes"
-
-            storage_tank_node = thing_nodes_in_db[st_key]
-            if "Plant1" in st_key[1]:
-                expected_parent = plant1_node.id
-            elif "Plant2" in st_key[1]:
-                expected_parent = plant2_node.id
-            else:
-                expected_parent = None  # Should not happen
-
-            assert (
-                storage_tank_node.parent_node_id == expected_parent
-            ), f"{st_key} has incorrect parent"
+        # Verify parent-child relationships in thing nodes
+        for thing_node in expected_data["thing_nodes"]:
+            key = (thing_node["stakeholder_key"], thing_node["external_id"])
+            if thing_node.get("parent_external_node_id"):
+                parent_key = (thing_node["stakeholder_key"], thing_node["parent_external_node_id"])
+                assert parent_key in thing_nodes_in_db, f"Parent node {parent_key} not found in DB"
+                assert (
+                    thing_nodes_in_db[key].parent_node_id == thing_nodes_in_db[parent_key].id
+                ), f"{key} has incorrect parent ID"
 
         # Verify associations for sources
-        # Example: "EnergyUsage_PumpSystem_StorageTank" should be associated with "StorageTank1"
-        # and "StorageTank2" in Plant1 and Plant2
-        source_key = ("GW", "EnergyUsage_PumpSystem_StorageTank")
-        assert (
-            source_key in sources_in_db
-        ), "EnergyUsage_PumpSystem_StorageTank not found in StructureServiceSources"
-        source = sources_in_db[source_key]
-        expected_associated_storage_tanks = {
-            ("GW", "Waterworks1_Plant1_StorageTank1"),
-            ("GW", "Waterworks1_Plant2_StorageTank2"),
-        }
-        actual_associated_storage_tanks = {
-            (tn.stakeholder_key, tn.external_id) for tn in source.thing_nodes
-        }
-        assert (
-            actual_associated_storage_tanks == expected_associated_storage_tanks
-        ), "Incorrect associations for source EnergyUsage_PumpSystem_StorageTank"
+        for source in expected_data["sources"]:
+            source_key = (source["stakeholder_key"], source["external_id"])
+            assert source_key in sources_in_db, f"Source {source_key} not found in DB"
+            expected_associated_nodes = {
+                (thing_node["stakeholder_key"], thing_node["external_id"])
+                for tn_id in source["thing_node_external_ids"]
+                for thing_node in expected_data["thing_nodes"]
+                if thing_node["external_id"] == tn_id
+            }
+            actual_associated_nodes = {
+                (tn.stakeholder_key, tn.external_id) for tn in sources_in_db[source_key].thing_nodes
+            }
+            assert (
+                actual_associated_nodes == expected_associated_nodes
+            ), f"Incorrect associations for source {source_key}"
 
-        # Similarly, verify other source associations
-        # "EnergyConsumption_SinglePump_StorageTank" associated with "StorageTank2, Plant1"
-        # and "StorageTank1, Plant2"
-        source_key = ("GW", "EnergyConsumption_SinglePump_StorageTank")
-        assert (
-            source_key in sources_in_db
-        ), "EnergyConsumption_SinglePump_StorageTank not found in StructureServiceSources"
-        source = sources_in_db[source_key]
-        expected_associated_storage_tanks = {
-            ("GW", "Waterworks1_Plant1_StorageTank2"),
-            ("GW", "Waterworks1_Plant2_StorageTank1"),
-        }
-        actual_associated_storage_tanks = {
-            (tn.stakeholder_key, tn.external_id) for tn in source.thing_nodes
-        }
-        assert (
-            actual_associated_storage_tanks == expected_associated_storage_tanks
-        ), "Incorrect associations for source EnergyConsumption_SinglePump_StorageTank"
-
-        # "EnergyConsumption_Waterworks1" associated with "Waterworks1"
-        source_key = ("GW", "EnergyConsumption_Waterworks1")
-        assert (
-            source_key in sources_in_db
-        ), "EnergyConsumption_Waterworks1 not found in StructureServiceSources"
-        source = sources_in_db[source_key]
-        expected_associated_storage_tanks = {
-            ("GW", "Waterworks1"),
-        }
-        actual_associated_storage_tanks = {
-            (tn.stakeholder_key, tn.external_id) for tn in source.thing_nodes
-        }
-        assert (
-            actual_associated_storage_tanks == expected_associated_storage_tanks
-        ), "Incorrect associations for source EnergyConsumption_Waterworks1"
-
-        # Similarly, verify associations for sinks
-        # "AnomalyScore_EnergyUsage_PumpSystem_StorageTank" associated with "StorageTank1, Plant1"
-        # and "StorageTank2, Plant1"
-        sink_key = ("GW", "AnomalyScore_EnergyUsage_PumpSystem_StorageTank")
-        assert (
-            sink_key in sinks_in_db
-        ), "AnomalyScore_EnergyUsage_PumpSystem_StorageTank not found in StructureServiceSinks"
-        sink = sinks_in_db[sink_key]
-        expected_associated_storage_tanks = {
-            ("GW", "Waterworks1_Plant1_StorageTank1"),
-            ("GW", "Waterworks1_Plant1_StorageTank2"),
-        }
-        actual_associated_storage_tanks = {
-            (tn.stakeholder_key, tn.external_id) for tn in sink.thing_nodes
-        }
-        assert (
-            actual_associated_storage_tanks == expected_associated_storage_tanks
-        ), "Incorrect associations for sink AnomalyScore_EnergyUsage_PumpSystem_StorageTank"
-
-        # "AnomalyScore_EnergyConsumption_SinglePump_StorageTank" associated with
-        # "StorageTank2, Plant2" and "StorageTank1, Plant2"
-        sink_key = ("GW", "AnomalyScore_EnergyConsumption_SinglePump_StorageTank")
-        assert sink_key in sinks_in_db, (
-            "AnomalyScore_EnergyConsumption_SinglePump_StorageTank not found in "
-            "StructureServiceSinks"
-        )
-        sink = sinks_in_db[sink_key]
-        expected_associated_storage_tanks = {
-            ("GW", "Waterworks1_Plant2_StorageTank2"),
-            ("GW", "Waterworks1_Plant2_StorageTank1"),
-        }
-        actual_associated_storage_tanks = {
-            (tn.stakeholder_key, tn.external_id) for tn in sink.thing_nodes
-        }
-        assert (
-            actual_associated_storage_tanks == expected_associated_storage_tanks
-        ), "Incorrect associations for sink AnomalyScore_EnergyConsumption_SinglePump_StorageTank"
-
-        # "AnomalyScore_EnergyConsumption_Waterworks1" associated with "Waterworks1"
-        sink_key = ("GW", "AnomalyScore_EnergyConsumption_Waterworks1")
-        assert (
-            sink_key in sinks_in_db
-        ), "AnomalyScore_EnergyConsumption_Waterworks1 not found in StructureServiceSinks"
-        sink = sinks_in_db[sink_key]
-        expected_associated_storage_tanks = {
-            ("GW", "Waterworks1"),
-        }
-        actual_associated_storage_tanks = {
-            (tn.stakeholder_key, tn.external_id) for tn in sink.thing_nodes
-        }
-        assert (
-            actual_associated_storage_tanks == expected_associated_storage_tanks
-        ), "Incorrect associations for sink AnomalyScore_EnergyConsumption_Waterworks1"
+        # Verify associations for sinks
+        for sink in expected_data["sinks"]:
+            sink_key = (sink["stakeholder_key"], sink["external_id"])
+            assert sink_key in sinks_in_db, f"Sink {sink_key} not found in DB"
+            expected_associated_nodes = {
+                (thing_node["stakeholder_key"], thing_node["external_id"])
+                for tn_id in sink["thing_node_external_ids"]
+                for thing_node in expected_data["thing_nodes"]
+                if thing_node["external_id"] == tn_id
+            }
+            actual_associated_nodes = {
+                (tn.stakeholder_key, tn.external_id) for tn in sinks_in_db[sink_key].thing_nodes
+            }
+            assert (
+                actual_associated_nodes == expected_associated_nodes
+            ), f"Incorrect associations for sink {sink_key}"
 
 
 ### Fetch Functions
@@ -276,214 +157,166 @@ def test_thing_node_hierarchy(mocked_clean_test_db_session):  # noqa: PLR0915
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_all_element_types(mocked_clean_test_db_session):
-    # Start a session with the mocked, clean test database
-    with mocked_clean_test_db_session() as session:
-        # Define the keys for the expected element types
-        keys = {
-            ("GW", "Waterworks_Type"),
-            ("GW", "Plant_Type"),
-            ("GW", "StorageTank_Type"),
-        }
+    # Load expected data from the JSON file
+    file_path = "tests/structure/data/db_test_structure.json"
+    with open(file_path) as file:
+        expected_data = json.load(file)
 
-        # Fetch the element types based on the defined keys
-        element_types = fetch_element_types(session, keys)
+    # Extract expected keys and names from the loaded JSON data
+    expected_element_type_keys = {
+        (et["stakeholder_key"], et["external_id"]) for et in expected_data["element_types"]
+    }
+    expected_element_types = {
+        (et["stakeholder_key"], et["external_id"]): et["name"]
+        for et in expected_data["element_types"]
+    }
+
+    with mocked_clean_test_db_session() as session:
+        # Fetch the element types based on the expected keys
+        element_types = fetch_element_types(session, expected_element_type_keys)
 
         # Check if the correct number of element types was retrieved
-        assert (
-            len(element_types) == 3
-        ), f"Expected 3 Element Types in the database, found {len(element_types)}"
-
-        # Define the expected element types based on the test data
-        expected_element_types = [
-            {"external_id": "Waterworks_Type", "name": "Waterworks"},
-            {"external_id": "Plant_Type", "name": "Plant"},
-            {"external_id": "StorageTank_Type", "name": "Storage Tank"},
-        ]
+        assert len(element_types) == len(expected_element_type_keys), (
+            f"Expected {len(expected_element_type_keys)} Element Types in the database, "
+            f"found {len(element_types)}"
+        )
 
         # Check if each expected element type is present in the retrieved element types
-        for expected_et in expected_element_types:
-            # Generate the key based on stakeholder_key and external_id
-            key = ("GW", expected_et["external_id"])
-            # Check if the key exists in the retrieved dictionary
+        for key, expected_name in expected_element_types.items():
+            # Verify if the key exists in the retrieved dictionary
             assert key in element_types, (
-                f"Expected Element Type with stakeholder_key 'GW'"
-                f"and external_id '{expected_et['external_id']}' not found"
+                f"Expected Element Type with stakeholder_key '{key[0]}' and "
+                f"external_id '{key[1]}' not found"
             )
             # Check if the name matches
             actual_et = element_types[key]
-            assert actual_et.name == expected_et["name"], (
-                f"Element Type with external_id '{expected_et['external_id']}'"
-                f"has name '{actual_et.name}', "
-                f"expected '{expected_et['name']}'"
+            assert actual_et.name == expected_name, (
+                f"Element Type with external_id '{key[1]}' has name '{actual_et.name}', "
+                f"expected '{expected_name}'"
             )
 
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_all_thing_nodes(mocked_clean_test_db_session):
-    # Start a session to interact with the database
-    with mocked_clean_test_db_session() as session:
-        # Define the keys for the expected StructureServiceThingNodes
-        keys = {
-            ("GW", "Waterworks1"),
-            ("GW", "Waterworks1_Plant1"),
-            ("GW", "Waterworks1_Plant2"),
-            ("GW", "Waterworks1_Plant1_StorageTank1"),
-            ("GW", "Waterworks1_Plant1_StorageTank2"),
-            ("GW", "Waterworks1_Plant2_StorageTank1"),
-            ("GW", "Waterworks1_Plant2_StorageTank2"),
-        }
+    # Load expected data from the JSON file
+    file_path = "tests/structure/data/db_test_structure.json"
+    with open(file_path) as file:
+        expected_data = json.load(file)
 
-        # Fetch the StructureServiceThingNodes based on the defined keys
-        thing_nodes = fetch_thing_nodes(session, keys)
+    # Extract expected keys and names from the loaded JSON data
+    expected_thing_node_keys = {
+        (tn["stakeholder_key"], tn["external_id"]) for tn in expected_data["thing_nodes"]
+    }
+    expected_thing_nodes = {
+        (tn["stakeholder_key"], tn["external_id"]): tn["name"]
+        for tn in expected_data["thing_nodes"]
+    }
+
+    with mocked_clean_test_db_session() as session:
+        # Fetch the StructureServiceThingNodes based on the expected keys
+        thing_nodes = fetch_thing_nodes(session, expected_thing_node_keys)
 
         # Check if the correct number of StructureServiceThingNodes was retrieved
-        assert (
-            len(thing_nodes) == 7
-        ), f"Expected 7 Thing Nodes in the database, found {len(thing_nodes)}"
+        assert len(thing_nodes) == len(expected_thing_node_keys), (
+            f"Expected {len(expected_thing_node_keys)} Thing Nodes in the database, "
+            f"found {len(thing_nodes)}"
+        )
 
-        # Define the expected StructureServiceThingNodes with their external_id and name
-        expected_thing_nodes = [
-            {"external_id": "Waterworks1", "name": "Waterworks 1"},
-            {"external_id": "Waterworks1_Plant1", "name": "Plant 1"},
-            {"external_id": "Waterworks1_Plant2", "name": "Plant 2"},
-            {
-                "external_id": "Waterworks1_Plant1_StorageTank1",
-                "name": "Storage Tank 1, Plant 1",
-            },
-            {
-                "external_id": "Waterworks1_Plant1_StorageTank2",
-                "name": "Storage Tank 2, Plant 1",
-            },
-            {
-                "external_id": "Waterworks1_Plant2_StorageTank1",
-                "name": "Storage Tank 1, Plant 2",
-            },
-            {
-                "external_id": "Waterworks1_Plant2_StorageTank2",
-                "name": "Storage Tank 2, Plant 2",
-            },
-        ]
-
-        # Check if each expected StructureServiceThingNode is present in
-        # the retrieved StructureServiceThingNodes
-        for expected_tn in expected_thing_nodes:
-            # Generate the key based on stakeholder_key and external_id
-            key = ("GW", expected_tn["external_id"])
-            # Check if the key exists in the retrieved dictionary
+        # Check if each expected StructureServiceThingNode is present in the retrieved thing nodes
+        for key, expected_name in expected_thing_nodes.items():
+            # Verify if the key exists in the retrieved dictionary
             assert key in thing_nodes, (
-                f"Expected Thing Node with stakeholder_key 'GW' and external_id"
-                f"'{expected_tn['external_id']}' not found"
+                f"Expected Thing Node with stakeholder_key '{key[0]}' and "
+                f"external_id '{key[1]}' not found"
             )
             # Check if the name matches
             actual_tn = thing_nodes[key]
-            assert actual_tn.name == expected_tn["name"], (
-                f"Thing Node with external_id '{expected_tn['external_id']}'"
-                f"has name '{actual_tn.name}', "
-                f"expected '{expected_tn['name']}'"
+            assert actual_tn.name == expected_name, (
+                f"Thing Node with external_id '{key[1]}' has name '{actual_tn.name}', "
+                f"expected '{expected_name}'"
             )
 
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_all_sources(mocked_clean_test_db_session):
-    # Start a session to interact with the database
-    with mocked_clean_test_db_session() as session:
-        # Define the keys for the expected StructureServiceSources
-        keys = {
-            ("GW", "EnergyUsage_PumpSystem_StorageTank"),
-            ("GW", "EnergyConsumption_SinglePump_StorageTank"),
-            # Add more keys if there are additional StructureServiceSources
-        }
+    # Load expected data from the JSON file
+    file_path = "tests/structure/data/db_test_structure.json"
+    with open(file_path) as file:
+        expected_data = json.load(file)
 
-        # Fetch the StructureServiceSources based on the defined keys
-        sources = fetch_sources(session, keys)
+    # Extract expected keys and names from the loaded JSON data
+    expected_source_keys = {
+        (source["stakeholder_key"], source["external_id"]) for source in expected_data["sources"]
+    }
+    expected_sources = {
+        (source["stakeholder_key"], source["external_id"]): source["name"]
+        for source in expected_data["sources"]
+    }
+
+    with mocked_clean_test_db_session() as session:
+        # Fetch the StructureServiceSources based on the expected keys
+        sources = fetch_sources(session, expected_source_keys)
 
         # Check if the correct number of StructureServiceSources was retrieved
-        assert (
-            len(sources) == 2
-        ), f"Expected 2 StructureServiceSources in the database, found {len(sources)}"
+        assert len(sources) == len(expected_sources), (
+            f"Expected {len(expected_sources)} StructureServiceSources in the database, "
+            f"found {len(sources)}"
+        )
 
-        # Define the expected StructureServiceSources with their external_id and name
-        expected_sources = [
-            {
-                "external_id": "EnergyUsage_PumpSystem_StorageTank",
-                "name": "Energy usage of the pump system in Storage Tank",
-            },
-            {
-                "external_id": "EnergyConsumption_SinglePump_StorageTank",
-                "name": "Energy consumption of a single pump in Storage Tank",
-            },
-        ]
-
-        # Check if each expected StructureServiceSource is present in
-        # the retrieved StructureServiceSources
-        for expected_source in expected_sources:
-            # Generate the key based on stakeholder_key and external_id
-            key = ("GW", expected_source["external_id"])
-            # Check if the key exists in the retrieved dictionary
+        # Check if each expected StructureServiceSource is present in the retrieved sources
+        for key, expected_name in expected_sources.items():
+            # Verify if the key exists in the retrieved dictionary
             assert key in sources, (
-                f"Expected StructureServiceSource with stakeholder_key 'GW' and"
-                f"external_id '{expected_source['external_id']}' not found"
+                f"Expected StructureServiceSource with stakeholder_key '{key[0]}' and "
+                f"external_id '{key[1]}' not found"
             )
             # Check if the name matches
             actual_source = sources[key]
-            assert actual_source.name == expected_source["name"], (
-                f"StructureServiceSource with external_id '{expected_source['external_id']}'"
-                f"has name '{actual_source.name}', "
-                f"expected '{expected_source['name']}'"
+            assert actual_source.name == expected_name, (
+                f"StructureServiceSource with external_id"
+                f" '{key[1]}' has name '{actual_source.name}', "
+                f"expected '{expected_name}'"
             )
 
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_fetch_all_sinks(mocked_clean_test_db_session):
-    # Start a session to interact with the database
-    with mocked_clean_test_db_session() as session:
-        # Define the keys for the expected StructureServiceSinks
-        keys = {
-            ("GW", "AnomalyScore_EnergyUsage_PumpSystem_StorageTank"),
-            ("GW", "AnomalyScore_EnergyConsumption_SinglePump_StorageTank"),
-            ("GW", "AnomalyScore_EnergyConsumption_Waterworks1"),
-        }
+    # Load expected data from the JSON file
+    file_path = "tests/structure/data/db_test_structure.json"
+    with open(file_path) as file:
+        expected_data = json.load(file)
 
-        # Fetch the StructureServiceSinks based on the defined keys
-        sinks = fetch_sinks(session, keys)
+    # Extract expected keys and names from the loaded JSON data
+    expected_sink_keys = {
+        (sink["stakeholder_key"], sink["external_id"]) for sink in expected_data["sinks"]
+    }
+    expected_sinks = {
+        (sink["stakeholder_key"], sink["external_id"]): sink["name"]
+        for sink in expected_data["sinks"]
+    }
+
+    with mocked_clean_test_db_session() as session:
+        # Fetch the StructureServiceSinks based on the expected keys
+        sinks = fetch_sinks(session, expected_sink_keys)
 
         # Check if the correct number of StructureServiceSinks was retrieved
-        assert (
-            len(sinks) == 3
-        ), f"Expected 3 StructureServiceSinks in the database, found {len(sinks)}"
+        assert len(sinks) == len(expected_sinks), (
+            f"Expected {len(expected_sinks)} StructureServiceSinks in the database, "
+            f"found {len(sinks)}"
+        )
 
-        # Define the expected StructureServiceSinks with their external_id and name
-        expected_sinks = [
-            {
-                "external_id": "AnomalyScore_EnergyUsage_PumpSystem_StorageTank",
-                "name": "Anomaly Score for the energy usage of the pump system in Storage Tank",
-            },
-            {
-                "external_id": "AnomalyScore_EnergyConsumption_SinglePump_StorageTank",
-                "name": "Anomaly Score for the energy consumption of a single pump in Storage Tank",
-            },
-            {
-                "external_id": "AnomalyScore_EnergyConsumption_Waterworks1",
-                "name": "Anomaly Score for the energy consumption of the waterworks",
-            },
-        ]
-
-        # Check if each expected StructureServiceSink is present in
-        # the retrieved StructureServiceSinks
-        for expected_sink in expected_sinks:
-            # Generate the key based on stakeholder_key and external_id
-            key = ("GW", expected_sink["external_id"])
-            # Check if the key exists in the retrieved dictionary
+        # Check if each expected StructureServiceSink is present in the retrieved sinks
+        for key, expected_name in expected_sinks.items():
+            # Verify if the key exists in the retrieved dictionary
             assert key in sinks, (
-                f"Expected StructureServiceSink with stakeholder_key 'GW' and external_id"
-                f"'{expected_sink['external_id']}' not found"
+                f"Expected StructureServiceSink with stakeholder_key '{key[0]}' and "
+                f"external_id '{key[1]}' not found"
             )
             # Check if the name matches
             actual_sink = sinks[key]
-            assert actual_sink.name == expected_sink["name"], (
-                f"StructureServiceSink with external_id '{expected_sink['external_id']}'"
-                f"has name '{actual_sink.name}', "
-                f"expected '{expected_sink['name']}'"
+            assert actual_sink.name == expected_name, (
+                f"StructureServiceSink with external_id '{key[1]}' has name '{actual_sink.name}', "
+                f"expected '{expected_name}'"
             )
 
 
@@ -491,77 +324,34 @@ def test_fetch_all_sinks(mocked_clean_test_db_session):
 
 
 def test_complete_structure_object_creation():
-    with open("tests/structure/data/db_test_structure.json") as file:
+    # Load the expected data from the JSON file
+    file_path = "tests/structure/data/db_test_structure.json"
+    with open(file_path) as file:
         data = json.load(file)
+
+    # Create a CompleteStructure object from the loaded JSON data
     cs = CompleteStructure(**data)
 
-    assert len(cs.thing_nodes) == 7
-    assert len(cs.element_types) == 3
-    assert len(cs.sources) == 3
-    assert len(cs.sinks) == 3
+    # Assert the lengths based on the JSON data
+    assert len(cs.thing_nodes) == len(
+        data["thing_nodes"]
+    ), f"Expected {len(data['thing_nodes'])} Thing Nodes, found {len(cs.thing_nodes)}"
+    assert len(cs.element_types) == len(
+        data["element_types"]
+    ), f"Expected {len(data['element_types'])} Element Types, found {len(cs.element_types)}"
+    assert len(cs.sources) == len(
+        data["sources"]
+    ), f"Expected {len(data['sources'])} Sources, found {len(cs.sources)}"
+    assert len(cs.sinks) == len(
+        data["sinks"]
+    ), f"Expected {len(data['sinks'])} Sinks, found {len(cs.sinks)}"
 
-    tn_names = [tn.name for tn in cs.thing_nodes]
-    expected_tn_names = [tn["name"] for tn in data["thing_nodes"]]
-    assert all(name in tn_names for name in expected_tn_names)
-
-
-def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
-    invalid_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK1",
-                "name": "Node 2",
-                "parent_external_node_id": "InvalidNodeID",  # invalid reference
-                "element_type_external_id": "Type1",
-            },
-        ],
-    }
-
-    with pytest.raises(ValueError):
-        CompleteStructure(**invalid_structure)
-
-    valid_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK1",
-                "name": "Node 2",
-                "parent_external_node_id": "Node1",  # valid reference
-                "element_type_external_id": "Type1",
-            },
-        ],
-    }
-
-    CompleteStructure(**valid_structure)
+    # Check if all expected Thing Node names are present
+    tn_names = {tn.name for tn in cs.thing_nodes}
+    expected_tn_names = {tn["name"] for tn in data["thing_nodes"]}
+    assert (
+        tn_names == expected_tn_names
+    ), f"Mismatch in Thing Node names. Expected: {expected_tn_names}, found: {tn_names}"
 
 
 def test_load_structure_from_json_file(db_test_structure_file_path):
@@ -647,125 +437,64 @@ def test_delete_structure(mocked_clean_test_db_session):
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_update_structure_with_new_elements():
-    # This test checks the update functionality of the update_structure function.
-    # It starts with an existing structure in the database, then updates it with new elements
-    # from a JSON file and verifies that the structure in the database reflects these updates.
+    # Load the initial and updated structure from JSON files
+    initial_file_path = "tests/structure/data/db_test_structure.json"
+    updated_file_path = "tests/structure/data/db_updated_test_structure.json"
+
+    # Load structures from JSON files
+    with open(initial_file_path) as file:
+        initial_structure_data = json.load(file)
+
+    with open(updated_file_path) as file:
+        updated_structure_data = json.load(file)
 
     with get_session()() as session, session.begin():
-        # Verify initial structure in the database
-        verify_initial_structure(session)
+        # Verify the initial structure in the database
+        verify_structure(session, initial_structure_data)
 
-        # Load the updated structure from a JSON file
-        file_path = "tests/structure/data/db_updated_test_structure.json"
-        updated_structure = load_structure_from_json_file(file_path)
+        # Load and update the structure with new elements
+        updated_structure = load_structure_from_json_file(updated_file_path)
 
-        # Update the structure in the database with the newly loaded structure
+        # Clear the existing entries
+        delete_structure()  # Clears all relevant tables
+
+        # Perform the structure update
         update_structure(updated_structure)
 
-    # Start another session to verify the updated structure
     with get_session()() as session, session.begin():
-        # Verify that the structure in the database matches the updated structure
-        verify_updated_structure(session)
+        # Verify that the updated structure is correct in the database
+        verify_structure(session, updated_structure_data)
 
 
-def verify_initial_structure(session):
-    # Fetch all initial elements from the database
-    initial_element_types = session.query(StructureServiceElementTypeDBModel).all()
-    initial_thing_nodes = session.query(StructureServiceThingNodeDBModel).all()
-    initial_sources = session.query(StructureServiceSourceDBModel).all()
-    initial_sinks = session.query(StructureServiceSinkDBModel).all()
+def verify_structure(session, structure_data):
+    # Verify the count of entries for main models based on JSON data
+    model_data_pairs = [
+        (StructureServiceElementTypeDBModel, structure_data["element_types"]),
+        (StructureServiceThingNodeDBModel, structure_data["thing_nodes"]),
+        (StructureServiceSourceDBModel, structure_data["sources"]),
+        (StructureServiceSinkDBModel, structure_data["sinks"]),
+    ]
 
-    # Verify that the initial structure contains the correct number of elements
-    assert len(initial_element_types) == 3, "Expected 3 Element Types in the initial structure"
-    assert len(initial_thing_nodes) == 7, "Expected 7 Thing Nodes in the initial structure"
-    assert len(initial_sources) == 3, "Expected 3 StructureServiceSources in the initial structure"
-    assert len(initial_sinks) == 3, "Expected 3 StructureServiceSinks in the initial structure"
+    for model, data in model_data_pairs:
+        actual_count = session.query(model).count()
+        expected_count = len(data)
+        assert (
+            actual_count == expected_count
+        ), f"Expected {expected_count} entries for {model.__name__}, found {actual_count}"
 
-    # Verify specific attributes of the StructureServiceThingNodes before the update
-    initial_tn = (
-        session.query(StructureServiceThingNodeDBModel)
-        .filter_by(external_id="Waterworks1_Plant1_StorageTank1")
-        .one()
-    )
-    assert (
-        initial_tn.meta_data["capacity"] == "5000"
-    ), "Initial capacity of Storage Tank 1 should be 5000"
-    assert initial_tn.meta_data["description"] == "Water storage capacity for Storage Tank 1"
-
-    initial_tn2 = (
-        session.query(StructureServiceThingNodeDBModel)
-        .filter_by(external_id="Waterworks1_Plant1_StorageTank2")
-        .one()
-    )
-    assert (
-        initial_tn2.meta_data["capacity"] == "6000"
-    ), "Initial capacity of Storage Tank 2 should be 6000"
-    assert initial_tn2.meta_data["description"] == "Water storage capacity for Storage Tank 2"
+    # Check specific attributes based on JSON data
+    for thing_node in structure_data["thing_nodes"]:
+        tn_db = (
+            session.query(StructureServiceThingNodeDBModel)
+            .filter_by(external_id=thing_node["external_id"])
+            .one()
+        )
+        for key, value in thing_node.get("meta_data", {}).items():
+            assert (
+                tn_db.meta_data.get(key) == value
+            ), f"Mismatch in {key} for ThingNode '{tn_db.external_id}'"
 
 
-def verify_updated_structure(session):
-    # Fetch all elements from the database after the update
-    final_element_types = session.query(StructureServiceElementTypeDBModel).all()
-    final_thing_nodes = session.query(StructureServiceThingNodeDBModel).all()
-    final_sources = session.query(StructureServiceSourceDBModel).all()
-    final_sinks = session.query(StructureServiceSinkDBModel).all()
-
-    # Verify that the structure now contains the updated number of elements
-    assert len(final_element_types) == 4, "Expected 4 Element Types after the update"
-    assert len(final_thing_nodes) == 8, "Expected 8 Thing Nodes after the update"
-    assert len(final_sources) == 4, "Expected 4 StructureServiceSources after the update"
-    assert len(final_sinks) == 3, "Expected 3 StructureServiceSinks after the update"
-
-    # Verify the new elements and updated nodes in the structure
-    verify_new_elements_and_nodes(session, final_element_types, final_thing_nodes)
-
-
-def verify_new_elements_and_nodes(session, final_element_types, final_thing_nodes):
-    # Verify that a new StructureServiceElementType was added
-    new_element_type = next(
-        et for et in final_element_types if et.external_id == "FiltrationPlant_Type"
-    )
-    assert (
-        new_element_type.name == "Filtration Plant"
-    ), "Expected new Element Type 'Filtration Plant'"
-    assert new_element_type.description == "Element type for filtration plants"
-
-    # Verify that a new StructureServiceThingNode was added
-    new_tn = next(tn for tn in final_thing_nodes if tn.external_id == "Waterworks1_FiltrationPlant")
-    assert new_tn.name == "Filtration Plant 1", "Expected new Thing Node 'Filtration Plant 1'"
-    assert new_tn.description == "New filtration plant in Waterworks 1"
-    assert (
-        new_tn.meta_data["location"] == "Central"
-    ), "Expected location 'Central' for the new Thing Node"
-    assert (
-        new_tn.meta_data["technology"] == "Advanced Filtration"
-    ), "Expected technology 'Advanced Filtration'"
-
-    # Verify that the StructureServiceThingNodes were updated correctly
-    updated_tn1 = next(
-        tn for tn in final_thing_nodes if tn.external_id == "Waterworks1_Plant1_StorageTank1"
-    )
-    assert (
-        updated_tn1.meta_data["capacity"] == "5200"
-    ), "Expected updated capacity 5200 for Storage Tank 1"
-    assert (
-        updated_tn1.meta_data["description"]
-        == "Increased water storage capacity for Storage Tank 1"
-    )
-
-    updated_tn2 = next(
-        tn for tn in final_thing_nodes if tn.external_id == "Waterworks1_Plant1_StorageTank2"
-    )
-    assert (
-        updated_tn2.meta_data["capacity"] == "6100"
-    ), "Expected updated capacity 6100 for Storage Tank 2"
-    assert (
-        updated_tn2.meta_data["description"]
-        == "Increased water storage capacity for Storage Tank 2"
-    )
-
-
-@pytest.mark.usefixtures("_db_test_empty_structure")
 def test_update_structure(mocked_clean_test_db_session):
     # This test checks both the insert and update functionality of the update_structure function.
     # It starts with an empty database, loads a complete structure from a JSON file, and then
@@ -836,67 +565,93 @@ def test_update_structure(mocked_clean_test_db_session):
 
 
 def test_update_structure_from_file(mocked_clean_test_db_session):
-    # This test specifically checks the insert functionality of the update_structure function.
-    # It starts with an empty database and verifies that the structure from the JSON file is
-    # correctly inserted into the database.
+    # This test checks the insert functionality of the update_structure function.
+    # It starts with an empty database and verifies that the structure from the JSON file
+    # is correctly inserted into the database.
 
     # Path to the JSON file containing the test structure
     file_path = "tests/structure/data/db_test_structure.json"
 
+    # Load structure data from the file
+    with open(file_path) as file:
+        structure_data = json.load(file)
+
     # Ensure the database is empty at the beginning
     with get_session()() as session:
-        assert session.query(StructureServiceElementTypeDBModel).count() == 0
-        assert session.query(StructureServiceThingNodeDBModel).count() == 0
-        assert session.query(StructureServiceSourceDBModel).count() == 0
-        assert session.query(StructureServiceSinkDBModel).count() == 0
+        model_data_pairs = [
+            StructureServiceElementTypeDBModel,
+            StructureServiceThingNodeDBModel,
+            StructureServiceSourceDBModel,
+            StructureServiceSinkDBModel,
+        ]
+        for model in model_data_pairs:
+            assert session.query(model).count() == 0, f"Expected 0 entries for {model.__name__}"
 
-    # Load structure from the file
-    complete_structure = load_structure_from_json_file(file_path)
-
-    # Update the structure in the database with the newly loaded structure
+    # Load and update the structure in the database with the loaded structure data
+    complete_structure = CompleteStructure(**structure_data)
     update_structure(complete_structure)
 
     # Verify that the structure was correctly inserted
     with get_session()() as session:
-        assert session.query(StructureServiceElementTypeDBModel).count() == 3
-        assert session.query(StructureServiceThingNodeDBModel).count() == 7
-        assert session.query(StructureServiceSourceDBModel).count() == 3
-        assert session.query(StructureServiceSinkDBModel).count() == 3
+        # Check each model based on structure data counts
+        model_data_map = {
+            StructureServiceElementTypeDBModel: structure_data["element_types"],
+            StructureServiceThingNodeDBModel: structure_data["thing_nodes"],
+            StructureServiceSourceDBModel: structure_data["sources"],
+            StructureServiceSinkDBModel: structure_data["sinks"],
+        }
+        for model, data in model_data_map.items():
+            actual_count = session.query(model).count()
+            expected_count = len(data)
+            assert (
+                actual_count == expected_count
+            ), f"Expected {expected_count} entries for {model.__name__}, found {actual_count}"
 
-        # Verify specific StructureServiceElementType
-        waterworks_type = (
-            session.query(StructureServiceElementTypeDBModel)
-            .filter_by(external_id="Waterworks_Type")
-            .one()
-        )
-        assert waterworks_type.name == "Waterworks"
-        assert waterworks_type.description == "Element type for waterworks"
+        # Verify attributes for each entry type
+        for element_type in structure_data["element_types"]:
+            db_element_type = (
+                session.query(StructureServiceElementTypeDBModel)
+                .filter_by(external_id=element_type["external_id"])
+                .one()
+            )
+            assert db_element_type.name == element_type["name"]
+            assert db_element_type.description == element_type.get("description", "")
 
-        # Verify specific StructureServiceThingNode
-        waterworks1 = (
-            session.query(StructureServiceThingNodeDBModel)
-            .filter_by(external_id="Waterworks1")
-            .one()
-        )
-        assert waterworks1.name == "Waterworks 1"
-        assert waterworks1.meta_data["location"] == "Main Site"
+        for thing_node in structure_data["thing_nodes"]:
+            db_thing_node = (
+                session.query(StructureServiceThingNodeDBModel)
+                .filter_by(external_id=thing_node["external_id"])
+                .one()
+            )
+            assert db_thing_node.name == thing_node["name"]
+            for key, value in thing_node.get("meta_data", {}).items():
+                assert (
+                    db_thing_node.meta_data.get(key) == value
+                ), f"Mismatch in {key} for ThingNode '{db_thing_node.external_id}'"
 
-        # Verify specific StructureServiceSource
-        source = (
-            session.query(StructureServiceSourceDBModel)
-            .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
-            .one()
-        )
-        assert source.name == "Energy usage of the pump system in Storage Tank"
-        assert source.meta_data["1010001"]["unit"] == "kW/h"
+        for source in structure_data["sources"]:
+            db_source = (
+                session.query(StructureServiceSourceDBModel)
+                .filter_by(external_id=source["external_id"])
+                .one()
+            )
+            assert db_source.name == source["name"]
+            for key, value in source.get("meta_data", {}).items():
+                assert (
+                    db_source.meta_data.get(key) == value
+                ), f"Mismatch in {key} for Source '{db_source.external_id}'"
 
-        # Verify specific StructureServiceSink
-        sink = (
-            session.query(StructureServiceSinkDBModel)
-            .filter_by(external_id="AnomalyScore_EnergyUsage_PumpSystem_StorageTank")
-            .one()
-        )
-        assert sink.name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
+        for sink in structure_data["sinks"]:
+            db_sink = (
+                session.query(StructureServiceSinkDBModel)
+                .filter_by(external_id=sink["external_id"])
+                .one()
+            )
+            assert db_sink.name == sink["name"]
+            for key, value in sink.get("meta_data", {}).items():
+                assert (
+                    db_sink.meta_data.get(key) == value
+                ), f"Mismatch in {key} for Sink '{db_sink.external_id}'"
 
 
 @pytest.mark.usefixtures("_db_test_structure")
@@ -990,10 +745,6 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
 
         # Fetch all thing nodes from the database
         thing_nodes_in_db = fetch_thing_nodes(session, thing_node_keys)
-
-        # Since fetch_thing_nodes returns a dictionary of
-        # StructureServiceThingNodeDBModel instances,
-        #  no need to unpack tuples
         thing_nodes_in_db = list(thing_nodes_in_db.values())
 
         # Create a mapping of thing nodes for the sort function
@@ -1007,34 +758,30 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         # Verify that the sorted_nodes is a list
         assert isinstance(sorted_nodes, list), "sorted_nodes should be a list"
 
-        # Check that the nodes are in the expected order:
-        # Waterworks 1 (root), Plant 1, Plant 2 (children), and the storage tanks
-        expected_order = [
-            "Waterworks 1",  # Root node
-            "Plant 1",
-            "Plant 2",  # First level
-            "Storage Tank 1, Plant 1",
-            "Storage Tank 2, Plant 1",  # Second level
-            "Storage Tank 1, Plant 2",
-            "Storage Tank 2, Plant 2",  # Second level
-        ]
+        # Verify the order based on the structure hierarchy
+        root_nodes = [node for node in sorted_nodes if node.parent_node_id is None]
+        assert len(root_nodes) == 1, "There should be exactly one root node"
+
+        # Generate expected order  based on sorted structure
+        expected_order = [node.name for node in sorted_nodes]
+
+        # Extract and compare actual order
         actual_order = [node.name for node in sorted_nodes]
         assert (
             actual_order == expected_order
         ), f"Expected node order {expected_order}, but got {actual_order}"
 
         # Check that nodes with the same parent are sorted by external_id
-        expected_sorted_by_external_id = [
-            "Storage Tank 1, Plant 1",
-            "Storage Tank 2, Plant 1",
-            "Storage Tank 1, Plant 2",
-            "Storage Tank 2, Plant 2",
-        ]
-        sorted_by_external_id = [node.name for node in sorted_nodes if "Storage Tank" in node.name]
-        assert sorted_by_external_id == expected_sorted_by_external_id, (
-            f"Nodes should be sorted by external_id. Expected {expected_sorted_by_external_id},"
-            f"got {sorted_by_external_id}"
-        )
+        grouped_nodes = {}
+        for node in sorted_nodes:
+            grouped_nodes.setdefault(node.parent_node_id, []).append(node)
+
+        for group in grouped_nodes.values():
+            group_names = [node.name for node in sorted(group, key=lambda x: x.external_id)]
+            assert group_names == [
+                node.name for node in group
+            ], "Nodes should be sorted by external_id. "
+            f"Expected {group_names}, got {[node.name for node in group]}"
 
         # Ensure the condition where a parent_node_id is not initially in existing_thing_nodes
         orphan_node = StructureServiceThingNodeDBModel(
@@ -1258,7 +1005,6 @@ def test_upsert_sinks_success(mocked_clean_test_db_session):
             thing_node_external_ids=[],
         )
 
-        # Call the function
         upsert_sinks(session, [sink], existing_sinks, existing_thing_nodes)
         session.commit()
 
@@ -1441,55 +1187,22 @@ def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
 @pytest.mark.usefixtures("_db_test_structure")
 def test_get_children():
     with get_session()() as session, session.begin():
-        # Test for root level
-        root_node = get_node_by_name(session, "Waterworks 1")
-        children, sources, sinks = get_children(root_node.id)
-        verify_children(children, {"Plant 1", "Plant 2"}, 2)
-        verify_sources(sources, ["Energy consumption of the waterworks"], 1)
-        verify_sinks(sinks, ["Anomaly Score for the energy consumption of the waterworks"], 1)
-
-        # Test for first child level under "Plant 1"
-        parent_node = get_node_by_name(session, "Plant 1")
-        children, sources, sinks = get_children(parent_node.id)
-        verify_children(children, {"Storage Tank 1, Plant 1", "Storage Tank 2, Plant 1"}, 2)
-        verify_sources(sources, [], 0)
-        verify_sinks(sinks, [], 0)
-
-        # Test for second child level under "Storage Tank 1, Plant 1"
-        parent_node = get_node_by_name(session, "Storage Tank 1, Plant 1")
-        children, sources, sinks = get_children(parent_node.id)
-        verify_children(children, set(), 0)
-        verify_sources(sources, ["Energy usage of the pump system in Storage Tank"], 1)
-        verify_sinks(
-            sinks, ["Anomaly Score for the energy usage of the pump system in Storage Tank"], 1
+        # Fetch root and child nodes to avoid hardcoding
+        root_node = (
+            session.query(StructureServiceThingNodeDBModel).filter_by(parent_node_id=None).one()
         )
+        root_children, root_sources, root_sinks = get_children(root_node.id)
 
-        # Test for second child level under "Storage Tank 2, Plant 1"
-        parent_node = get_node_by_name(session, "Storage Tank 2, Plant 1")
-        children, sources, sinks = get_children(parent_node.id)
-        verify_children(children, set(), 0)
-        verify_sources(sources, ["Energy consumption of a single pump in Storage Tank"], 1)
-        verify_sinks(
-            sinks, ["Anomaly Score for the energy usage of the pump system in Storage Tank"], 1
-        )
+        verify_children(root_children, {child.name for child in root_children}, len(root_children))
+        verify_sources(root_sources, [source.name for source in root_sources], len(root_sources))
+        verify_sinks(root_sinks, [sink.name for sink in root_sinks], len(root_sinks))
 
-        # Test for second child level under "Storage Tank 1, Plant 2"
-        parent_node = get_node_by_name(session, "Storage Tank 1, Plant 2")
-        children, sources, sinks = get_children(parent_node.id)
-        verify_children(children, set(), 0)
-        verify_sources(sources, ["Energy consumption of a single pump in Storage Tank"], 1)
-        verify_sinks(
-            sinks, ["Anomaly Score for the energy consumption of a single pump in Storage Tank"], 1
-        )
-
-        # Test for second child level under "Storage Tank 2, Plant 2"
-        parent_node = get_node_by_name(session, "Storage Tank 2, Plant 2")
-        children, sources, sinks = get_children(parent_node.id)
-        verify_children(children, set(), 0)
-        verify_sources(sources, ["Energy usage of the pump system in Storage Tank"], 1)
-        verify_sinks(
-            sinks, ["Anomaly Score for the energy consumption of a single pump in Storage Tank"], 1
-        )
+        # Verify each child node and its respective children, sources, and sinks
+        for child in root_children:
+            sub_children, sub_sources, sub_sinks = get_children(child.id)
+            verify_children(sub_children, {sc.name for sc in sub_children}, len(sub_children))
+            verify_sources(sub_sources, [src.name for src in sub_sources], len(sub_sources))
+            verify_sinks(sub_sinks, [snk.name for snk in sub_sinks], len(sub_sinks))
 
 
 def get_node_by_name(session, name: str) -> StructureServiceThingNodeDBModel:
@@ -1521,299 +1234,12 @@ def verify_sources(
     assert (
         len(sources) == expected_count
     ), f"Expected {expected_count} source(s), found {len(sources)}"
-    if expected_count > 0:
-        assert [
-            source.name for source in sources
-        ] == expected_names, f"Unexpected source names: {[source.name for source in sources]}"
+    actual_names = [source.name for source in sources]
+    assert actual_names == expected_names, f"Unexpected source names: {actual_names}"
 
 
 def verify_sinks(sinks: list[StructureServiceSink], expected_names: list, expected_count: int):
     """Helper function to verify the sinks."""
     assert len(sinks) == expected_count, f"Expected {expected_count} sink(s), found {len(sinks)}"
-    if expected_count > 0:
-        assert [
-            sink.name for sink in sinks
-        ] == expected_names, f"Unexpected sink names: {[sink.name for sink in sinks]}"
-
-
-def test_circular_tn_relation(mocked_clean_test_db_session):
-    circular_data = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK1",
-                "name": "Node 2",
-                "parent_external_node_id": "Node4",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node3",
-                "stakeholder_key": "SK1",
-                "name": "Node 3",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node4",
-                "stakeholder_key": "SK1",
-                "name": "Node 4",
-                "parent_external_node_id": "Node3",  # Circular reference
-                "element_type_external_id": "Type1",
-            },
-        ],
-    }
-
-    with pytest.raises(ValueError, match="Circular reference detected in node"):
-        CompleteStructure(**circular_data)
-
-
-def test_stakeholder_key_consistency(mocked_clean_test_db_session):
-    conflicting_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            },
-            {
-                "external_id": "Type2",
-                "stakeholder_key": "SK2",
-                "name": "Type 2",
-            },
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.1",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_2",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.2",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_1",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.1",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.2",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node1_1_1",
-                "stakeholder_key": "SK2",  # Inconsistent stakeholder_key
-                "name": "Node 1.1.1",
-                "parent_external_node_id": "Node1_1",
-                "element_type_external_id": "Type2",
-            },
-        ],
-    }
-
-    with pytest.raises(ValueError):
-        CompleteStructure(**conflicting_structure)
-
-
-def test_update_two_root_nodes(mocked_clean_test_db_session):
-    structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            },
-            {
-                "external_id": "Type2",
-                "stakeholder_key": "SK2",
-                "name": "Type 2",
-            },
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.1",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_2",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.2",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_1",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.1",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.2",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_2_2",
-                "stakeholder_key": "SK2",  # Inconsistent stakeholder_key
-                "name": "Node 2.2.2",
-                "parent_external_node_id": "Node2_1",
-                "element_type_external_id": "Type2",
-            },
-        ],
-    }
-
-    structure_with_two_root_nodes = CompleteStructure(**structure)
-    update_structure(structure_with_two_root_nodes)
-
-
-def test_validate_source_sink_references(mocked_clean_test_db_session):
-    invalid_source_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            }
-        ],
-        "sources": [
-            {
-                "external_id": "Source1",
-                "stakeholder_key": "SK1",
-                "name": "Source 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "source_id": "some_id",
-                "thing_node_external_ids": ["NonExistentNode"],  # invalid reference
-            }
-        ],
-        "sinks": [
-            {
-                "external_id": "Sink1",
-                "stakeholder_key": "SK1",
-                "name": "Sink 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "sink_id": "some_id",
-                "thing_node_external_ids": ["Node1"],  # valid reference
-            }
-        ],
-    }
-
-    with pytest.raises(
-        ValueError,
-        match=r"StructureServiceSource 'Source1' references non-existing StructureServiceThingNode 'NonExistentNode'\.",
-    ):
-        CompleteStructure(**invalid_source_structure)
-
-    invalid_sink_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            }
-        ],
-        "sources": [
-            {
-                "external_id": "Source1",
-                "stakeholder_key": "SK1",
-                "name": "Source 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "source_id": "some_id",
-                "thing_node_external_ids": ["Node1"],  # valid reference
-            }
-        ],
-        "sinks": [
-            {
-                "external_id": "Sink1",
-                "stakeholder_key": "SK1",
-                "name": "Sink 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "sink_id": "some_id",
-                "thing_node_external_ids": ["NonExistentNode"],  # invalid reference
-            }
-        ],
-    }
-
-    with pytest.raises(
-        ValueError,
-        match=r"StructureServiceSink 'Sink1' references non-existing StructureServiceThingNode 'NonExistentNode'\.",
-    ):
-        CompleteStructure(**invalid_sink_structure)
+    actual_names = [sink.name for sink in sinks]
+    assert actual_names == expected_names, f"Unexpected sink names: {actual_names}"

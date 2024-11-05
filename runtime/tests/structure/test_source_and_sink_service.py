@@ -187,13 +187,18 @@ def test_fetch_collection_of_sinks_from_db_by_id(mocked_clean_test_db_session):
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_filter_sinks_by_substring_match_success(mocked_clean_test_db_session):
-    result = fetch_sinks_by_substring_match(
-        "Anomaly Score for the energy usage of the pump system in Storage Tan"
-    )
+    with mocked_clean_test_db_session() as session:
+        # Fetch an example sink name from the database to use in the test
+        example_sink = session.query(StructureServiceSinkDBModel).first()
+        assert example_sink is not None, "No sinks found in the database."
 
-    # Assert that the correct StructureServiceSinkDBModel is returned
-    assert len(result) == 1
-    assert result[0].name == "Anomaly Score for the energy usage of the pump system in Storage Tank"
+        # Use a substring of the example sink's name to perform the search
+        substring_to_match = example_sink.name[:30]  # Take the first 30 characters as a substring
+        result = fetch_sinks_by_substring_match(substring_to_match)
+
+        # Verify that the correct StructureServiceSinkDBModel is returned
+        assert len(result) == 1
+        assert result[0].name == example_sink.name
 
 
 @pytest.mark.usefixtures("_db_test_structure")
@@ -206,11 +211,18 @@ def test_filter_sinks_by_substring_match_no_matches(mocked_clean_test_db_session
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_filter_sources_by_substring_match_success(mocked_clean_test_db_session):
-    result = fetch_sources_by_substring_match("Energy consumption of the waterwor")
+    with mocked_clean_test_db_session() as session:
+        # Fetch an example source name from the database to use in the test
+        example_source = session.query(StructureServiceSourceDBModel).first()
+        assert example_source is not None, "No sources found in the database."
 
-    # Assert that the correct StructureServiceSourceDBModel is returned
-    assert len(result) == 1
-    assert result[0].name == "Energy consumption of the waterworks"
+        # Use a substring of the example source's name to perform the search
+        substring_to_match = example_source.name[:30]  # Take the first 30 characters as a substring
+        result = fetch_sources_by_substring_match(substring_to_match)
+
+        # Verify that the correct StructureServiceSourceDBModel is returned
+        assert len(result) == 1
+        assert result[0].name == example_source.name
 
 
 @pytest.mark.usefixtures("_db_test_structure")
