@@ -578,7 +578,7 @@ class CompleteStructure(BaseModel):
                 # does not exist in 'thing_node_ids', raise an error.
                 if tn_id not in thing_node_ids:
                     raise ValueError(
-                        f"StructureServiceSink '{cls.agnostic_getattr(source, 'external_id')}' "
+                        f"StructureServiceSink '{cls.agnostic_getattr(sink, 'external_id')}' "
                         f"references non-existing StructureServiceThingNode '{tn_id}'."
                     )
 
