@@ -64,3 +64,10 @@ def db_test_structure_file_path():
 def _db_test_unordered_structure(mocked_clean_test_db_session):
     file_path = "tests/structure/data/db_test_unordered_structure.json"
     update_structure_from_file(file_path)
+
+
+# Fixture to load an empty test structure into the database from a JSON file
+@pytest.fixture()
+def _db_test_empty_structure(mocked_clean_test_db_session):
+    file_path = "tests/structure/data/db_test_empty_structure.json"
+    update_structure_from_file(file_path)
