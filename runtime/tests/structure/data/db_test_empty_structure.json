@@ -1,0 +1,25 @@
+{
+    "element_types": [
+        {
+            "external_id": "Waterworks_Type",
+            "stakeholder_key": "GW",
+            "name": "Waterworks",
+            "description": "Element type for waterworks"
+        },
+        {
+            "external_id": "Plant_Type",
+            "stakeholder_key": "GW",
+            "name": "Plant",
+            "description": "Element type for plants"
+        },
+        {
+            "external_id": "StorageTank_Type",
+            "stakeholder_key": "GW",
+            "name": "Storage Tank",
+            "description": "Element type for storage tanks"
+        }
+    ],
+    "thing_nodes": [],
+    "sources": [],
+    "sinks": []
+}
