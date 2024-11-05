@@ -24,7 +24,6 @@ from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
     DBConnectionError,
     DBError,
-    DBFetchError,
     DBIntegrityError,
     DBNotFoundError,
     DBParsingError,
