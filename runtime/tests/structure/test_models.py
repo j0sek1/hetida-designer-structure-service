@@ -14,6 +14,8 @@ from hetdesrun.structure.models import (
     StructureServiceThingNode,
 )
 
+from hetdesrun.persistence.structure_service_dbmodels import StructureServiceThingNodeDBModel
+
 
 def test_external_id_stakeholder_key_name_non_empty():
     with pytest.raises(ValueError, match="The external id cannot be empty"):
@@ -114,320 +116,81 @@ def test_filter_class_initialization_with_empty_string_as_name(filter_json):
 
 
 def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
-    invalid_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK1",
-                "name": "Node 2",
-                "parent_external_node_id": "InvalidNodeID",  # invalid reference
-                "element_type_external_id": "Type1",
-            },
-        ],
-    }
+    file_path = "tests/structure/data/db_invalid_structure_root_nodes.json"
+    with open(file_path) as file:
+        invalid_structure = json.load(file)
+
+    invalid_node = next(
+        node
+        for node in invalid_structure["thing_nodes"]
+        if node["parent_external_node_id"] == "InvalidNodeID"
+    )
+    invalid_node_name = invalid_node["name"]
+    invalid_parent_id = invalid_node["parent_external_node_id"]
 
     with pytest.raises(
         ValueError,
-        match="Root node 'Node 2' has an invalid parent_external_node_id "
-        "'InvalidNodeID' that does not reference any existing StructureServiceThingNode.",
+        match=f"Root node '{invalid_node_name}' has an invalid parent_external_node_id '{invalid_parent_id}'",
     ):
-        CompleteStructure(**invalid_structure)
+        structure = CompleteStructure(**invalid_structure)
+
 
 
 def test_circular_tn_relation(mocked_clean_test_db_session):
-    circular_data = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK1",
-                "name": "Node 2",
-                "parent_external_node_id": "Node4",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node3",
-                "stakeholder_key": "SK1",
-                "name": "Node 3",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node4",
-                "stakeholder_key": "SK1",
-                "name": "Node 4",
-                "parent_external_node_id": "Node3",  # Circular reference
-                "element_type_external_id": "Type1",
-            },
-        ],
-    }
+    file_path = "tests/structure/data/db_circular_structure.json"
+    with open(file_path) as file:
+        circular_data = json.load(file)
 
     with pytest.raises(ValueError, match="Circular reference detected in node"):
-        CompleteStructure(**circular_data)
+        structure = CompleteStructure(**circular_data)
 
 
 def test_stakeholder_key_consistency(mocked_clean_test_db_session):
-    conflicting_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            },
-            {
-                "external_id": "Type2",
-                "stakeholder_key": "SK2",
-                "name": "Type 2",
-            },
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.1",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_2",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.2",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_1",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.1",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.2",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node1_1_1",
-                "stakeholder_key": "SK2",  # Inconsistent stakeholder_key
-                "name": "Node 1.1.1",
-                "parent_external_node_id": "Node1_1",
-                "element_type_external_id": "Type2",
-            },
-        ],
-    }
+    file_path = "tests/structure/data/db_conflicting_stakeholder_keys.json"
+    with open(file_path) as file:
+        conflicting_structure = json.load(file)
 
     with pytest.raises(ValueError, match="Inconsistent stakeholder_key at node"):
-        CompleteStructure(**conflicting_structure)
+        structure = CompleteStructure(**conflicting_structure)
 
 
-def test_update_two_root_nodes(mocked_clean_test_db_session):
-    structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            },
-            {
-                "external_id": "Type2",
-                "stakeholder_key": "SK2",
-                "name": "Type 2",
-            },
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.1",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node1_2",
-                "stakeholder_key": "SK1",
-                "name": "Node 1.2",
-                "parent_external_node_id": "Node1",
-                "element_type_external_id": "Type1",
-            },
-            {
-                "external_id": "Node2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_1",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.1",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_2",
-                "stakeholder_key": "SK2",
-                "name": "Node 2.2",
-                "parent_external_node_id": "Node2",
-                "element_type_external_id": "Type2",
-            },
-            {
-                "external_id": "Node2_2_2",
-                "stakeholder_key": "SK2",  # Inconsistent stakeholder_key
-                "name": "Node 2.2.2",
-                "parent_external_node_id": "Node2_1",
-                "element_type_external_id": "Type2",
-            },
-        ],
-    }
+def test_update_structure_two_root_nodes(mocked_clean_test_db_session):
+    file_path = "tests/structure/data/db_two_root_nodes_structure.json"
+    with open(file_path) as file:
+        structure_data = json.load(file)
+    
+    structure_with_two_root_nodes = CompleteStructure(**structure_data)
+    root_nodes = [node for node in structure_with_two_root_nodes.thing_nodes if node.parent_external_node_id is None]
 
-    structure_with_two_root_nodes = CompleteStructure(**structure)
+    assert len(root_nodes) == 2, f"Expected 2 root nodes, found {len(root_nodes)}"
+
     update_structure(structure_with_two_root_nodes)
 
+    with mocked_clean_test_db_session() as session:
+        updated_nodes = session.query(StructureServiceThingNodeDBModel).all()
+        assert len(updated_nodes) == len(structure_with_two_root_nodes.thing_nodes), (
+            "Database update failed, node count does not match"
+        )
 
 def test_validate_source_sink_references(mocked_clean_test_db_session):
-    invalid_source_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            }
-        ],
-        "sources": [
-            {
-                "external_id": "Source1",
-                "stakeholder_key": "SK1",
-                "name": "Source 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "source_id": "some_id",
-                "thing_node_external_ids": ["NonExistentNode"],  # invalid reference
-            }
-        ],
-        "sinks": [
-            {
-                "external_id": "Sink1",
-                "stakeholder_key": "SK1",
-                "name": "Sink 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "sink_id": "some_id",
-                "thing_node_external_ids": ["Node1"],  # valid reference
-            }
-        ],
-    }
+    invalid_source_file_path = "tests/structure/data/db_invalid_source_structure.json"
+    with open(invalid_source_file_path) as file:
+        invalid_source_structure = json.load(file)
 
     with pytest.raises(
         ValueError,
-        match=r"StructureServiceSource 'Source1' references non-existing "
-        r"StructureServiceThingNode 'NonExistentNode'\.",
+        match="StructureServiceSource 'Source1' references non-existing "
+        "StructureServiceThingNode 'NonExistentNode'\\.",
     ):
         CompleteStructure(**invalid_source_structure)
 
-    invalid_sink_structure = {
-        "element_types": [
-            {
-                "external_id": "Type1",
-                "stakeholder_key": "SK1",
-                "name": "Type 1",
-            }
-        ],
-        "thing_nodes": [
-            {
-                "external_id": "Node1",
-                "stakeholder_key": "SK1",
-                "name": "Node 1",
-                "parent_external_node_id": None,
-                "element_type_external_id": "Type1",
-            }
-        ],
-        "sources": [
-            {
-                "external_id": "Source1",
-                "stakeholder_key": "SK1",
-                "name": "Source 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "source_id": "some_id",
-                "thing_node_external_ids": ["Node1"],  # valid reference
-            }
-        ],
-        "sinks": [
-            {
-                "external_id": "Sink1",
-                "stakeholder_key": "SK1",
-                "name": "Sink 1",
-                "type": "multitsframe",
-                "adapter_key": "sql-adapter",
-                "sink_id": "some_id",
-                "thing_node_external_ids": ["NonExistentNode"],  # invalid reference
-            }
-        ],
-    }
-
+    
+    invalid_sink_file_path = "tests/structure/data/db_invalid_sink_structure.json"
+    with open(invalid_sink_file_path) as file:
+        invalid_sink_structure = json.load(file)
     with pytest.raises(
         ValueError,
-        match=r"StructureServiceSink 'Sink1' references non-existing"
-        r" StructureServiceThingNode 'NonExistentNode'\.",
+        match="StructureServiceSink 'Sink1' references non-existing"
+        " StructureServiceThingNode 'NonExistentNode'\\.",
     ):
         CompleteStructure(**invalid_sink_structure)
