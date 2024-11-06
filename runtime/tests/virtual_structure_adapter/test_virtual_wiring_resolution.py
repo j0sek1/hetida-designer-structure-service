@@ -109,18 +109,12 @@ def test_virtual_wiring_resolution_with_other_adapter_key():
 
 @pytest.mark.usefixtures("_fill_db")
 def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
-    # Create example InputWiring
-    # Only a source is created because the retrieval process for
-    # sources and sinks is identical
-    sources = fetch_all_sources_from_db()
-    struct_src = VirtualStructureAdapterSource.from_structure_service_source(sources[0])
-    struct_src.id = uuid.uuid4()  # Overwrite existing ID
-
+    # Create example InputWiring, process would be analogous for OutputWiring
     input_wiring = InputWiring(
         workflow_input_name="nf",
         adapter_id="virtual-structure-adapter",
-        ref_id=str(struct_src.id),
-        type=struct_src.type,
+        ref_id=str(uuid.uuid4()),  # Non-existent ID
+        type="timeseries(float)",
         filters={},
     )
 

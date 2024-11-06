@@ -1,3 +1,4 @@
+import json
 import uuid
 
 import pytest
@@ -40,6 +41,11 @@ def test_get_structure_with_non_existent_uuid():
 
 @pytest.mark.usefixtures("_fill_db")
 def test_get_structure_with_existing_uuid():
+    # Load structure for reference
+    filepath = "tests/virtual_structure_adapter/data/simple_end_to_end_with_any_test.json"
+    with open(filepath) as file:
+        structure_ref = json.load(file)
+
     # Make multiple calls to get structure, as the IDs are not known
     structure = get_structure(None)
     structure = get_structure(structure.thingNodes[0].id)
@@ -52,21 +58,16 @@ def test_get_structure_with_existing_uuid():
     # Check Sources
     assert len(structure.sources) == 3
     assert isinstance(structure.sources[0], VirtualStructureAdapterSource)
-    expected_source_names = [
-        "Energy usage with preset filter",
-        "Energy usage with passthrough filters",
-        "Test source for type metadata(any)",
-    ]
+
+    expected_source_names = [src["name"] for src in structure_ref["sources"]]
+
     for source in structure.sources:
         assert source.name in expected_source_names
 
     # Check Sinks
     assert len(structure.sinks) == 1
     assert isinstance(structure.sinks[0], VirtualStructureAdapterSink)
-    assert (
-        structure.sinks[0].name
-        == "Anomaly score for the energy usage of the pump system in Storage Tank"
-    )
+    assert structure.sinks[0].name == structure_ref["sinks"][0]["name"]
 
 
 @pytest.mark.usefixtures("_fill_db")
