@@ -8,7 +8,7 @@ from hetdesrun.adapters.virtual_structure_adapter.models import (
     VirtualStructureAdapterSource,
     VirtualStructureAdapterThingNode,
 )
-from hetdesrun.structure.db.exceptions import DBNotFoundError
+from hetdesrun.structure.db.exceptions import DBIntegrityError, DBNotFoundError
 from hetdesrun.structure.db.source_sink_service import (
     fetch_single_sink_from_db_by_id,
     fetch_single_source_from_db_by_id,
@@ -33,7 +33,7 @@ def get_children_from_structure_service(
     """
     try:
         thing_nodes, sources, sinks = get_children(parent_id)
-    except DBNotFoundError:
+    except (DBNotFoundError, DBIntegrityError):
         raise
 
     struct_thing_nodes = [
