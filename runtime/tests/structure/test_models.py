@@ -142,10 +142,8 @@ def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
 
     with pytest.raises(
         ValueError,
-        match=(
-            r"Root node 'Node 2' has an invalid parent_external_node_id "
-            r"'InvalidNodeID' that does not reference any existing StructureServiceThingNode."
-        ),
+        match="Root node 'Node 2' has an invalid parent_external_node_id "
+        "'InvalidNodeID' that does not reference any existing StructureServiceThingNode.",
     ):
         CompleteStructure(**invalid_structure)
 
