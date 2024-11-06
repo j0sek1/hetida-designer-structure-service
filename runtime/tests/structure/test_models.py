@@ -3,6 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
+from hetdesrun.persistence.structure_service_dbmodels import StructureServiceThingNodeDBModel
 from hetdesrun.structure.db.structure_service import (
     update_structure,
 )
@@ -13,8 +14,6 @@ from hetdesrun.structure.models import (
     StructureServiceSource,
     StructureServiceThingNode,
 )
-
-from hetdesrun.persistence.structure_service_dbmodels import StructureServiceThingNodeDBModel
 
 
 def test_external_id_stakeholder_key_name_non_empty():
@@ -135,7 +134,6 @@ def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
         structure = CompleteStructure(**invalid_structure)
 
 
-
 def test_circular_tn_relation(mocked_clean_test_db_session):
     file_path = "tests/structure/data/db_circular_structure.json"
     with open(file_path) as file:
@@ -158,9 +156,13 @@ def test_update_structure_two_root_nodes(mocked_clean_test_db_session):
     file_path = "tests/structure/data/db_two_root_nodes_structure.json"
     with open(file_path) as file:
         structure_data = json.load(file)
-    
+
     structure_with_two_root_nodes = CompleteStructure(**structure_data)
-    root_nodes = [node for node in structure_with_two_root_nodes.thing_nodes if node.parent_external_node_id is None]
+    root_nodes = [
+        node
+        for node in structure_with_two_root_nodes.thing_nodes
+        if node.parent_external_node_id is None
+    ]
 
     assert len(root_nodes) == 2, f"Expected 2 root nodes, found {len(root_nodes)}"
 
@@ -168,9 +170,10 @@ def test_update_structure_two_root_nodes(mocked_clean_test_db_session):
 
     with mocked_clean_test_db_session() as session:
         updated_nodes = session.query(StructureServiceThingNodeDBModel).all()
-        assert len(updated_nodes) == len(structure_with_two_root_nodes.thing_nodes), (
-            "Database update failed, node count does not match"
-        )
+        assert len(updated_nodes) == len(
+            structure_with_two_root_nodes.thing_nodes
+        ), "Database update failed, node count does not match"
+
 
 def test_validate_source_sink_references(mocked_clean_test_db_session):
     invalid_source_file_path = "tests/structure/data/db_invalid_source_structure.json"
@@ -184,7 +187,6 @@ def test_validate_source_sink_references(mocked_clean_test_db_session):
     ):
         CompleteStructure(**invalid_source_structure)
 
-    
     invalid_sink_file_path = "tests/structure/data/db_invalid_sink_structure.json"
     with open(invalid_sink_file_path) as file:
         invalid_sink_structure = json.load(file)
