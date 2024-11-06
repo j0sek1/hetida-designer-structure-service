@@ -49,17 +49,6 @@ logger = logging.getLogger(__name__)
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:
     """
     Loads the structure from a JSON file.
-
-    Args:
-        file_path (str): The path to the JSON file.
-
-    Returns:
-        CompleteStructure: The loaded CompleteStructure object.
-
-    Raises:
-        FileNotFoundError: If the JSON file is not found at the given path.
-        DBParsingError: If an error occurs while parsing or validating the JSON structure.
-        DBError: If any other unexpected error occurs.
     """
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
@@ -110,18 +99,6 @@ def sort_thing_nodes(
     """
     Sorts StructureServiceThingNodes into hierarchical levels and flattens the structure,
     excluding orphan nodes (nodes without valid parent).
-
-    Args:
-        thing_nodes (list[StructureServiceThingNode]): The StructureServiceThingNodes to sort.
-        existing_thing_nodes (dict[tuple[str, str], StructureServiceThingNodeDBModel]):
-            Existing StructureServiceThingNodes from the database.
-
-    Returns:
-        list[StructureServiceThingNode]: A flat, sorted list of StructureServiceThingNodes,
-        excluding orphan nodes.
-
-    Note:
-        This function assumes that all StructureServiceThingNodes have an ID assigned.
     """
     logger.debug("Sorting and flattening StructureServiceThingNodes, excluding orphan nodes.")
 
@@ -209,17 +186,6 @@ def populate_element_type_ids(
     """
     Sets the element_type_id for each StructureServiceThingNode based
     on existing StructureServiceElementTypes.
-
-    Args:
-        thing_nodes (list[StructureServiceThingNode]): The StructureServiceThingNodes
-        to populate with element_type_id.
-        existing_element_types (dict[tuple[str, str], StructureServiceElementTypeDBModel]):
-            Existing StructureServiceElementTypes from the database,
-            mapped by (stakeholder_key, external_id).
-
-    Note:
-        If no matching StructureServiceElementType is found for a StructureServiceThingNode,
-        a warning is logged, and element_type_id remains unset.
     """
     logger.debug("Populating element_type_id for StructureServiceThingNodes.")
     for tn in thing_nodes:
@@ -249,20 +215,6 @@ def populate_element_type_ids(
 def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
     """
     Writes a given structure to the database, updating records if they exist.
-
-    Args:
-        complete_structure (CompleteStructure): The structure to be inserted or updated.
-        batch_size (int, optional): Number of elements to retrieve per query, default is 500.
-
-    Returns:
-        None
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBConnectionError: If a database connection error (e.g., operational error) occurs.
-        DBAssociationError: If there is an issue with entity associations.
-        DBUpdateError: If an error occurs specifically during an update operation.
-        DBError: For any other general database error.
     """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
@@ -332,16 +284,6 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
 def update_structure_from_file(file_path: str) -> None:
     """
     Updates the structure in the database based on a JSON file.
-
-    Args:
-        file_path (str): The path to the JSON file defining the structure.
-
-    Returns:
-        None
-
-    Raises:
-        DBError: If an unexpected error occurs during the update.
-        SQLAlchemyError: If a database-specific error occurs.
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
@@ -365,12 +307,6 @@ def is_database_empty() -> bool:
     Checks if the database is empty by verifying the presence of records
     in the StructureServiceElementType, StructureServiceThingNode, StructureServiceSource,
     and StructureServiceSink tables.
-
-    Returns:
-        bool: True if the database is empty; False otherwise.
-
-    Raises:
-        SQLAlchemyError: If a database-specific error occurs during the query.
     """
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
@@ -399,18 +335,6 @@ def get_children(
     along with any sources and sinks associated with the root nodes. Otherwise,
     fetches the direct child nodes, sources, and sinks associated with the
     specified parent node.
-
-    Args:
-        parent_id (UUID | None): The UUID of the parent StructureServiceThingNode. If None,
-                                 retrieves root nodes.
-
-    Returns:
-        tuple[list[StructureServiceThingNode], list[StructureServiceSource],
-        list[StructureServiceSink]]:
-            A tuple containing lists of child StructureServiceThingNodes,
-            StructureServiceSources, and StructureServiceSinks
-            associated with the specified parent node or root nodes if
-            `parent_id` is None.
     """
 
     try:
@@ -502,10 +426,6 @@ def delete_structure() -> None:
     This function ensures records are deleted in the correct order to maintain
     referential integrity.
     Association tables are cleared first, followed by dependent ORM classes.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the deletion process.
-        DBError: If any other database error occurs.
     """
     logger.debug("Starting deletion of all structure data from the database.")
 

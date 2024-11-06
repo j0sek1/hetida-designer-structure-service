@@ -19,18 +19,6 @@ def fetch_element_types(
     """
     Fetches StructureServiceElementTypeDBModel records from the
     database based on stakeholder_key and external_id.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        keys (Set[tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
-
-    Returns:
-        dict[tuple[str, str], StructureServiceElementTypeDBModel]:
-            A mapping from (stakeholder_key, external_id) to StructureServiceElementTypeDBModel.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     existing_ets_mapping: dict[tuple[str, str], StructureServiceElementTypeDBModel] = {}
     if not keys:
@@ -66,18 +54,6 @@ def search_element_types_by_name(
 ) -> list[StructureServiceElementTypeDBModel]:
     """
     Searches for StructureServiceElementTypeDBModel records based on a partial or full name match.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        name_query (str): The name or partial name to search for.
-
-    Returns:
-        list[StructureServiceElementTypeDBModel]: A list of StructureServiceElementTypeDBModel
-        records matching the name query.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     try:
         element_types = (
@@ -114,18 +90,6 @@ def upsert_element_types(
 ) -> None:
     """
     Upserts StructureServiceElementTypeDBModel records efficiently.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        elements (list[StructureServiceElementType]): The list of StructureServiceElementType
-            objects to upsert.
-        existing_elements (dict[tuple[str, str], StructureServiceElementTypeDBModel]):
-            Existing StructureServiceElementTypeDBModel objects
-            mapped by (stakeholder_key, external_id).
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the upsert operation.
-        DBUpdateError: If any other error occurs during the upsert operation.
     """
     try:
         for element in elements:

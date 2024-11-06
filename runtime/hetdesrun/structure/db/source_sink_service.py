@@ -29,12 +29,6 @@ logger = logging.getLogger(__name__)
 def fetch_all_sources_from_db() -> list[StructureServiceSource]:
     """
     Fetches all StructureServiceSource records from the database.
-
-    Returns:
-        list[StructureServiceSource]: A list of all StructureServiceSource objects.
-
-    Raises:
-        DBNotFoundError: If no sources are found in the database.
     """
     logger.debug("Fetching all StructureServiceSources from the database.")
     with get_session()() as session:
@@ -47,12 +41,6 @@ def fetch_all_sources_from_db() -> list[StructureServiceSource]:
 def fetch_all_sinks_from_db() -> list[StructureServiceSink]:
     """
     Fetches all StructureServiceSink records from the database.
-
-    Returns:
-        list[StructureServiceSink]: A list of all StructureServiceSink objects.
-
-    Raises:
-        DBNotFoundError: If no sinks are found in the database.
     """
     logger.debug("Fetching all StructureServiceSinks from the database.")
     with get_session()() as session:
@@ -65,15 +53,6 @@ def fetch_all_sinks_from_db() -> list[StructureServiceSink]:
 def fetch_single_sink_from_db_by_id(sink_id: UUID) -> StructureServiceSink:
     """
     Fetches a single StructureServiceSink record from the database by its unique ID.
-
-    Args:
-        sink_id (UUID): The unique identifier of the StructureServiceSink.
-
-    Returns:
-        StructureServiceSink: The StructureServiceSink object matching the given ID.
-
-    Raises:
-        DBNotFoundError: If no StructureServiceSink with the specified ID is found.
     """
     logger.debug("Fetching single StructureServiceSink from database with ID: %s", sink_id)
     with get_session()() as session:
@@ -93,15 +72,6 @@ def fetch_single_sink_from_db_by_id(sink_id: UUID) -> StructureServiceSink:
 def fetch_single_source_from_db_by_id(src_id: UUID) -> StructureServiceSource:
     """
     Fetches a single StructureServiceSource record from the database by its unique ID.
-
-    Args:
-        src_id (UUID): The unique identifier of the StructureServiceSource.
-
-    Returns:
-        StructureServiceSource: The StructureServiceSource object matching the given ID.
-
-    Raises:
-        DBNotFoundError: If no StructureServiceSource with the specified ID is found.
     """
     logger.debug("Fetching single StructureServiceSource from database with ID: %s", src_id)
     with get_session()() as session:
@@ -123,17 +93,6 @@ def fetch_collection_of_sources_from_db_by_id(
 ) -> dict[UUID, StructureServiceSource]:
     """
     Fetches a collection of StructureServiceSource records from the database by their unique IDs.
-
-    Args:
-        src_ids (list[UUID]): A list of unique identifiers for the StructureServiceSources.
-        batch_size (int): The number of records to fetch in each batch. Default is 500.
-
-    Returns:
-        dict[UUID, StructureServiceSource]: A mapping of StructureServiceSource IDs
-        to StructureServiceSource objects.
-
-    Raises:
-        DBNotFoundError: If no StructureServiceSources with the specified IDs are found.
     """
     sources: dict[UUID, StructureServiceSource] = {}
     if not src_ids:
@@ -161,17 +120,6 @@ def fetch_collection_of_sinks_from_db_by_id(
 ) -> dict[UUID, StructureServiceSink]:
     """
     Fetches a collection of StructureServiceSink records from the database by their unique IDs.
-
-    Args:
-        sink_ids (list[UUID]): A list of unique identifiers for the StructureServiceSinks.
-        batch_size (int): The number of records to fetch in each batch. Default is 500.
-
-    Returns:
-        dict[UUID, StructureServiceSink]: A mapping of StructureServiceSink IDs
-        to StructureServiceSink objects.
-
-    Raises:
-        DBNotFoundError: If no StructureServiceSinks with the specified IDs are found.
     """
     sinks: dict[UUID, StructureServiceSink] = {}
     if not sink_ids:
@@ -200,18 +148,6 @@ def fetch_sources(
     """
     Fetches StructureServiceSourceDBModel records from the database based
     on stakeholder_key and external_id.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        keys (set[tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
-
-    Returns:
-        dict[tuple[str, str], StructureServiceSourceDBModel]:
-        A mapping from (stakeholder_key, external_id) to StructureServiceSourceDBModel.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     existing_sources_mapping: dict[tuple[str, str], StructureServiceSourceDBModel] = {}
     if not keys:
@@ -250,19 +186,6 @@ def fetch_sinks(
     """
     Fetches StructureServiceSinkDBModel records from the database
     based on stakeholder_key and external_id.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        keys (set[tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
-
-    Returns:
-        dict[tuple[str, str], StructureServiceSinkDBModel]:
-        A mapping from (stakeholder_key, external_id)
-                                            to StructureServiceSinkDBModel.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     existing_sinks_mapping: dict[tuple[str, str], StructureServiceSinkDBModel] = {}
     if not keys:
@@ -297,17 +220,6 @@ def fetch_sources_by_substring_match(filter_string: str) -> list[StructureServic
     """
     Fetches StructureServiceSourceDBModel records where the name partially or fully matches
     the provided filter string.
-
-    Args:
-        filter_string (str): The substring to match in StructureServiceSourceDBModel names.
-
-    Returns:
-        list[StructureServiceSource]: A list of StructureServiceSource
-        objects matching the filter string.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     with get_session()() as session:
         try:
@@ -346,16 +258,6 @@ def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceS
     """
     Fetches StructureServiceSinkDBModel records where the name partially or fully matches
     the provided filter string.
-
-    Args:
-        filter_string (str): The substring to match in StructureServiceSinkDBModel names.
-
-    Returns:
-        list[Sink]: A list of Sink objects matching the filter string.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     with get_session()() as session:
         try:
@@ -398,20 +300,6 @@ def upsert_sources(
 ) -> None:
     """
     Upserts StructureServiceSourceDBModel records using SQLAlchemy's add_all functionality.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        sources (list[StructureServiceSource]): The list of StructureServiceSource
-        objects to upsert.
-        existing_sources (dict[tuple[str, str], StructureServiceSourceDBModel]):
-            Existing StructureServiceSourceDBModel objects mapped by (stakeholder_key, external_id).
-        existing_thing_nodes (dict[tuple[str, str], StructureServiceThingNodeDBModel]):
-            Existing StructureServiceThingNodeDBModel objects mapped
-            by (stakeholder_key, external_id).
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the upsert operation.
-        DBUpdateError: If any other error occurs during the upsert operation.
     """
     try:
         for source in sources:
@@ -487,19 +375,6 @@ def upsert_sinks(
 ) -> None:
     """
     Upserts StructureServiceSinkDBModel records efficiently.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        sinks (list[StructureServiceSink]): The list of Sink objects to upsert.
-        existing_sinks (dict[tuple[str, str], StructureServiceSinkDBModel]):
-            Existing StructureServiceSinkDBModel objects mapped by (stakeholder_key, external_id).
-        existing_thing_nodes (dict[tuple[str, str], StructureServiceThingNodeDBModel]):
-            Existing StructureServiceThingNodeDBModel objects mapped
-            by (stakeholder_key, external_id).
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the upsert operation.
-        DBUpdateError: If any other error occurs during the upsert operation.
     """
     try:
         for sink in sinks:
