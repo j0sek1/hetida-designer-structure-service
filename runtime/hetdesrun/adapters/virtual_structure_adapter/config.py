@@ -41,14 +41,15 @@ class VirtualStructureAdapterConfig(BaseSettings):
     completely_overwrite_an_existing_virtual_structure_at_hd_startup: bool = Field(
         True,
         description="Determines whether a potentially existent virtual structure in the database "
-        "is overwritten (if set to True) or updated (if set to False) at hetida designer startup.",
+        "is overwritten (if set to True) or updated (if set to False) "
+        "at hetida designer backend startup.",
         env="COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP",
     )
 
     structure_filepath_to_prepopulate_virtual_structure_adapter: str | None = Field(
         None,
         description="A JSON-filepath, used to provide a structure "
-        "for the virtual structure adapter at hetida designer startup. "
+        "for the virtual structure adapter at hetida designer backend startup. "
         "Used analogously to 'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'.",
         env="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER",
     )
@@ -56,7 +57,7 @@ class VirtualStructureAdapterConfig(BaseSettings):
     structure_to_prepopulate_virtual_structure_adapter: CompleteStructure | None = Field(
         None,
         description="A JSON, used to provide a structure for the virtual structure adapter "
-        "at hetida designer startup. "
+        "at hetida designer backend startup. "
         "This built-in adapter enables the user to create "
         "a flexible, abstract hierarchical structure for their data. "
         "In this JSON the user can provide names, descriptions and metadata "
