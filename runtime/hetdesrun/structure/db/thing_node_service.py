@@ -25,15 +25,6 @@ logger = logging.getLogger(__name__)
 def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingNode:
     """
     Fetches a single StructureServiceThingNode from the database by its unique ID.
-
-    Args:
-        tn_id (UUID): The unique identifier of the StructureServiceThingNode.
-
-    Returns:
-        StructureServiceThingNode: The StructureServiceThingNode object matching the given ID.
-
-    Raises:
-        DBNotFoundError: If no StructureServiceThingNode with the specified ID is found.
     """
     logger.debug("Fetching single StructureServiceThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
@@ -56,18 +47,6 @@ def fetch_thing_nodes(
     """
     Fetches StructureServiceThingNodeDBModel records from the database
     based on stakeholder_key and external_id.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        keys (Set[Tuple[str, str]]): A set of (stakeholder_key, external_id) tuples.
-
-    Returns:
-        Dict[Tuple[str, str], StructureServiceThingNodeDBModel]:
-            A mapping from (stakeholder_key, external_id) to StructureServiceThingNodeDBModel.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     existing_tns_mapping: dict[tuple[str, str], StructureServiceThingNodeDBModel] = {}
     if not keys:
@@ -103,18 +82,6 @@ def search_thing_nodes_by_name(
 ) -> list[StructureServiceThingNodeDBModel]:
     """
     Searches for StructureServiceThingNodeDBModel records based on a partial or full name match.
-
-    Args:
-        session (SQLAlchemySession): The SQLAlchemy session.
-        name_query (str): The name or partial name to search for.
-
-    Returns:
-        List[StructureServiceThingNodeDBModel]: A list of StructureServiceThingNodeDBModel
-        records matching the name query.
-
-    Raises:
-        DBIntegrityError: If an integrity error occurs during the database operation.
-        DBError: If any other database error occurs.
     """
     try:
         thing_nodes = (
@@ -152,22 +119,6 @@ def upsert_thing_nodes(
     """
     Upserts StructureServiceThingNodeDBModel records efficiently using bulk operations.
     Creates new records if they do not exist.
-
-    Args:
-        session (SQLAlchemySession):
-            The SQLAlchemy session used for database transactions.
-        thing_nodes (list[StructureServiceThingNode]):
-            A list of `StructureServiceThingNode` objects to upsert into the database.
-        existing_thing_nodes (dict[tuple[str, str], StructureServiceThingNodeDBModel]):
-            A dictionary of existing `StructureServiceThingNodeDBModel` objects, mapped by
-            `(stakeholder_key, external_id)` tuples.
-
-    Raises:
-        DBIntegrityError:
-            If an integrity error occurs during the upsert operation, such as a unique constraint
-            violation.
-        DBUpdateError:
-            If any other error occurs during the upsert operation.
     """
 
     try:
