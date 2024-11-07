@@ -129,9 +129,12 @@ def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
 
     with pytest.raises(
         ValueError,
-        match=f"Root node '{invalid_node_name}' has an invalid parent_external_node_id '{invalid_parent_id}'",
+        match=(
+            f"Root node '{invalid_node_name}' has an invalid "
+            f"parent_external_node_id '{invalid_parent_id}'"
+        ),
     ):
-        structure = CompleteStructure(**invalid_structure)
+        CompleteStructure(**invalid_structure)
 
 
 def test_circular_tn_relation(mocked_clean_test_db_session):
@@ -140,7 +143,7 @@ def test_circular_tn_relation(mocked_clean_test_db_session):
         circular_data = json.load(file)
 
     with pytest.raises(ValueError, match="Circular reference detected in node"):
-        structure = CompleteStructure(**circular_data)
+        CompleteStructure(**circular_data)
 
 
 def test_stakeholder_key_consistency(mocked_clean_test_db_session):
@@ -149,7 +152,7 @@ def test_stakeholder_key_consistency(mocked_clean_test_db_session):
         conflicting_structure = json.load(file)
 
     with pytest.raises(ValueError, match="Inconsistent stakeholder_key at node"):
-        structure = CompleteStructure(**conflicting_structure)
+        CompleteStructure(**conflicting_structure)
 
 
 # Verifies that the structure update can handle multiple root nodes
