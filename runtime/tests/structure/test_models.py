@@ -152,6 +152,7 @@ def test_stakeholder_key_consistency(mocked_clean_test_db_session):
         structure = CompleteStructure(**conflicting_structure)
 
 
+# Verifies that the structure update can handle multiple root nodes
 def test_update_structure_two_root_nodes(mocked_clean_test_db_session):
     file_path = "tests/structure/data/db_two_root_nodes_structure.json"
     with open(file_path) as file:
