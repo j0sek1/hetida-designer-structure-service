@@ -15,92 +15,95 @@ The Virtual Structure Adapter relies on defined entities like thing nodes, sourc
 The key concepts of the Virtual Structure Adapter are described below:
 
 - **`Thing node`**: Represents individual node elements within a hierarchical structure, e.g. a plant, a water treatment plant or a storage tank in a waterworks. Thing nodes can have parent-child relationships that help to create a clear, searchable structure of a system. They can be connected to one or more sources and sinks.
-- **`Source`**: Represents data inputs within the system, e.g. sensor data from a pump in a waterworks plant. Sources are linked to thing nodes and provide real-time or historical data that is fed into the system for analysis or monitoring.
-- **`Sink`**:  Represents outputs or results within your system, such as calculated anomaly values based on energy consumption data. Sinks are linked to thing nodes and are the endpoints where processed data is stored or used.
-- **`Element type`**: Defines the type of a thing node, e.g. 'Plant' or 'Storage Tank,' and encapsulates its properties and behavior within the hierarchy. This can help in conducting analyses based on specific criteria.
+- **`Source`**: References a source of an adapter, which handles actual data in- and egestion.
+- **`Sink`**:  References a sink of an adapter, which handles actual data in- and egestion.
+- **`Element type`**: Defines the type of a thing node, e.g. 'Plant' or 'Storage Tank,' and encapsulates its properties and behavior within the hierarchy. This attached information could be used as metadata in analyses, for example.
 
 ## JSON Structure
 
 ### How to provide a structure
 
 The hierarchical structure can be provided in two ways:
-1. Via a JSON directly assigned to the environment variable `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER`.
-2. Via a filepath pointing to a JSON-file assigned to the environment variable `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER`.
+1. Via a JSON directly assigned to the environment variable `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` in the backend container.
+2. Via a filepath pointing to a JSON-file assigned to the environment variable `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` in the backend container.
 
-Below is a template for the JSON file:
+Below is a specification for the JSON file:
 
 ```
 {
     "element_types": [  // Contains element types for your data
         {
-            "external_id": "string",  // An ID used in your organization
-            "stakeholder_key": "string",  // Some short letter combination representing your org
-            "name": "string",  // How you want to name the element type
-            "description": "string"  // Arbitrary description
+            "external_id": STRING,  // An ID used in your organization
+            "stakeholder_key": STRING,  // Some short letter combination representing your org
+            "name": STRING,  // How you want to name the element type
+            "description": STRING  // Arbitrary description
         },...
     ],
     "thing_nodes": [ // Contains thingnodes for your data
         {
-            "external_id": "string",
-            "stakeholder_key": "string",
-            "name": "string",
-            "description": "string",
-            "parent_external_node_id": null or "string",  // referencing the parent of this node
-            "element_type_external_id": "string", // referencing the element_type of this node
+            "external_id": STRING,
+            "stakeholder_key": STRING,
+            "name": STRING,
+            "description": STRING,
+            "parent_external_node_id": null or STRING,  // referencing the parent of this node
+            "element_type_external_id": STRING, // referencing the element_type of this node
             "meta_data": {
-                "key": "value"
+                "<key>": <value>
             }
         },...
     ],
     "sources": [
         {
-            "external_id": "string",
-            "stakeholder_key": "string",
-            "name": "string",
-            "type": "string", // Representing the hetida designer datatype e.g. "timeseries(float)"
-            "adapter_key": "string", // Key of the adapter that actually handles data in- and egestion, e.g. "demo-adapter-python"
-            "source_id": "string",  // ID of the source in the target adapter
-            "ref_key": "string",  // Optional key of the referenced metadatum, only used for sources of type metadata(any)
-            "ref_id": "string",  // Optional ID of the thingnode in the mapped adapter hierarchy, which the mapped source references if source has type metadata(any)
+            "external_id": STRING,
+            "stakeholder_key": STRING,
+            "name": STRING,
+            "type": STRING, // Representing the hetida designer datatype e.g. "timeseries(float)"
+            "adapter_key": STRING, // Key of the adapter that actually handles data in- and egestion, 
+                                   // e.g. "demo-adapter-python"
+            "source_id": STRING,  // ID of the source in the target adapter
+            "ref_key": STRING,  // Optional key of the referenced metadatum, 
+                                // only used for sources of type metadata(any)
+            "ref_id": STRING,  // Optional ID of the thingnode in the mapped adapter hierarchy,
+                               // which the mapped source references if source has type metadata(any)
             "meta_data": {
-                "key": "value"
+                "<key>": <value>
             },
             "passthrough_filters": [  // Values for filters that should be modifyable be the user
                 {
-                    "name": "string",
-                    "type": "string",  // Which type the filter has, the designer defines specific types
-                    "required": bool  // Whether this filter is required for the source to work properly
+                    "name": STRING,
+                    "type": STRING,  // Which type the filter has, the designer defines specific types
+                    "required": BOOL  // Whether this filter is required for the source to work properly
                 },...
             ]
-            "preset_filters": {"key": "value"},  // Values for filters that should not be modifyable by the user
+            "preset_filters": {"<key>": <value>},  // Values for filters that should not be modifyable by the user
             "thing_node_external_ids": [  // Parent IDs of this source
-                "string1", "string2",...
+                STRING, STRING,...
             ]
         },...
     ],
     "sinks": [  // Analogous to source
         {
-            "external_id": "string",
-            "stakeholder_key": "string",
-            "name": "string",
-            "type": "string",
-            "adapter_key": "string",
-            "sink_id": "string",
-            "ref_key": "string",
-            "ref_id": "string",
+            "external_id": STRING,
+            "stakeholder_key": STRING,
+            "name": STRING,
+            "type": STRING,
+            "adapter_key": STRING,
+            "sink_id": STRING,
+            "ref_key": STRING,
+            "ref_id": STRING,
             "meta_data": {
-                "key": "value"
+                "<key>": <value>
             },
             "passthrough_filters": [
                 {
-                    "name": "string",
-                    "type": "string",
-                    "required": bool
+                    "name": STRING,
+                    "type": STRING,
+                    "required": BOOL
                 },...
             ]
-            "preset_filters": {"key": "value"},
+            "preset_filters": {"<key>": <value>},
             "thing_node_external_ids": [
-                "string1", "string2",...
+                STRING, STRING,...
             ]
         }
     ]
@@ -277,14 +280,23 @@ An example of such a JSON file is provided below, demonstrating how the Virtual 
 
 ## Configuration
 
-There are several environment variables which can be used to configure the use of the virtual structure adapter.   
-* `VST_ADAPTER_ACTIVE` (default `True`): Whether the adapter is active (registered in the designer application)
-* `VST_ADAPTER_SERVICE_IN_RUNTIME` (default `True`): Whether the adapter is part of the backend or the runtime
-* `PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP` (default `False`): Set to `True` if you wish to provide a structure for the adapter at designer startup
-* `PREPOPULATE_VST_ADAPTER_VIA_FILE` (default `False`): Whether to load the structure from a JSON-file or not
-* `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a JSON defining a structure to this variable
-* `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a filepath pointing to a JSON-file containing the structure
-* `COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP` (default `True`): This option controls whether a potentially existing structure in the database is removed during startup. When set to `True` (default), the existing structure is deleted entirely before the new structure specified in `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` is inserted. If set to `False`, the existing structure is retained and updated. New elements from the provided JSON structure will be added, and existing elements will be updated. Existing elements not specified in the new JSON structure will remain unchanged. To fully replace an existing structure, it must first be deleted, before inserting the new one
+There are several environment variables which can be used to configure the use of the virtual structure adapter.  
+They can either be provided in two different ways:
+1. Directly set in the backend docker container, e.g. in the section environment of hetida-designer-backend in the docker-compose file. 
+2. Defined in the contents of the environment variable `HD_VST_ADAPTER_ENVIRONMENT_FILE`, which has to be set in the docker container.  
+
+It is strongly advised to use either method 1 or method 2, but not both in conjunction.  
+If an environment variable is set both directly and in `HD_VST_ADAPTER_ENVIRONMENT_FILE`, the directly set variable will take precedence.  
+The following is a list of all environment variables available to configure the virtual structure adapter.  
+"default" refers to the behavior occurring if the variable is not set:  
+
+* `VST_ADAPTER_ACTIVE` (default `True`): Whether the adapter is active (registered in the designer application).
+* `VST_ADAPTER_SERVICE_IN_RUNTIME` (default `True`): Whether the adapter is part of the backend or the runtime.
+* `PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP` (default `False`): Set to `True` if you wish to provide a structure for the adapter at designer startup.
+* `PREPOPULATE_VST_ADAPTER_VIA_FILE` (default `False`): Whether to load the structure from a JSON-file or not.
+* `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a JSON defining a structure to this variable.
+* `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a filepath pointing to a JSON-file containing the structure.
+* `COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP` (default `True`): This option controls whether a potentially existing structure in the database is removed during startup of the backend, provided that prepopulation is enabled. When set to `True` (default), the existing structure is deleted entirely before the new structure specified in `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` is inserted. If set to `False`, the existing structure is retained and updated. New elements from the provided JSON structure will be added, and existing elements will be updated. Existing elements not specified in the new JSON structure will remain unchanged. To fully replace an existing structure, it must first be deleted, before inserting the new one.
 
 ## Technical Information
 

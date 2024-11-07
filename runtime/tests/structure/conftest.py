@@ -6,7 +6,7 @@ from sqlalchemy.future.engine import Engine
 
 from hetdesrun.persistence.db_engine_and_session import get_db_engine, sessionmaker
 from hetdesrun.persistence.structure_service_dbmodels import Base
-from hetdesrun.structure.db.orm_service import (
+from hetdesrun.structure.db.structure_service import (
     update_structure_from_file,
 )
 
@@ -46,13 +46,6 @@ def use_in_memory_db(pytestconfig: pytest.Config) -> Any:
     return pytestconfig.getoption("use_in_memory_db")
 
 
-# Fixture to load an empty database structure from a JSON file
-@pytest.fixture()
-def _db_empty_database(mocked_clean_test_db_session):
-    file_path = "tests/structure/data/db_empty_structure.json"
-    update_structure_from_file(file_path)
-
-
 # Fixture to load a basic test structure into the database from a JSON file
 @pytest.fixture()
 def _db_test_structure(mocked_clean_test_db_session):
@@ -70,4 +63,11 @@ def db_test_structure_file_path():
 @pytest.fixture()
 def _db_test_unordered_structure(mocked_clean_test_db_session):
     file_path = "tests/structure/data/db_test_unordered_structure.json"
+    update_structure_from_file(file_path)
+
+
+# Fixture to load an empty test structure into the database from a JSON file
+@pytest.fixture()
+def _db_test_empty_structure(mocked_clean_test_db_session):
+    file_path = "tests/structure/data/db_test_empty_structure.json"
     update_structure_from_file(file_path)

@@ -8,7 +8,7 @@ from sqlalchemy.future.engine import Engine
 
 from hetdesrun.persistence.db_engine_and_session import get_db_engine, sessionmaker
 from hetdesrun.persistence.structure_service_dbmodels import Base
-from hetdesrun.structure.db.orm_service import update_structure_from_file
+from hetdesrun.structure.db.structure_service import update_structure_from_file
 from hetdesrun.webservice.application import init_app
 
 
@@ -45,7 +45,7 @@ def use_in_memory_db(pytestconfig: pytest.Config) -> Any:
 
 @pytest.fixture(scope="function")  # noqa: PT003
 def _fill_db(mocked_clean_test_db_session):
-    file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_test.json"
+    file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_with_any_test.json"
     update_structure_from_file(file_path)
 
 

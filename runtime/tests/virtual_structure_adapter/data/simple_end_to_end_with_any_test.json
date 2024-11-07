@@ -118,7 +118,7 @@
             "adapter_key": "demo-adapter-python",
             "source_id": "root.plantA.plant_additional_info",
             "ref_id": "root.plantA",
-            "ref_key": "Additional Info",
+            "ref_key": "Location",
             "meta_data": {
                 "Influx": {"nf": 23}
             },

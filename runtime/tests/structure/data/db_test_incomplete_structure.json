@@ -11,6 +11,12 @@
             "stakeholder_key": "GW",
             "name": "Plant",
             "description": "Element type for plants"
+        },
+        {
+            "external_id": "StorageTank_Type",
+            "stakeholder_key": "GW",
+            "name": "Storage Tank",
+            "description": "Element type for storage tanks"
         }
     ],
     "thing_nodes": [

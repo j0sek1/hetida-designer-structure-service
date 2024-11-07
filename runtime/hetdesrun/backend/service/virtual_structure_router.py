@@ -1,19 +1,24 @@
 import logging
+from secrets import compare_digest
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Query, status
 
+from hetdesrun.backend.service.maintenance_router import MaintenancePayload
 from hetdesrun.structure.db.exceptions import (
     DBAssociationError,
+    DBError,
     DBFetchError,
     DBIntegrityError,
     DBNotFoundError,
     DBUpdateError,
 )
-from hetdesrun.structure.models import CompleteStructure
-from hetdesrun.structure.structure_service import (
+from hetdesrun.structure.db.structure_service import (
     delete_structure,
+    is_database_empty,
     update_structure,
 )
+from hetdesrun.structure.models import CompleteStructure
+from hetdesrun.webservice.config import get_config
 from hetdesrun.webservice.router import HandleTrailingSlashAPIRouter
 
 logger = logging.getLogger(__name__)
@@ -38,21 +43,40 @@ virtual_structure_router = HandleTrailingSlashAPIRouter(
     responses={status.HTTP_204_NO_CONTENT: {"description": "Successfully updated the structure"}},
 )
 async def update_structure_endpoint(
-    new_structure: CompleteStructure, delete_existing_structure: bool = True
+    maintenance_payload: MaintenancePayload,
+    new_structure: CompleteStructure,
+    delete_existing_structure: bool = Query(True, alias="delete_existing_structure"),
 ) -> None:
+    # For security purposes this endpoint can only be accessed
+    # with a maintenance secret
+    configured_maintenance_secret = get_config().maintenance_secret
+    assert configured_maintenance_secret is not None  # for mypy # noqa: S101
+    secret_str = maintenance_payload.maintenance_secret
+
+    if not compare_digest(
+        secret_str.get_secret_value(),
+        configured_maintenance_secret.get_secret_value(),
+    ):
+        logger.error("Maintenance secret check failed")
+        raise HTTPException(
+            status_code=403,
+            detail={"authorization_error": "maintenance secret check failed"},
+        )
+
     logger.info("Starting to update the vst structure via the API endpoint")
-    if delete_existing_structure:
-        delete_structure()
+    if delete_existing_structure and not is_database_empty():
+        logger.info("Starting to delete existing structure")
+        try:
+            delete_structure()
+        except (DBIntegrityError, DBError) as e:
+            logger.error("Structure deletion during an update request failed: %s", e)
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     try:
         update_structure(new_structure)
         logger.info("The structure was successfully updated")
-    except DBIntegrityError as e:
+    except (DBIntegrityError, DBUpdateError, DBAssociationError, DBFetchError) as e:
+        logger.error("Structure update request failed: %s", e)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
     except DBNotFoundError as e:
+        logger.error("Structure update request failed: %s", e)
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e)) from e
-    except DBUpdateError as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
-    except DBAssociationError as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
-    except DBFetchError as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e

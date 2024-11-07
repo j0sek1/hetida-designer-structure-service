@@ -1,26 +1,20 @@
+import json
 from unittest import mock
 
 import pytest
 
-from hetdesrun.adapters.virtual_structure_adapter.utils import prepopulate_structure
-from hetdesrun.structure.structure_service import is_database_empty, load_structure_from_json_file
-
-
-def test_with_prepopulation_disabled(mocked_clean_test_db_session):
-    with mock.patch(
-        "hetdesrun.webservice.config.runtime_config.prepopulate_virtual_structure_adapter_at_designer_startup",
-        False,
-    ):
-        prepopulate_structure()
-
-    # Verify that no changes have been made to the database
-    assert is_database_empty()
+from hetdesrun.adapters.virtual_structure_adapter.config import VirtualStructureAdapterConfig
+from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import (
+    prepopulate_structure,
+)
+from hetdesrun.structure.db.structure_service import load_structure_from_json_file
+from hetdesrun.structure.models import CompleteStructure
 
 
 @pytest.mark.usefixtures("_fill_db")
 def test_if_existing_structure_is_overwritten_if_specified():
     with mock.patch.multiple(  # noqa: SIM117
-        "hetdesrun.webservice.config.runtime_config",
+        "hetdesrun.adapters.virtual_structure_adapter.config.vst_adapter_config",
         prepopulate_virtual_structure_adapter_at_designer_startup=True,
         completely_overwrite_an_existing_virtual_structure_at_hd_startup=True,
         structure_to_prepopulate_virtual_structure_adapter=load_structure_from_json_file(
@@ -28,36 +22,49 @@ def test_if_existing_structure_is_overwritten_if_specified():
         ),
     ):
         with mock.patch(
-            "hetdesrun.adapters.virtual_structure_adapter.utils.delete_structure"
+            "hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation.delete_structure"
         ) as mocked_delete:
             prepopulate_structure()
             mocked_delete.assert_called_once()
 
 
-def test_if_error_raised_when_no_filepath_is_provided():
-    with mock.patch.multiple(  # noqa: SIM117
-        "hetdesrun.webservice.config.runtime_config",
-        prepopulate_virtual_structure_adapter_at_designer_startup=True,
-        prepopulate_virtual_structure_adapter_via_file=True,
+def test_validator_filepath_must_be_set_when_populating_from_file():
+    with pytest.raises(
+        ValueError,
+        match="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER must be set "
+        "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True",
     ):
-        with pytest.raises(
-            ValueError,
-            match="If prepopulation of the virtual structure adapter structure "
-            "via a file is set, "
-            "'STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER' must be set, "
-            "but it is not.",
-        ):
-            prepopulate_structure()
+        _ = VirtualStructureAdapterConfig(
+            prepopulate_virtual_structure_adapter_at_designer_startup=True,
+            prepopulate_virtual_structure_adapter_via_file=True,
+        )
 
 
-def test_if_error_raised_when_no_structure_is_provided():
-    with mock.patch.multiple(  # noqa: SIM117
-        "hetdesrun.webservice.config.runtime_config",
-        prepopulate_virtual_structure_adapter_at_designer_startup=True,
+def test_validator_structure_must_be_provided_if_populating_from_env_var():
+    with pytest.raises(
+        ValueError,
+        match="STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must be set "
+        "if PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP is set to True "
+        "and you want to populate from an environment variable",
     ):
-        with pytest.raises(
-            ValueError,
-            match="The prepopulation of the virtual structure adapter structure "
-            "is enabled, but no structure was provided.",
-        ):
-            prepopulate_structure()
+        _ = VirtualStructureAdapterConfig(
+            prepopulate_virtual_structure_adapter_at_designer_startup=True,
+        )
+
+
+def test_validator_complete_structure_must_not_be_set_if_populating_from_file():
+    file_path = "tests/virtual_structure_adapter/data/simple_end_to_end_test.json"
+    with open(file_path) as file:
+        structure_json = json.load(file)
+    complete_structure = CompleteStructure(**structure_json)
+    with pytest.raises(
+        ValueError,
+        match="STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must NOT be set "
+        "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True, "
+        "since you wish to populate from a file",
+    ):
+        _ = VirtualStructureAdapterConfig(
+            prepopulate_virtual_structure_adapter_via_file=True,
+            structure_filepath_to_prepopulate_virtual_structure_adapter="nf",
+            structure_to_prepopulate_virtual_structure_adapter=complete_structure,
+        )

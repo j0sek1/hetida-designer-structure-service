@@ -8,7 +8,6 @@ from pydantic import BaseSettings, Field, Json, SecretStr, validator
 from sqlalchemy.engine import URL as SQLAlchemy_DB_URL
 
 from hetdesrun.models.execution import ExecByIdBase
-from hetdesrun.structure.models import CompleteStructure
 from hetdesrun.webservice.auth import FrontendAuthOptions
 from hetdesrun.webservice.auth_outgoing import ServiceCredentials
 
@@ -323,51 +322,6 @@ class RuntimeConfig(BaseSettings):
         env="HD_BACKEND_AUTOIMPORT_DIRECTORY",
     )
 
-    prepopulate_virtual_structure_adapter_at_designer_startup: bool = Field(
-        False,
-        description="Set this flag to True, if you wish to provide a structure "
-        "for the virtual structure adapter "
-        "via the environment variable STRUCTURE_TO_PREPOPULATE_VST_ADAPTER.",
-        env="PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP",
-    )
-
-    prepopulate_virtual_structure_adapter_via_file: bool = Field(
-        False,
-        description="Set this flag to True, if you wish to provide a structure "
-        "for the virtual structure adapter "
-        "via a filepath stored in the "
-        "environment variable STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER.",
-        env="PREPOPULATE_VST_ADAPTER_VIA_FILE",
-    )
-
-    completely_overwrite_an_existing_virtual_structure_at_hd_startup: bool = Field(
-        True,
-        description="Determines whether a potentially existent virtual structure in the database "
-        "is overwritten (if set to True) or updated (if set to False) at hetida designer startup.",
-        env="COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP",
-    )
-
-    structure_to_prepopulate_virtual_structure_adapter: CompleteStructure | None = Field(
-        None,
-        description="A JSON, used to provide a structure for the virtual structure adapter "
-        "at hetida designer startup. "
-        "This built-in adapter enables the user to create "
-        "a flexible, abstract hierarchical structure for their data. "
-        "In this JSON the user can provide names, descriptions and metadata "
-        "for each element of the hierarchy. "
-        "The JSON should contain definitions for all thingnodes, sources, sinks and element types "
-        "representing the users data.",
-        env="STRUCTURE_TO_PREPOPULATE_VST_ADAPTER",
-    )
-
-    structure_filepath_to_prepopulate_virtual_structure_adapter: str | None = Field(
-        None,
-        description="A JSON-filepath, used to provide a structure "
-        "for the virtual structure adapter at hetida designer startup. "
-        "Used analogously to 'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'.",
-        env="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER",
-    )
-
     hd_adapters: str = Field(
         "demo-adapter-python|Python-Demo-Adapter"
         "|http://localhost:8092"
@@ -382,8 +336,8 @@ class RuntimeConfig(BaseSettings):
         "|http://localhost:8090/adapters/kafka"
         "|http://localhost:8090/adapters/kafka,"
         "virtual-structure-adapter|Virtual Structure Adapter"
-        "|http://localhost:8090/adapters/vst"
-        "|http://localhost:8090/adapters/vst,"
+        "|http://localhost:8090/adapters/virtual_structure"
+        "|http://localhost:8090/adapters/virtual_structure,"
         "external-sources|External Sources"
         "|http://localhost:8090/adapters/external_sources"
         "|http://localhost:8090/adapters/external_sources",

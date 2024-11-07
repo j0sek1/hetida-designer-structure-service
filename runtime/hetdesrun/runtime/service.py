@@ -1,6 +1,9 @@
 from fastapi.encoders import jsonable_encoder
 
 from hetdesrun.adapters import AdapterHandlingException
+from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
+    resolve_virtual_structure_wirings,
+)
 from hetdesrun.datatypes import NamedDataTypedValue
 from hetdesrun.models.run import (
     PerformanceMeasuredStep,
@@ -27,7 +30,6 @@ from hetdesrun.utils import model_to_pretty_json_str
 from hetdesrun.wiring import (
     resolve_and_load_data_from_wiring,
     resolve_and_send_data_from_wiring,
-    resolve_virtual_structure_wirings,
 )
 
 runtime_logger.addFilter(job_id_context_filter)
