@@ -6,7 +6,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_access_vst_adapter_info(
     async_test_client_with_vst_adapter,
-) -> None:
+):
     response = await async_test_client_with_vst_adapter.get("adapters/virtual_structure/info")
     assert response.status_code == 200
     assert "version" in response.json()
@@ -16,6 +16,7 @@ async def test_access_vst_adapter_info(
 async def test_vst_adapter_get_structure_with_none_from_webservice(
     async_test_client_with_vst_adapter,
 ):
+    """Tests whether the root node is returned when no parent_id is provided"""
     response = await async_test_client_with_vst_adapter.get("/adapters/virtual_structure/structure")
 
     assert response.status_code == 200
@@ -41,6 +42,7 @@ async def test_vst_adapter_get_structure_with_none_from_webservice(
 
 @pytest.mark.asyncio
 async def test_vst_adapter_get_structure_from_webservice(async_test_client_with_vst_adapter):
+    """Tests the normal behavior of the structure endpoint"""
     # Track current node ID to iterate through the structure hierarchy
     current_node_id = None
 
@@ -79,6 +81,7 @@ async def test_vst_adapter_metadata_endpoints(async_test_client_with_vst_adapter
     ]
     for endpoint in endpoints:
         response = await async_test_client_with_vst_adapter.get(endpoint)
+        # All metadata endpoints are hardcoded to return empty lists
         assert response.status_code == 200
         assert response.json() == []
 
@@ -116,6 +119,7 @@ async def test_vst_adapter_endpoints_with_non_existent_id(
 async def test_sources_and_sinks_endpoints_with_filter_strings(
     async_test_client_with_vst_adapter, endpoint, filter_value, expected_name
 ):
+    """Tests whether sources and sinks are correctly retrieved in search"""
     response = await async_test_client_with_vst_adapter.get(
         endpoint, params={"filter": filter_value}
     )
