@@ -7,8 +7,8 @@ from hetdesrun.structure.db.exceptions import (
     DBConnectionError,
     DBError,
     DBIntegrityError,
-    DBParsingError,
     DBUpdateError,
+    JsonParsingError,
 )
 from hetdesrun.structure.db.structure_service import (
     delete_structure,
@@ -32,7 +32,7 @@ def prepopulate_structure() -> None:
         logger.info("Prepopulating the virtual structure adapter via a file")
         try:
             complete_structure = load_structure_from_json_file(structure_filepath)  # type: ignore
-        except (FileNotFoundError, DBParsingError, DBError) as e:
+        except (FileNotFoundError, JsonParsingError, DBError) as e:
             logger.error(
                 "Loading the structure from a JSON failed during the prepopulation process: %s", e
             )
