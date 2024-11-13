@@ -26,9 +26,8 @@ from hetdesrun.structure.db.exceptions import (
     DBError,
     DBIntegrityError,
     DBNotFoundError,
-    JsonError,
-    JsonParsingError,
     DBUpdateError,
+    JsonParsingError,
 )
 from hetdesrun.structure.db.source_sink_service import (
     fetch_sinks,
@@ -83,7 +82,9 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         logger.error(
             "Validation error while creating CompleteStructure from %s: %s", file_path, str(e)
         )
-        raise JsonParsingError(f"Validation error for JSON data in file {file_path}: {str(e)}") from e
+        raise JsonParsingError(
+            f"Validation error for JSON data in file {file_path}: {str(e)}"
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -291,7 +292,7 @@ def update_structure_from_file(file_path: str) -> None:
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
-    # Load stricture
+    # Load structure
     try:
         complete_structure: CompleteStructure = load_structure_from_json_file(file_path)
         logger.debug("Successfully loaded structure from JSON file.")
@@ -308,7 +309,6 @@ def update_structure_from_file(file_path: str) -> None:
         raise
 
 
-
 def is_database_empty() -> bool:
     """Check if the database is empty.
 
@@ -318,14 +318,14 @@ def is_database_empty() -> bool:
     """
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
-        element_type_exists = session.query(StructureServiceElementTypeDBModel).first() is not None
-        thing_node_exists = session.query(StructureServiceThingNodeDBModel).first() is not None
-        source_exists = session.query(StructureServiceSourceDBModel).first() is not None
-        sink_exists = session.query(StructureServiceSinkDBModel).first() is not None
+        is_empty = not (
+            session.query(StructureServiceElementTypeDBModel).first() is not None
+            or session.query(StructureServiceThingNodeDBModel).first() is not None
+            or session.query(StructureServiceSourceDBModel).first() is not None
+            or session.query(StructureServiceSinkDBModel).first() is not None
+        )
 
-    is_empty = not (element_type_exists or thing_node_exists or source_exists or sink_exists)
     logger.debug("Database empty status: %s", is_empty)
-
     return is_empty
 
 
