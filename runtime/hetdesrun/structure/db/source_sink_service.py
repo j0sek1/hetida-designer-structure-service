@@ -104,8 +104,8 @@ def fetch_collection_of_sources_from_db_by_id(
         return sources
 
     logger.debug(
-        "Successfully fetched collection of %d StructureServiceSources from the database for %d IDs. "
-        "StructureServiceSources with IDs: %s",
+        "Successfully fetched collection of %d StructureServiceSources "
+        "from the database for %d IDs. StructureServiceSources with IDs: %s",
         len(sources),
         len(src_ids),
         src_ids,
@@ -251,7 +251,8 @@ def fetch_sources_by_substring_match(filter_string: str) -> list[StructureServic
                 .all()
             )
             logger.debug(
-                "Found %d StructureServiceSourceDBModel items matching filter string '%s' from %d total records.",
+                "Found %d StructureServiceSourceDBModel items matching filter "
+                "string '%s' from %d total records.",
                 len(matching_sources),
                 filter_string,
                 session.query(StructureServiceSourceDBModel).count(),
@@ -290,7 +291,8 @@ def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceS
                 .all()
             )
             logger.debug(
-                "Found %d StructureServiceSinkDBModel items matching filter string '%s' from %d total records.",
+                "Found %d StructureServiceSinkDBModel items matching "
+                "filter string '%s' from %d total records.",
                 len(matching_sinks),
                 filter_string,
                 session.query(StructureServiceSinkDBModel).count(),

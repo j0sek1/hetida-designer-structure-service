@@ -93,7 +93,8 @@ def search_thing_nodes_by_name(
             .all()
         )
         logger.debug(
-            "Found %d StructureServiceThingNodeDBModel items matching name query '%s' from %d total records.",
+            "Found %d StructureServiceThingNodeDBModel items matching "
+            "name query '%s' from %d total records.",
             len(thing_nodes),
             name_query,
             session.query(StructureServiceThingNodeDBModel).count(),

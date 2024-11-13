@@ -107,8 +107,10 @@ class StructureServiceSourceDBModel(Base):
     # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
     thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
         "StructureServiceThingNodeDBModel",
-        secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="sources",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_source_association,
+        back_populates="sources",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceThingNodeDBModel
     )  # type: ignore
 
@@ -161,8 +163,10 @@ class StructureServiceSinkDBModel(Base):
     # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
     thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
         "StructureServiceThingNodeDBModel",
-        secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="sinks",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_sink_association,
+        back_populates="sinks",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceThingNodeDBModel
     )  # type: ignore
 
@@ -219,16 +223,20 @@ class StructureServiceThingNodeDBModel(Base):
     # Defines Many-to-Many relationship with StructureServiceSourceDBModel
     sources: list["StructureServiceSourceDBModel"] = relationship(
         "StructureServiceSourceDBModel",
-        secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_source_association,
+        back_populates="thing_nodes",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceSourceDBModel
     )
 
     # Defines Many-to-Many relationship with StructureServiceSinkDBModel
     sinks: list["StructureServiceSinkDBModel"] = relationship(
         "StructureServiceSinkDBModel",
-        secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_sink_association,
+        back_populates="thing_nodes",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceSinkDBModel
     )
 

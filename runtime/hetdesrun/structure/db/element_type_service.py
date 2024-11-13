@@ -64,7 +64,8 @@ def search_element_types_by_name(
             .all()
         )
         logger.debug(
-            "Found %d StructureServiceElementTypeDBModel items matching name query '%s' from %d total records.",
+            "Found %d StructureServiceElementTypeDBModel items matching "
+            "name query '%s' from %d total records.",
             len(element_types),
             name_query,
             session.query(StructureServiceElementTypeDBModel).count(),
