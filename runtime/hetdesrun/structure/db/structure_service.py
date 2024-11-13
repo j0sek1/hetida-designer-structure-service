@@ -314,7 +314,6 @@ def is_database_empty() -> bool:
         thing_node_exists = session.query(StructureServiceThingNodeDBModel).first() is not None
         source_exists = session.query(StructureServiceSourceDBModel).first() is not None
         sink_exists = session.query(StructureServiceSinkDBModel).first() is not None
-        # TODO: Shorten function by only checking for StructureServiceElementTypes?
 
     is_empty = not (element_type_exists or thing_node_exists or source_exists or sink_exists)
     logger.debug("Database empty status: %s", is_empty)
