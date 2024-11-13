@@ -30,5 +30,9 @@ class DBConnectionError(DBError):
     pass
 
 
-class DBParsingError(DBError):
+class JsonError(Exception):
+    pass
+
+
+class JsonParsingError(JsonError):
     pass

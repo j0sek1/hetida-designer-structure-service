@@ -26,7 +26,8 @@ from hetdesrun.structure.db.exceptions import (
     DBError,
     DBIntegrityError,
     DBNotFoundError,
-    DBParsingError,
+    JsonError,
+    JsonParsingError,
     DBUpdateError,
 )
 from hetdesrun.structure.db.source_sink_service import (
@@ -47,10 +48,9 @@ logger = logging.getLogger(__name__)
 
 
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:
-    """Load the structure from a JSON file.
+    """Load and parse a JSON file to create a CompleteStructure instance.
 
-    Reads the specified JSON file, parses its content, and creates a
-    CompleteStructure instance.
+    Reads the file, validates its content, and converts it to CompleteStructure.
     """
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
@@ -70,11 +70,11 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
 
     except json.JSONDecodeError as e:
         logger.error("JSON parsing error in file %s: %s", file_path, str(e))
-        raise DBParsingError(f"Error parsing JSON structure in file {file_path}: {str(e)}") from e
+        raise JsonParsingError(f"Error parsing JSON structure in file {file_path}: {str(e)}") from e
 
     except TypeError as e:
         logger.error("Type error while creating CompleteStructure from %s: %s", file_path, str(e))
-        raise DBParsingError(
+        raise JsonParsingError(
             f"Error converting JSON data to CompleteStructure from file {file_path}: {str(e)}"
         ) from e
 
@@ -83,13 +83,13 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         logger.error(
             "Validation error while creating CompleteStructure from %s: %s", file_path, str(e)
         )
-        raise DBParsingError(f"Validation error for JSON data in file {file_path}: {str(e)}") from e
+        raise JsonParsingError(f"Validation error for JSON data in file {file_path}: {str(e)}") from e
 
     except Exception as e:
         logger.error(
             "Unexpected error while loading or parsing structure from %s: %s", file_path, str(e)
         )
-        raise DBError(
+        raise JsonParsingError(
             f"Unexpected error while loading or parsing structure from {file_path}: {str(e)}"
         ) from e
 
