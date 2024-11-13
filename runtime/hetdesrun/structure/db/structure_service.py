@@ -291,19 +291,22 @@ def update_structure_from_file(file_path: str) -> None:
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
+    # Load stricture
     try:
         complete_structure: CompleteStructure = load_structure_from_json_file(file_path)
         logger.debug("Successfully loaded structure from JSON file.")
+    except Exception as e:
+        logger.error("Error while loading structure from JSON file: %s", e)
+        raise
 
+    # Update structure
+    try:
         update_structure(complete_structure)
         logger.debug("Successfully updated structure in the database.")
-
-    except SQLAlchemyError as e:
-        logger.error("Database error occurred while updating structure: %s", e)
-        raise
     except Exception as e:
-        logger.error("An unexpected error occurred while updating structure: %s", e)
+        logger.error("Error while updating structure in the database: %s", e)
         raise
+
 
 
 def is_database_empty() -> bool:
