@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 def fetch_element_types(
     session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceElementTypeDBModel]:
-    """
-    Fetches StructureServiceElementTypeDBModel records from the
-    database based on stakeholder_key and external_id.
+    """Fetch StructureServiceElementTypeDBModel records by stakeholder_key and external_id.
+
+    Retrieves element types from the database in batches.
     """
     existing_ets_mapping: dict[tuple[str, str], StructureServiceElementTypeDBModel] = {}
     if not keys:
@@ -52,8 +52,9 @@ def fetch_element_types(
 def search_element_types_by_name(
     session: SQLAlchemySession, name_query: str
 ) -> list[StructureServiceElementTypeDBModel]:
-    """
-    Searches for StructureServiceElementTypeDBModel records based on a partial or full name match.
+    """Search StructureServiceElementTypeDBModel records by partial or full name match.
+
+    Retrieves element types that match the given name query using a case-insensitive search.
     """
     try:
         element_types = (
@@ -88,8 +89,9 @@ def upsert_element_types(
     elements: list[StructureServiceElementType],
     existing_elements: dict[tuple[str, str], StructureServiceElementTypeDBModel],
 ) -> None:
-    """
-    Upserts StructureServiceElementTypeDBModel records efficiently.
+    """Insert or update StructureServiceElementTypeDBModel records.
+
+    Updates existing records or creates new ones if they do not exist.
     """
     try:
         for element in elements:

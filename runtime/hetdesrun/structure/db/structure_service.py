@@ -47,8 +47,10 @@ logger = logging.getLogger(__name__)
 
 
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:
-    """
-    Loads the structure from a JSON file.
+    """Load the structure from a JSON file.
+
+    Reads the specified JSON file, parses its content, and creates a
+    CompleteStructure instance.
     """
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
@@ -96,9 +98,9 @@ def sort_thing_nodes(
     thing_nodes: list[StructureServiceThingNode],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> list[StructureServiceThingNode]:
-    """
-    Sorts StructureServiceThingNodes into hierarchical levels and flattens the structure,
-    excluding orphan nodes (nodes without valid parent).
+    """Sort and flatten StructureServiceThingNodes by hierarchical levels.
+
+    Returns a list of sorted nodes and excludes orphan nodes.
     """
     logger.debug("Sorting and flattening StructureServiceThingNodes, excluding orphan nodes.")
 
@@ -183,9 +185,9 @@ def populate_element_type_ids(
     thing_nodes: list[StructureServiceThingNode],
     existing_element_types: dict[tuple[str, str], StructureServiceElementTypeDBModel],
 ) -> None:
-    """
-    Sets the element_type_id for each StructureServiceThingNode based
-    on existing StructureServiceElementTypes.
+    """Populate element_type_id for each StructureServiceThingNode.
+
+    Uses existing StructureServiceElementTypes for lookup.
     """
     logger.debug("Populating element_type_id for StructureServiceThingNodes.")
     for tn in thing_nodes:
@@ -213,8 +215,9 @@ def populate_element_type_ids(
 
 
 def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
-    """
-    Writes a given structure to the database, updating records if they exist.
+    """Update or insert a complete structure into the database.
+
+    Existing records are updated, and new records are inserted as needed.
     """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
@@ -282,8 +285,9 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
 
 
 def update_structure_from_file(file_path: str) -> None:
-    """
-    Updates the structure in the database based on a JSON file.
+    """Update the database structure using a JSON file.
+
+    Loads the structure from the file and updates the database records.
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
@@ -303,10 +307,11 @@ def update_structure_from_file(file_path: str) -> None:
 
 
 def is_database_empty() -> bool:
-    """
-    Checks if the database is empty by verifying the presence of records
-    in the StructureServiceElementType, StructureServiceThingNode, StructureServiceSource,
-    and StructureServiceSink tables.
+    """Check if the database is empty.
+
+    Verifies the presence of records in the
+    StructureServiceElementType, StructureServiceThingNode,
+    StructureServiceSource, and StructureServiceSink tables.
     """
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
@@ -362,7 +367,7 @@ def get_children(
                 )
 
                 if parent_node is None:
-                    logger.error(
+                    logger.warning(
                         "The prodived ID %s has no corresponding node in the database", parent_id
                     )
                     raise DBNotFoundError(
@@ -417,14 +422,9 @@ def get_children(
 
 
 def delete_structure() -> None:
-    """
-    Deletes all structure-related data from the database, including StructureServiceThingNodes,
-    StructureServiceSources, StructureServiceSinks,
-    StructureServiceElementTypes, and their associations.
+    """Delete all structure-related data from the database.
 
-    This function ensures records are deleted in the correct order to maintain
-    referential integrity.
-    Association tables are cleared first, followed by dependent ORM classes.
+    Clears all associations and related ORM records while maintaining referential integrity.
     """
     logger.debug("Starting deletion of all structure data from the database.")
 
