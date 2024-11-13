@@ -351,7 +351,11 @@ def get_children(
                 .filter(StructureServiceThingNodeDBModel.parent_node_id == parent_id)
                 .all()
             )
-            logger.debug("Fetched %d child nodes.", len(child_nodes_orm))
+            logger.debug(
+                "Fetched %d child nodes out of %d total records.",
+                len(child_nodes_orm),
+                session.query(StructureServiceThingNodeDBModel).count(),
+            )
 
             if parent_id is None:
                 # Handle root nodes separately if needed
@@ -389,7 +393,11 @@ def get_children(
                     )
                     .all()
                 )
-                logger.debug("Fetched %d sources.", len(sources_orm))
+                logger.debug(
+                    "Fetched %d sources out of %d total records.",
+                    len(sources_orm),
+                    session.query(StructureServiceSourceDBModel).count(),
+                )
 
                 # Fetch StructureServiceSinks associated with this StructureServiceThingNode
                 sinks_orm = (
@@ -405,7 +413,11 @@ def get_children(
                     )
                     .all()
                 )
-                logger.debug("Fetched %d sinks.", len(sinks_orm))
+                logger.debug(
+                    "Fetched %d sinks out of %d total records.",
+                    len(sinks_orm),
+                    session.query(StructureServiceSinkDBModel).count(),
+                )
 
             return (
                 [StructureServiceThingNode.from_orm_model(node) for node in child_nodes_orm],

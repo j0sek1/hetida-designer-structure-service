@@ -37,8 +37,9 @@ def fetch_element_types(
                 key = (et.stakeholder_key, et.external_id)
                 existing_ets_mapping[key] = et
         logger.debug(
-            "Fetched %d StructureServiceElementTypeDBModel items from the database.",
+            "Fetched %d StructureServiceElementTypeDBModel items from the database for %d keys.",
             len(existing_ets_mapping),
+            len(keys),
         )
         return existing_ets_mapping
     except IntegrityError as e:
@@ -63,9 +64,10 @@ def search_element_types_by_name(
             .all()
         )
         logger.debug(
-            "Found %d StructureServiceElementTypeDBModel items matching name query '%s'.",
+            "Found %d StructureServiceElementTypeDBModel items matching name query '%s' from %d total records.",
             len(element_types),
             name_query,
+            session.query(StructureServiceElementTypeDBModel).count(),
         )
         return element_types
     except IntegrityError as e:

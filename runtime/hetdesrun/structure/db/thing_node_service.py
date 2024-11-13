@@ -66,8 +66,9 @@ def fetch_thing_nodes(
                 key = (tn.stakeholder_key, tn.external_id)
                 existing_tns_mapping[key] = tn
         logger.debug(
-            "Fetched %d StructureServiceThingNodeDBModel items from the database.",
+            "Fetched %d StructureServiceThingNodeDBModel items from the database for %d keys.",
             len(existing_tns_mapping),
+            len(keys),
         )
         return existing_tns_mapping
     except IntegrityError as e:
@@ -92,9 +93,10 @@ def search_thing_nodes_by_name(
             .all()
         )
         logger.debug(
-            "Found %d StructureServiceThingNodeDBModel items matching name query '%s'.",
+            "Found %d StructureServiceThingNodeDBModel items matching name query '%s' from %d total records.",
             len(thing_nodes),
             name_query,
+            session.query(StructureServiceThingNodeDBModel).count(),
         )
         return thing_nodes
     except IntegrityError as e:

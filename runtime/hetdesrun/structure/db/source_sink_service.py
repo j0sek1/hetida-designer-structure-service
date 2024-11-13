@@ -103,7 +103,13 @@ def fetch_collection_of_sources_from_db_by_id(
     if not src_ids:
         return sources
 
-    logger.debug("Fetching collection of StructureServiceSources with IDs: %s", src_ids)
+    logger.debug(
+        "Successfully fetched collection of %d StructureServiceSources from the database for %d IDs. "
+        "StructureServiceSources with IDs: %s",
+        len(sources),
+        len(src_ids),
+        src_ids,
+    )
     with get_session()() as session:
         for id_batch in batched(src_ids, ceil(len(src_ids) / batch_size)):
             batch_query = session.query(StructureServiceSourceDBModel).filter(
@@ -132,6 +138,14 @@ def fetch_collection_of_sinks_from_db_by_id(
         return sinks
 
     logger.debug("Fetching collection of StructureServiceSinks with IDs: %s", sink_ids)
+
+    logger.debug(
+        "Successfully fetched collection of %d StructureServiceSinks from the database for %d IDs. "
+        "StructureServiceSinks with IDs: %s",
+        len(sinks),
+        len(sink_ids),
+        sink_ids,
+    )
     with get_session()() as session:
         for id_batch in batched(sink_ids, ceil(len(sink_ids) / batch_size)):
             batch_query = session.query(StructureServiceSinkDBModel).filter(
@@ -172,8 +186,9 @@ def fetch_sources(
                 key = (source.stakeholder_key, source.external_id)
                 existing_sources_mapping[key] = source
         logger.debug(
-            "Fetched %d StructureServiceSourceDBModel items from the database.",
+            "Fetched %d StructureServiceSourceDBModel items from the database for %d keys.",
             len(existing_sources_mapping),
+            len(keys),
         )
         return existing_sources_mapping
     except IntegrityError as e:
@@ -210,8 +225,9 @@ def fetch_sinks(
                 key = (sink.stakeholder_key, sink.external_id)
                 existing_sinks_mapping[key] = sink
         logger.debug(
-            "Fetched %d StructureServiceSinkDBModel items from the database.",
+            "Fetched %d StructureServiceSinkDBModel items from the database for %d keys.",
             len(existing_sinks_mapping),
+            len(keys),
         )
         return existing_sinks_mapping
     except IntegrityError as e:
@@ -235,9 +251,10 @@ def fetch_sources_by_substring_match(filter_string: str) -> list[StructureServic
                 .all()
             )
             logger.debug(
-                "Found %d StructureServiceSourceDBModel items matching filter string '%s'.",
+                "Found %d StructureServiceSourceDBModel items matching filter string '%s' from %d total records.",
                 len(matching_sources),
                 filter_string,
+                session.query(StructureServiceSourceDBModel).count(),
             )
             return [StructureServiceSource.from_orm_model(src) for src in matching_sources]
         except IntegrityError as e:
@@ -273,9 +290,10 @@ def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceS
                 .all()
             )
             logger.debug(
-                "Found %d StructureServiceSinkDBModel items matching filter string '%s'.",
+                "Found %d StructureServiceSinkDBModel items matching filter string '%s' from %d total records.",
                 len(matching_sinks),
                 filter_string,
+                session.query(StructureServiceSinkDBModel).count(),
             )
             return [StructureServiceSink.from_orm_model(sink) for sink in matching_sinks]
         except IntegrityError as e:
