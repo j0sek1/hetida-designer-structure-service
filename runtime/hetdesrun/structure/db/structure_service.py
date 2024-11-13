@@ -444,22 +444,25 @@ def delete_structure() -> None:
     logger.debug("Starting deletion of all structure data from the database.")
 
     with get_session()() as session:
-        # Define the order of deletion to maintain referential integrity:
-        # Association tables first, followed by dependent ORM classes.
-        deletion_order = [
-            thingnode_source_association,
-            thingnode_sink_association,
-            StructureServiceSourceDBModel,
-            StructureServiceSinkDBModel,
-            StructureServiceThingNodeDBModel,
-            StructureServiceElementTypeDBModel,
-        ]
-
         try:
-            for table in deletion_order:
-                table_name = table.name if hasattr(table, "name") else table.__tablename__  # type: ignore
-                logger.debug("Deleting records from table: %s", table_name)
-                session.execute(delete(table))
+            logger.debug("Deleting records from table: thingnode_source_association")
+            session.execute(delete(thingnode_source_association))
+
+            logger.debug("Deleting records from table: thingnode_sink_association")
+            session.execute(delete(thingnode_sink_association))
+
+            logger.debug("Deleting records from table: StructureServiceSourceDBModel")
+            session.execute(delete(StructureServiceSourceDBModel))
+
+            logger.debug("Deleting records from table: StructureServiceSinkDBModel")
+            session.execute(delete(StructureServiceSinkDBModel))
+
+            logger.debug("Deleting records from table: StructureServiceThingNodeDBModel")
+            session.execute(delete(StructureServiceThingNodeDBModel))
+
+            logger.debug("Deleting records from table: StructureServiceElementTypeDBModel")
+            session.execute(delete(StructureServiceElementTypeDBModel))
+
             session.commit()
             logger.debug("Successfully deleted all structure data from the database.")
 
@@ -475,3 +478,4 @@ def delete_structure() -> None:
             msg = f"Unexpected Error while deleting structure: {str(e)}"
             logger.error(msg)
             raise DBError(msg) from e
+
