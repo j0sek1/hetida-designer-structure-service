@@ -76,14 +76,6 @@ class StructureServiceElementTypeDBModel(Base):
         ),
     )
 
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceElementTypeDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, description={self.description}, "
-            f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
-        )
-
 
 # ORM model for Source
 class StructureServiceSourceDBModel(Base):
@@ -127,19 +119,6 @@ class StructureServiceSourceDBModel(Base):
         ),
     )
 
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceSourceDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, type={self.type}, visible={self.visible}, "
-            f"display_path={self.display_path}, "
-            f"adapter_key={self.adapter_key}, "
-            f"source_id={self.source_id}, meta_data={self.meta_data}, "
-            f"preset_filters={self.preset_filters}, "
-            f"passthrough_filters={self.passthrough_filters}, "
-            f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
-        )
-
 
 # ORM model for Sink
 class StructureServiceSinkDBModel(Base):
@@ -182,19 +161,6 @@ class StructureServiceSinkDBModel(Base):
             "external_id",
         ),
     )
-
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceSinkDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, type={self.type}, visible={self.visible}, "
-            f"display_path={self.display_path}, "
-            f"adapter_key={self.adapter_key}, "
-            f"sink_id={self.sink_id}, meta_data={self.meta_data}, "
-            f"preset_filters={self.preset_filters}, "
-            f"passthrough_filters={self.passthrough_filters}, "
-            f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
-        )
 
 
 # ORM model for ThingNode
@@ -254,15 +220,3 @@ class StructureServiceThingNodeDBModel(Base):
             "external_id",
         ),
     )
-
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceThingNodeDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, description={self.description}, "
-            f"parent_node_id={self.parent_node_id}, "
-            f"parent_external_node_id={self.parent_external_node_id}, "
-            f"element_type_id={self.element_type_id}, "
-            f"element_type_external_id={self.element_type_external_id}, "
-            f"meta_data={self.meta_data})>"
-        )
