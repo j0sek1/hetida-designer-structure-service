@@ -121,7 +121,8 @@ def test_virtual_wiring_resolution_with_non_existent_source_or_sink_id():
     wf_wiring = WorkflowWiring(input_wirings=[input_wiring])
 
     with pytest.raises(
-        AdapterHandlingException, match="An error occurred during the wiring resolution"
+        AdapterHandlingException,
+        match="Atleast one source or sink referenced in the wirings was not found",
     ):
         resolve_virtual_structure_wirings(wf_wiring)
 

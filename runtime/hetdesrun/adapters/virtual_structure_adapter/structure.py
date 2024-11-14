@@ -52,7 +52,9 @@ def get_structure(parent_id: UUID | None = None) -> VirtualStructureAdapterRespo
     try:
         nodes, sources, sinks = get_children_from_structure_service(parent_id)
     except DBNotFoundError as e:
-        raise AdapterHandlingException(str(e)) from e
+        raise AdapterHandlingException(
+            f"Atleast one element of the structure was not found in the database: {str(e)}"
+        ) from e
 
     return VirtualStructureAdapterResponse(
         id="vst-adapter",
