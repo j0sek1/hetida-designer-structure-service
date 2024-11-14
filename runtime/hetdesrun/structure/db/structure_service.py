@@ -309,12 +309,10 @@ def update_structure_from_file(file_path: str) -> None:
         raise
 
 
-def is_database_empty() -> bool:
-    """Check if the database is empty.
+def is_structure_empty() -> bool:
+    """Check if the structure-related tables in the database are empty.
 
-    Verifies the presence of records in the
-    StructureServiceElementType, StructureServiceThingNode,
-    StructureServiceSource, and StructureServiceSink tables.
+    Verifies the presence of records in structure-specific tables.
     """
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:

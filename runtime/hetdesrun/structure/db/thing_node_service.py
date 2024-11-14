@@ -38,7 +38,7 @@ def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingN
             logger.debug("StructureServiceThingNode with ID %s found.", tn_id)
             return StructureServiceThingNode.from_orm_model(thing_node)
 
-    logger.warning("No StructureServiceThingNode found for ID %s. Raising DBNotFoundError.", tn_id)
+    logger.warning("No StructureServiceThingNode found for ID %s.", tn_id)
     raise DBNotFoundError(f"No StructureServiceThingNode found for ID {tn_id}")
 
 
