@@ -71,7 +71,7 @@ def get_single_thingnode(
     try:
         node = fetch_single_thing_node_from_db_by_id(tn_id)
     except DBNotFoundError as e:
-        logger.error("Could not retrieve thingnode for ID: %s, due to: %s", tn_id, e)
+        logger.warning("Could not retrieve thingnode for ID: %s, due to: %s", tn_id, e)
         return None
     return VirtualStructureAdapterThingNode.from_structure_service_thingnode(node)
 
@@ -82,7 +82,7 @@ def get_single_source(
     try:
         source = fetch_single_source_from_db_by_id(src_id)
     except DBNotFoundError as e:
-        logger.error("Could not retrieve source for ID: %s, due to: %s", src_id, e)
+        logger.warning("Could not retrieve source for ID: %s, due to: %s", src_id, e)
         return None
     return VirtualStructureAdapterSource.from_structure_service_source(source)
 
@@ -100,7 +100,7 @@ def get_single_sink(
     try:
         sink = fetch_single_sink_from_db_by_id(sink_id)
     except DBNotFoundError as e:
-        logger.error("Could not retrieve sink for ID: %s, due to: %s", sink_id, e)
+        logger.warning("Could not retrieve sink for ID: %s, due to: %s", sink_id, e)
         return None
     return VirtualStructureAdapterSink.from_structure_service_sink(sink)
 
