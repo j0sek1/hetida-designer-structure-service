@@ -121,7 +121,7 @@ def upsert_thing_nodes(
     thing_nodes: list[StructureServiceThingNode],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
-    """Insert or update StructureServiceThingNodeDBModel records.
+    """Insert or update StructureServiceThingNodeDBModel records in the database.
 
     Updates existing records or creates new ones if they do not exist.
     """
@@ -182,7 +182,7 @@ def upsert_thing_nodes(
                 )
 
         if new_records:
-            session.bulk_save_objects(new_records)
+            session.add_all(new_records)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceThingNodeDBModel: %s", e)
@@ -190,5 +190,7 @@ def upsert_thing_nodes(
             "Integrity Error while upserting StructureServiceThingNodeDBModel"
         ) from e
     except Exception as e:
-        logger.error("Error while upserting StructureServiceThingNodeDBModel: %s", e)
-        raise DBUpdateError("Error while upserting StructureServiceThingNodeDBModel") from e
+        logger.error("Unexpected error while upserting StructureServiceThingNodeDBModel: %s", e)
+        raise DBUpdateError(
+            "Unexpected error while upserting StructureServiceThingNodeDBModel"
+        ) from e

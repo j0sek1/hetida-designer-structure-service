@@ -329,6 +329,8 @@ def upsert_sources(
     Updates existing records or creates new ones if they do not exist.
     """
     try:
+        new_records = []
+
         for source in sources:
             key = (source.stakeholder_key, source.external_id)
             db_source = existing_sources.get(key)
@@ -356,7 +358,6 @@ def upsert_sources(
                 ]
             else:
                 logger.debug("Creating new StructureServiceSourceDBModel with key %s.", key)
-                # Create a new instance
                 new_source = StructureServiceSourceDBModel(
                     id=source.id,
                     external_id=source.external_id,
@@ -374,15 +375,16 @@ def upsert_sources(
                     passthrough_filters=source.passthrough_filters,  # type: ignore
                 )
 
-                # Add the new source to the session immediately
-                session.add(new_source)
-
-                # Only now assign relationships
+                # Assign relationships
                 new_source.thing_nodes = [
                     existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
                     for tn_external_id in source.thing_node_external_ids or []
                     if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
                 ]
+                new_records.append(new_source)
+
+        if new_records:
+            session.add_all(new_records)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSourceDBModel: %s", e)
@@ -390,8 +392,8 @@ def upsert_sources(
             "Integrity Error while upserting StructureServiceSourceDBModel"
         ) from e
     except Exception as e:
-        logger.error("Error while upserting StructureServiceSourceDBModel: %s", e)
-        raise DBUpdateError("Error while upserting StructureServiceSourceDBModel") from e
+        logger.error("Unexpected error while upserting StructureServiceSourceDBModel: %s", e)
+        raise DBUpdateError("Unexpected error while upserting StructureServiceSourceDBModel") from e
 
 
 def upsert_sinks(
@@ -405,11 +407,15 @@ def upsert_sinks(
     Updates existing records or creates new ones if they do not exist.
     """
     try:
+        new_records = []
+
         for sink in sinks:
             key = (sink.stakeholder_key, sink.external_id)
             db_sink = existing_sinks.get(key)
+
             if db_sink:
                 logger.debug("Updating StructureServiceSinkDBModel with key %s.", key)
+                # Update fields
                 db_sink.name = sink.name
                 db_sink.type = sink.type
                 db_sink.visible = sink.visible
@@ -421,6 +427,8 @@ def upsert_sinks(
                 db_sink.meta_data = sink.meta_data
                 db_sink.preset_filters = sink.preset_filters
                 db_sink.passthrough_filters = sink.passthrough_filters
+
+                # Clear and set relationships
                 db_sink.thing_nodes = [
                     existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
                     for tn_external_id in sink.thing_node_external_ids or []
@@ -444,17 +452,21 @@ def upsert_sinks(
                     preset_filters=sink.preset_filters,
                     passthrough_filters=sink.passthrough_filters,  # type: ignore
                 )
-                session.add(new_sink)
 
+                # Assign relationships
                 new_sink.thing_nodes = [
                     existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
                     for tn_external_id in sink.thing_node_external_ids or []
                     if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
                 ]
+                new_records.append(new_sink)
+
+        if new_records:
+            session.add_all(new_records)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBIntegrityError("Integrity Error while upserting StructureServiceSinkDBModel") from e
     except Exception as e:
-        logger.error("Error while upserting StructureServiceSinkDBModel: %s", e)
-        raise DBUpdateError("Error while upserting StructureServiceSinkDBModel") from e
+        logger.error("Unexpected error while upserting StructureServiceSinkDBModel: %s", e)
+        raise DBUpdateError("Unexpected error while upserting StructureServiceSinkDBModel") from e

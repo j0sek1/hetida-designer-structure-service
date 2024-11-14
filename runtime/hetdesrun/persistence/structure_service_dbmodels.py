@@ -58,7 +58,13 @@ class StructureServiceElementTypeDBModel(Base):
     name = Column(String(255), index=True, nullable=False, unique=True)
     description = Column(String(1024), nullable=True)
     thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
-        "StructureServiceThingNodeDBModel", back_populates="element_type"
+        "StructureServiceThingNodeDBModel",
+        back_populates="element_type",
+        # 'back_populates' specifies reciprocal relationship in
+        # StructureServiceThingNodeDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )
 
     # Constraints and Indexes for optimized search and uniqueness
@@ -104,6 +110,9 @@ class StructureServiceSourceDBModel(Base):
         back_populates="sources",
         # 'back_populates' specifies reciprocal relationship in
         # StructureServiceThingNodeDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )  # type: ignore
 
     __table_args__ = (
@@ -147,6 +156,9 @@ class StructureServiceSinkDBModel(Base):
         back_populates="sinks",
         # 'back_populates' specifies reciprocal relationship in
         # StructureServiceThingNodeDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )  # type: ignore
 
     __table_args__ = (
@@ -194,6 +206,9 @@ class StructureServiceThingNodeDBModel(Base):
         back_populates="thing_nodes",
         # 'back_populates' specifies reciprocal relationship in
         # StructureServiceSourceDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )
 
     # Defines Many-to-Many relationship with StructureServiceSinkDBModel
@@ -204,6 +219,9 @@ class StructureServiceThingNodeDBModel(Base):
         back_populates="thing_nodes",
         # 'back_populates' specifies reciprocal relationship in
         # StructureServiceSinkDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )
 
     # Constraints and Indexes for optimized search and uniqueness

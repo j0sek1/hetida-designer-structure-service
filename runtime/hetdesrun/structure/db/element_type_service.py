@@ -92,28 +92,35 @@ def upsert_element_types(
     elements: list[StructureServiceElementType],
     existing_elements: dict[tuple[str, str], StructureServiceElementTypeDBModel],
 ) -> None:
-    """Insert or update StructureServiceElementTypeDBModel records.
+    """Insert or update StructureServiceElementTypeDBModel records in the database.
 
     Updates existing records or creates new ones if they do not exist.
     """
     try:
+        new_records = []
+
         for element in elements:
             key = (element.stakeholder_key, element.external_id)
             db_element = existing_elements.get(key)
+
             if db_element:
                 logger.debug("Updating StructureServiceElementTypeDBModel with key %s.", key)
                 db_element.name = element.name
                 db_element.description = element.description
             else:
                 logger.debug("Creating new StructureServiceElementTypeDBModel with key %s.", key)
-                new_element = StructureServiceElementTypeDBModel(
-                    id=element.id,
-                    external_id=element.external_id,
-                    stakeholder_key=element.stakeholder_key,
-                    name=element.name,
-                    description=element.description,
+                new_records.append(
+                    StructureServiceElementTypeDBModel(
+                        id=element.id,
+                        external_id=element.external_id,
+                        stakeholder_key=element.stakeholder_key,
+                        name=element.name,
+                        description=element.description,
+                    )
                 )
-                session.add(new_element)
+
+        if new_records:
+            session.add_all(new_records)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceElementTypeDBModel: %s", e)
@@ -121,5 +128,7 @@ def upsert_element_types(
             "Integrity Error while upserting StructureServiceElementTypeDBModel"
         ) from e
     except Exception as e:
-        logger.error("Error while upserting StructureServiceElementTypeDBModel: %s", e)
-        raise DBUpdateError("Error while upserting StructureServiceElementTypeDBModel") from e
+        logger.error("Unexpected error while upserting StructureServiceElementTypeDBModel: %s", e)
+        raise DBUpdateError(
+            "Unexpected error while upserting StructureServiceElementTypeDBModel"
+        ) from e
