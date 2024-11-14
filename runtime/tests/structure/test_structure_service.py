@@ -22,7 +22,7 @@ from hetdesrun.structure.db.element_type_service import (
 )
 from hetdesrun.structure.db.exceptions import (
     DBError,
-    DBParsingError,
+    JsonParsingError,
 )
 from hetdesrun.structure.db.source_sink_service import (
     fetch_sinks,
@@ -33,7 +33,7 @@ from hetdesrun.structure.db.source_sink_service import (
 from hetdesrun.structure.db.structure_service import (
     delete_structure,
     get_children,
-    is_database_empty,
+    is_structure_empty,
     load_structure_from_json_file,
     populate_element_type_ids,
     sort_thing_nodes,
@@ -401,13 +401,13 @@ def test_load_structure_from_json_file(db_test_structure_file_path):
 def test_load_structure_from_invalid_json_file():
     with pytest.raises(FileNotFoundError):
         load_structure_from_json_file("non_existent_file.json")
-    with pytest.raises(DBParsingError):
+    with pytest.raises(JsonParsingError):
         load_structure_from_json_file("tests/structure/data/db_test_structure_malformed.json")
 
 
 def test_load_structure_from_json_with_invalid_data():
     invalid_structure_path = "tests/structure/data/db_test_structure_invalid_data.json"
-    with pytest.raises(DBParsingError) as exc_info:
+    with pytest.raises(JsonParsingError) as exc_info:
         load_structure_from_json_file(invalid_structure_path)
     assert "Validation error" in str(exc_info.value)
 
@@ -725,13 +725,13 @@ def test_update_structure_no_elements_deleted():
             )
 
 
-def test_is_database_empty_when_empty(mocked_clean_test_db_session):
-    assert is_database_empty(), "Database should be empty but is not."
+def test_is_structure_empty_when_empty(mocked_clean_test_db_session):
+    assert is_structure_empty(), "Database should be empty but is not."
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_is_database_empty_when_not_empty(mocked_clean_test_db_session):
-    assert not is_database_empty(), "Database should not be empty but it is."
+def test_is_structure_empty_when_not_empty(mocked_clean_test_db_session):
+    assert not is_structure_empty(), "Database should not be empty but it is."
 
 
 @pytest.mark.usefixtures("_db_test_unordered_structure")

@@ -58,7 +58,13 @@ class StructureServiceElementTypeDBModel(Base):
     name = Column(String(255), index=True, nullable=False, unique=True)
     description = Column(String(1024), nullable=True)
     thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
-        "StructureServiceThingNodeDBModel", back_populates="element_type"
+        "StructureServiceThingNodeDBModel",
+        back_populates="element_type",
+        # 'back_populates' specifies reciprocal relationship in
+        # StructureServiceThingNodeDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )
 
     # Constraints and Indexes for optimized search and uniqueness
@@ -75,14 +81,6 @@ class StructureServiceElementTypeDBModel(Base):
             "external_id",
         ),
     )
-
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceElementTypeDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, description={self.description}, "
-            f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
-        )
 
 
 # ORM model for Source
@@ -107,9 +105,14 @@ class StructureServiceSourceDBModel(Base):
     # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
     thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
         "StructureServiceThingNodeDBModel",
-        secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="sources",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_source_association,
+        back_populates="sources",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceThingNodeDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )  # type: ignore
 
     __table_args__ = (
@@ -124,19 +127,6 @@ class StructureServiceSourceDBModel(Base):
             "external_id",
         ),
     )
-
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceSourceDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, type={self.type}, visible={self.visible}, "
-            f"display_path={self.display_path}, "
-            f"adapter_key={self.adapter_key}, "
-            f"source_id={self.source_id}, meta_data={self.meta_data}, "
-            f"preset_filters={self.preset_filters}, "
-            f"passthrough_filters={self.passthrough_filters}, "
-            f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
-        )
 
 
 # ORM model for Sink
@@ -161,9 +151,14 @@ class StructureServiceSinkDBModel(Base):
     # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
     thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
         "StructureServiceThingNodeDBModel",
-        secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="sinks",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_sink_association,
+        back_populates="sinks",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceThingNodeDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )  # type: ignore
 
     __table_args__ = (
@@ -178,19 +173,6 @@ class StructureServiceSinkDBModel(Base):
             "external_id",
         ),
     )
-
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceSinkDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, type={self.type}, visible={self.visible}, "
-            f"display_path={self.display_path}, "
-            f"adapter_key={self.adapter_key}, "
-            f"sink_id={self.sink_id}, meta_data={self.meta_data}, "
-            f"preset_filters={self.preset_filters}, "
-            f"passthrough_filters={self.passthrough_filters}, "
-            f"thing_nodes={[thing_node.id for thing_node in self.thing_nodes]})>"
-        )
 
 
 # ORM model for ThingNode
@@ -219,17 +201,27 @@ class StructureServiceThingNodeDBModel(Base):
     # Defines Many-to-Many relationship with StructureServiceSourceDBModel
     sources: list["StructureServiceSourceDBModel"] = relationship(
         "StructureServiceSourceDBModel",
-        secondary=thingnode_source_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_source_association,
+        back_populates="thing_nodes",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceSourceDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )
 
     # Defines Many-to-Many relationship with StructureServiceSinkDBModel
     sinks: list["StructureServiceSinkDBModel"] = relationship(
         "StructureServiceSinkDBModel",
-        secondary=thingnode_sink_association,  # Association table for Many-to-Many relation
-        back_populates="thing_nodes",  # Specifies reciprocal relationship in
+        # Association table for Many-to-Many relation:
+        secondary=thingnode_sink_association,
+        back_populates="thing_nodes",
+        # 'back_populates' specifies reciprocal relationship in
         # StructureServiceSinkDBModel
+        cascade_backrefs=False,
+        # Disable cascade_backrefs to prevent automatic session merging of related objects,
+        # avoiding unintended side effects and deprecation warnings in SQLAlchemy 2.0.
     )
 
     # Constraints and Indexes for optimized search and uniqueness
@@ -246,15 +238,3 @@ class StructureServiceThingNodeDBModel(Base):
             "external_id",
         ),
     )
-
-    def __repr__(self) -> str:
-        return (
-            f"<StructureServiceThingNodeDBModel(id={self.id}, external_id={self.external_id}, "
-            f"stakeholder_key={self.stakeholder_key}, "
-            f"name={self.name}, description={self.description}, "
-            f"parent_node_id={self.parent_node_id}, "
-            f"parent_external_node_id={self.parent_external_node_id}, "
-            f"element_type_id={self.element_type_id}, "
-            f"element_type_external_id={self.element_type_external_id}, "
-            f"meta_data={self.meta_data})>"
-        )

@@ -26,8 +26,8 @@ from hetdesrun.structure.db.exceptions import (
     DBError,
     DBIntegrityError,
     DBNotFoundError,
-    DBParsingError,
     DBUpdateError,
+    JsonParsingError,
 )
 from hetdesrun.structure.db.source_sink_service import (
     fetch_sinks,
@@ -47,8 +47,9 @@ logger = logging.getLogger(__name__)
 
 
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:
-    """
-    Loads the structure from a JSON file.
+    """Load and parse a JSON file to create a CompleteStructure instance.
+
+    Reads the file, validates its content, and converts it to CompleteStructure.
     """
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
@@ -68,11 +69,11 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
 
     except json.JSONDecodeError as e:
         logger.error("JSON parsing error in file %s: %s", file_path, str(e))
-        raise DBParsingError(f"Error parsing JSON structure in file {file_path}: {str(e)}") from e
+        raise JsonParsingError(f"Error parsing JSON structure in file {file_path}: {str(e)}") from e
 
     except TypeError as e:
         logger.error("Type error while creating CompleteStructure from %s: %s", file_path, str(e))
-        raise DBParsingError(
+        raise JsonParsingError(
             f"Error converting JSON data to CompleteStructure from file {file_path}: {str(e)}"
         ) from e
 
@@ -81,13 +82,15 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         logger.error(
             "Validation error while creating CompleteStructure from %s: %s", file_path, str(e)
         )
-        raise DBParsingError(f"Validation error for JSON data in file {file_path}: {str(e)}") from e
+        raise JsonParsingError(
+            f"Validation error for JSON data in file {file_path}: {str(e)}"
+        ) from e
 
     except Exception as e:
         logger.error(
             "Unexpected error while loading or parsing structure from %s: %s", file_path, str(e)
         )
-        raise DBError(
+        raise JsonParsingError(
             f"Unexpected error while loading or parsing structure from {file_path}: {str(e)}"
         ) from e
 
@@ -96,9 +99,9 @@ def sort_thing_nodes(
     thing_nodes: list[StructureServiceThingNode],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> list[StructureServiceThingNode]:
-    """
-    Sorts StructureServiceThingNodes into hierarchical levels and flattens the structure,
-    excluding orphan nodes (nodes without valid parent).
+    """Sort and flatten StructureServiceThingNodes by hierarchical levels.
+
+    Returns a list of sorted nodes and excludes orphan nodes.
     """
     logger.debug("Sorting and flattening StructureServiceThingNodes, excluding orphan nodes.")
 
@@ -183,9 +186,9 @@ def populate_element_type_ids(
     thing_nodes: list[StructureServiceThingNode],
     existing_element_types: dict[tuple[str, str], StructureServiceElementTypeDBModel],
 ) -> None:
-    """
-    Sets the element_type_id for each StructureServiceThingNode based
-    on existing StructureServiceElementTypes.
+    """Populate element_type_id for each StructureServiceThingNode.
+
+    Uses existing StructureServiceElementTypes for lookup.
     """
     logger.debug("Populating element_type_id for StructureServiceThingNodes.")
     for tn in thing_nodes:
@@ -213,8 +216,9 @@ def populate_element_type_ids(
 
 
 def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
-    """
-    Writes a given structure to the database, updating records if they exist.
+    """Update or insert a complete structure into the database.
+
+    Existing records are updated, and new records are inserted as needed.
     """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
@@ -282,43 +286,44 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
 
 
 def update_structure_from_file(file_path: str) -> None:
-    """
-    Updates the structure in the database based on a JSON file.
+    """Update the database structure using a JSON file.
+
+    Loads the structure from the file and updates the database records.
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
+    # Load structure
     try:
         complete_structure: CompleteStructure = load_structure_from_json_file(file_path)
         logger.debug("Successfully loaded structure from JSON file.")
+    except Exception as e:
+        logger.error("Error while loading structure from JSON file: %s", e)
+        raise
 
+    # Update structure
+    try:
         update_structure(complete_structure)
         logger.debug("Successfully updated structure in the database.")
-
-    except SQLAlchemyError as e:
-        logger.error("Database error occurred while updating structure: %s", e)
-        raise
     except Exception as e:
-        logger.error("An unexpected error occurred while updating structure: %s", e)
+        logger.error("Error while updating structure in the database: %s", e)
         raise
 
 
-def is_database_empty() -> bool:
-    """
-    Checks if the database is empty by verifying the presence of records
-    in the StructureServiceElementType, StructureServiceThingNode, StructureServiceSource,
-    and StructureServiceSink tables.
+def is_structure_empty() -> bool:
+    """Check if the structure-related tables in the database are empty.
+
+    Verifies the presence of records in structure-specific tables.
     """
     logger.debug("Checking if the database is empty.")
     with get_session()() as session:
-        element_type_exists = session.query(StructureServiceElementTypeDBModel).first() is not None
-        thing_node_exists = session.query(StructureServiceThingNodeDBModel).first() is not None
-        source_exists = session.query(StructureServiceSourceDBModel).first() is not None
-        sink_exists = session.query(StructureServiceSinkDBModel).first() is not None
-        # TODO: Shorten function by only checking for StructureServiceElementTypes?
+        is_empty = not (
+            session.query(StructureServiceElementTypeDBModel).first() is not None
+            or session.query(StructureServiceThingNodeDBModel).first() is not None
+            or session.query(StructureServiceSourceDBModel).first() is not None
+            or session.query(StructureServiceSinkDBModel).first() is not None
+        )
 
-    is_empty = not (element_type_exists or thing_node_exists or source_exists or sink_exists)
     logger.debug("Database empty status: %s", is_empty)
-
     return is_empty
 
 
@@ -347,7 +352,11 @@ def get_children(
                 .filter(StructureServiceThingNodeDBModel.parent_node_id == parent_id)
                 .all()
             )
-            logger.debug("Fetched %d child nodes.", len(child_nodes_orm))
+            logger.debug(
+                "Fetched %d child nodes out of %d total records.",
+                len(child_nodes_orm),
+                session.query(StructureServiceThingNodeDBModel).count(),
+            )
 
             if parent_id is None:
                 # Handle root nodes separately if needed
@@ -363,7 +372,7 @@ def get_children(
                 )
 
                 if parent_node is None:
-                    logger.error(
+                    logger.warning(
                         "The prodived ID %s has no corresponding node in the database", parent_id
                     )
                     raise DBNotFoundError(
@@ -385,7 +394,11 @@ def get_children(
                     )
                     .all()
                 )
-                logger.debug("Fetched %d sources.", len(sources_orm))
+                logger.debug(
+                    "Fetched %d sources out of %d total records.",
+                    len(sources_orm),
+                    session.query(StructureServiceSourceDBModel).count(),
+                )
 
                 # Fetch StructureServiceSinks associated with this StructureServiceThingNode
                 sinks_orm = (
@@ -401,7 +414,11 @@ def get_children(
                     )
                     .all()
                 )
-                logger.debug("Fetched %d sinks.", len(sinks_orm))
+                logger.debug(
+                    "Fetched %d sinks out of %d total records.",
+                    len(sinks_orm),
+                    session.query(StructureServiceSinkDBModel).count(),
+                )
 
             return (
                 [StructureServiceThingNode.from_orm_model(node) for node in child_nodes_orm],
@@ -418,36 +435,34 @@ def get_children(
 
 
 def delete_structure() -> None:
-    """
-    Deletes all structure-related data from the database, including StructureServiceThingNodes,
-    StructureServiceSources, StructureServiceSinks,
-    StructureServiceElementTypes, and their associations.
+    """Delete all structure-related data from the database.
 
-    This function ensures records are deleted in the correct order to maintain
-    referential integrity.
-    Association tables are cleared first, followed by dependent ORM classes.
+    Clears all associations and related ORM records while maintaining referential integrity.
     """
     logger.debug("Starting deletion of all structure data from the database.")
 
     with get_session()() as session:
-        # Define the order of deletion to maintain referential integrity:
-        # Association tables first, followed by dependent ORM classes.
-        deletion_order = [
-            thingnode_source_association,
-            thingnode_sink_association,
-            StructureServiceSourceDBModel,
-            StructureServiceSinkDBModel,
-            StructureServiceThingNodeDBModel,
-            StructureServiceElementTypeDBModel,
-        ]
-
         try:
-            for table in deletion_order:
-                table_name = table.name if hasattr(table, "name") else table.__tablename__  # type: ignore
-                logger.debug("Deleting records from table: %s", table_name)
-                session.execute(delete(table))
+            logger.info("Deleting records from table: thingnode_source_association")
+            session.execute(delete(thingnode_source_association))
+
+            logger.info("Deleting records from table: thingnode_sink_association")
+            session.execute(delete(thingnode_sink_association))
+
+            logger.info("Deleting records from table: StructureServiceSourceDBModel")
+            session.execute(delete(StructureServiceSourceDBModel))
+
+            logger.info("Deleting records from table: StructureServiceSinkDBModel")
+            session.execute(delete(StructureServiceSinkDBModel))
+
+            logger.info("Deleting records from table: StructureServiceThingNodeDBModel")
+            session.execute(delete(StructureServiceThingNodeDBModel))
+
+            logger.info("Deleting records from table: StructureServiceElementTypeDBModel")
+            session.execute(delete(StructureServiceElementTypeDBModel))
+
             session.commit()
-            logger.debug("Successfully deleted all structure data from the database.")
+            logger.info("Successfully deleted all structure data from the database.")
 
         except IntegrityError as e:
             msg = f"Integrity Error while deleting structure: {str(e)}"
