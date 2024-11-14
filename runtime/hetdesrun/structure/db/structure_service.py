@@ -443,26 +443,26 @@ def delete_structure() -> None:
 
     with get_session()() as session:
         try:
-            logger.debug("Deleting records from table: thingnode_source_association")
+            logger.info("Deleting records from table: thingnode_source_association")
             session.execute(delete(thingnode_source_association))
 
-            logger.debug("Deleting records from table: thingnode_sink_association")
+            logger.info("Deleting records from table: thingnode_sink_association")
             session.execute(delete(thingnode_sink_association))
 
-            logger.debug("Deleting records from table: StructureServiceSourceDBModel")
+            logger.info("Deleting records from table: StructureServiceSourceDBModel")
             session.execute(delete(StructureServiceSourceDBModel))
 
-            logger.debug("Deleting records from table: StructureServiceSinkDBModel")
+            logger.info("Deleting records from table: StructureServiceSinkDBModel")
             session.execute(delete(StructureServiceSinkDBModel))
 
-            logger.debug("Deleting records from table: StructureServiceThingNodeDBModel")
+            logger.info("Deleting records from table: StructureServiceThingNodeDBModel")
             session.execute(delete(StructureServiceThingNodeDBModel))
 
-            logger.debug("Deleting records from table: StructureServiceElementTypeDBModel")
+            logger.info("Deleting records from table: StructureServiceElementTypeDBModel")
             session.execute(delete(StructureServiceElementTypeDBModel))
 
             session.commit()
-            logger.debug("Successfully deleted all structure data from the database.")
+            logger.info("Successfully deleted all structure data from the database.")
 
         except IntegrityError as e:
             msg = f"Integrity Error while deleting structure: {str(e)}"
