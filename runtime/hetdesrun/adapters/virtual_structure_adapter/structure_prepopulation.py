@@ -41,8 +41,8 @@ def prepopulate_structure() -> None:
             ) from e
     else:
         logger.info(
-            "Prepopulating the virtual structure adapter via the environment variable "
-            "'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'"
+            "Prepopulating the virtual structure adapter via"
+            "structure_to_prepopulate_virtual_structure_adapter"
         )
         complete_structure = (
             get_vst_adapter_config().structure_to_prepopulate_virtual_structure_adapter  # type: ignore

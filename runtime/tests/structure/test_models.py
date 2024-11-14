@@ -17,15 +17,15 @@ from hetdesrun.structure.models import (
 
 
 def test_external_id_stakeholder_key_name_non_empty():
-    with pytest.raises(ValueError, match="The external id cannot be empty"):
+    with pytest.raises(ValueError, match="The field external_id cannot be empty"):
         StructureServiceElementType(external_id="", stakeholder_key="valid_key", name="TestElement")
 
-    with pytest.raises(ValueError, match="The stakeholder key cannot be empty"):
+    with pytest.raises(ValueError, match="The field stakeholder_key cannot be empty"):
         StructureServiceThingNode(
             external_id="valid_id", stakeholder_key="", name="TestStructureServiceThingNode"
         )
 
-    with pytest.raises(ValueError, match="The name cannot be empty"):
+    with pytest.raises(ValueError, match="The field name cannot be empty"):
         StructureServiceSource(external_id="valid_id", stakeholder_key="valid_key", name="")
 
 

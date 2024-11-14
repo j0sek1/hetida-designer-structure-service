@@ -40,7 +40,9 @@ class Filter(BaseModel):
     @validator("name")
     def no_empty_name(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("The name of the filter must be set")
+            raise ValueError(
+                "The name of the filter must be set to a non-empty string containing characters"
+            )
         return value
 
 
@@ -57,7 +59,7 @@ class StructureServiceCommonFieldsModel(BaseModel):
     @validator("external_id", "stakeholder_key", "name")
     def check_not_empty(cls, v: str, field: Field) -> str:  # type: ignore
         if not v:
-            raise ValueError(f"The {field.name.replace('_', ' ')} cannot be empty.")  # type: ignore
+            raise ValueError(f"The field {field.name} cannot be empty.")  # type: ignore
         return v
 
 
