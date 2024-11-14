@@ -11,6 +11,7 @@ from hetdesrun.structure.models import (
     CompleteStructure,
     Filter,
     StructureServiceElementType,
+    StructureServiceSink,
     StructureServiceSource,
     StructureServiceThingNode,
 )
@@ -134,6 +135,37 @@ def test_filter_class_name_validation(filter_json):
         "that only contains alphanumeric characters, underscores and spaces.",
     ):
         Filter(**filter_json["filter_with_invalid_string_as_name"])
+
+
+def test_source_sink_passthrough_filters_no_duplicate_keys_validator(filter_json):
+    example_source = {
+        "external_id": "EnergyUsage_PumpSystem_StorageTank",
+        "stakeholder_key": "GW",
+        "name": "nf",
+        "type": "multitsframe",
+        "adapter_key": "sql-adapter",
+        "source_id": "nf",
+        "thing_node_external_ids": ["Waterworks1"],
+        "passthrough_filters": [
+            filter_json["filter_with_valid_internal_name"],
+            filter_json["filter_with_valid_internal_name"],
+        ],
+    }
+
+    with pytest.raises(
+        ValidationError,
+        match="is shared by atleast two filters, provided for this source, it must be unique.",
+    ):
+        StructureServiceSource(**example_source)
+
+    example_sink = example_source
+    example_sink["sink_id"] = example_sink.pop("source_id")
+
+    with pytest.raises(
+        ValidationError,
+        match="is shared by atleast two filters, provided for this sink, it must be unique.",
+    ):
+        StructureServiceSink(**example_sink)
 
 
 def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
