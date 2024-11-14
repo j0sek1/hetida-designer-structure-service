@@ -25,7 +25,7 @@ class VirtualStructureAdapterConfig(BaseSettings):
         False,
         description="Set this flag to True, if you wish to provide a structure "
         "for the virtual structure adapter "
-        "via the environment variable STRUCTURE_TO_PREPOPULATE_VST_ADAPTER.",
+        "via the field structure_to_prepopulate_virtual_structure_adapter.",
         env="PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP",
     )
 
@@ -34,7 +34,7 @@ class VirtualStructureAdapterConfig(BaseSettings):
         description="Set this flag to True, if you wish to provide a structure "
         "for the virtual structure adapter "
         "via a filepath stored in the "
-        "environment variable STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER.",
+        "field structure_filepath_to_prepopulate_virtual_structure_adapter.",
         env="PREPOPULATE_VST_ADAPTER_VIA_FILE",
     )
 
@@ -50,7 +50,7 @@ class VirtualStructureAdapterConfig(BaseSettings):
         None,
         description="A JSON-filepath, used to provide a structure "
         "for the virtual structure adapter at hetida designer backend startup. "
-        "Used analogously to 'STRUCTURE_TO_PREPOPULATE_VST_ADAPTER'.",
+        "Used analogously to structure_to_prepopulate_virtual_structure_adapter.",
         env="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER",
     )
 
@@ -75,8 +75,8 @@ class VirtualStructureAdapterConfig(BaseSettings):
             value is None or value == ""
         ):
             raise ValueError(
-                "STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER must be set "
-                "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True"
+                "structure_filepath_to_prepopulate_virtual_structure_adapter must be set "
+                "if prepopulate_virtual_structure_adapter_via_file is set to True"
             )
         return value
 
@@ -90,8 +90,8 @@ class VirtualStructureAdapterConfig(BaseSettings):
             and value is None
         ):
             raise ValueError(
-                "STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must be set "
-                "if PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP is set to True "
+                "structure_to_prepopulate_virtual_structure_adapter must be set "
+                "if prepopulate_virtual_structure_adapter_at_designer_startup is set to True "
                 "and you want to populate from an environment variable"
             )
         return value
@@ -106,8 +106,8 @@ class VirtualStructureAdapterConfig(BaseSettings):
             and value is not None
         ):
             raise ValueError(
-                "STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must NOT be set "
-                "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True, "
+                "structure_to_prepopulate_virtual_structure_adapter must NOT be set "
+                "if prepopulate_virtual_structure_adapter_via_file is set to True, "
                 "since you wish to populate from a file"
             )
         return value

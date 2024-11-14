@@ -31,8 +31,8 @@ def test_if_existing_structure_is_overwritten_if_specified():
 def test_validator_filepath_must_be_set_when_populating_from_file():
     with pytest.raises(
         ValueError,
-        match="STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER must be set "
-        "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True",
+        match="structure_filepath_to_prepopulate_virtual_structure_adapter must be set "
+        "if prepopulate_virtual_structure_adapter_via_file is set to True",
     ):
         _ = VirtualStructureAdapterConfig(
             prepopulate_virtual_structure_adapter_at_designer_startup=True,
@@ -43,8 +43,8 @@ def test_validator_filepath_must_be_set_when_populating_from_file():
 def test_validator_structure_must_be_provided_if_populating_from_env_var():
     with pytest.raises(
         ValueError,
-        match="STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must be set "
-        "if PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP is set to True "
+        match="structure_to_prepopulate_virtual_structure_adapter must be set "
+        "if prepopulate_virtual_structure_adapter_at_designer_startup is set to True "
         "and you want to populate from an environment variable",
     ):
         _ = VirtualStructureAdapterConfig(
@@ -59,8 +59,8 @@ def test_validator_complete_structure_must_not_be_set_if_populating_from_file():
     complete_structure = CompleteStructure(**structure_json)
     with pytest.raises(
         ValueError,
-        match="STRUCTURE_TO_PREPOPULATE_VST_ADAPTER must NOT be set "
-        "if PREPOPULATE_VST_ADAPTER_VIA_FILE is set to True, "
+        match="structure_to_prepopulate_virtual_structure_adapter must NOT be set "
+        "if prepopulate_virtual_structure_adapter_via_file is set to True, "
         "since you wish to populate from a file",
     ):
         _ = VirtualStructureAdapterConfig(

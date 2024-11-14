@@ -45,10 +45,17 @@ virtual_structure_router = HandleTrailingSlashAPIRouter(
 async def update_structure_endpoint(
     maintenance_payload: MaintenancePayload,
     new_structure: CompleteStructure,
-    delete_existing_structure: bool = Query(True, alias="delete_existing_structure"),
+    delete_existing_structure: bool = Query(
+        True,
+        description="Determines whether a potentially existent structure in the database is deleted"
+        " ,before inserting the structure provided to the endpoint",
+    ),
 ) -> None:
-    # For security purposes this endpoint can only be accessed
-    # with a maintenance secret
+    """Endpoint to update the structure of the virtual structure adapter.
+
+    For security purposes this endpoint can only be accessed with a maintenance secret.
+    """
+
     configured_maintenance_secret = get_config().maintenance_secret
     assert configured_maintenance_secret is not None  # for mypy # noqa: S101
     secret_str = maintenance_payload.maintenance_secret

@@ -43,7 +43,6 @@ def update_wirings(
     return wiring
 
 
-# TODO Make it async?
 def resolve_virtual_structure_wirings(
     workflow_wiring: WorkflowWiring,
 ) -> None:
@@ -67,7 +66,8 @@ def resolve_virtual_structure_wirings(
             )
         except DBNotFoundError as e:
             raise AdapterHandlingException(
-                f"An error occurred during the wiring resolution: {str(e)}"
+                "Atleast one source or sink referenced in the wirings was not found "
+                f"in the structure service database, during the wiring resolution: {str(e)}"
             ) from e
 
         # Update input wirings
