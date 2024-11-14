@@ -1,3 +1,4 @@
+import re
 import uuid
 from enum import Enum
 from typing import Any
@@ -28,22 +29,34 @@ class Filter(BaseModel):
     type: FilterType = Field(..., description="Type of the filter")  # noqa: A003
     required: bool = Field(..., description="Indicates if the filter is required")
 
-    @root_validator(pre=True)
-    def set_internal_name(cls, values: dict) -> dict:
+    @validator("name")
+    def name_not_empty_only_alphanum_underscores_spaces(cls, value: str) -> str:
+        if not re.match(r"^[\w\s]+$", value) or not value.strip():
+            raise ValueError(
+                "The name of the filter must be set to a non-empty string, "
+                "that only contains alphanumeric characters, underscores and spaces."
+            )
+        return value
+
+    @validator("internal_name")
+    def internal_name_only_alphanum_and_underscores(cls, value: str) -> str:
+        if not re.match(r"^\w+$", value):
+            raise ValueError(
+                "The internal_name of the filter can only contain "
+                "alphanumeric characters and underscores."
+            )
+        return value
+
+    @root_validator(skip_on_failure=True)
+    def generate_internal_name_if_not_provided(cls, values: dict) -> dict:
         # Internally the designer requires an identifier for the filter
         # that has to be separated by underscores
         # Hence, an internal name is created for the wiring resoultion
         # performed by the virtual structure adapter
-        values["internal_name"] = "_".join(values["name"].strip().lower().split())
+        # if no internal_name is provided by the user
+        if not values["internal_name"]:
+            values["internal_name"] = "_".join(values["name"].strip().lower().split())
         return values
-
-    @validator("name")
-    def no_empty_name(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError(
-                "The name of the filter must be set to a non-empty string containing characters"
-            )
-        return value
 
 
 class StructureServiceCommonFieldsModel(BaseModel):
@@ -261,6 +274,22 @@ class StructureServiceSource(StructureServiceCommonFieldsModel):
             return {}
         return v
 
+    @validator("passthrough_filters")
+    def passthrough_filters_no_duplicate_keys(cls, v: list[Filter]) -> list[Filter]:
+        if v is None:
+            return v
+
+        seen = set()
+        for filter_obj in v:
+            internal_name = filter_obj.internal_name
+            if internal_name in seen:
+                raise ValueError(
+                    f"The internal_name {internal_name} is shared by atleast two filters, "
+                    "provided for this source, it must be unique."
+                )
+            seen.add(internal_name)
+        return v
+
 
 class StructureServiceSink(StructureServiceCommonFieldsModel):
     id: UUID = Field(default_factory=uuid.uuid4, description="Unique identifier for the sink")  # noqa: A003
@@ -346,6 +375,22 @@ class StructureServiceSink(StructureServiceCommonFieldsModel):
             return {}
         return v
 
+    @validator("passthrough_filters")
+    def passthrough_filters_no_duplicate_keys(cls, v: list[Filter]) -> list[Filter]:
+        if v is None:
+            return v
+
+        seen = set()
+        for filter_obj in v:
+            internal_name = filter_obj.internal_name
+            if internal_name in seen:
+                raise ValueError(
+                    f"The internal_name {internal_name} is shared by atleast two filters, "
+                    "provided for this sink, it must be unique."
+                )
+            seen.add(internal_name)
+        return v
+
 
 class CompleteStructure(BaseModel):
     element_types: list[StructureServiceElementType] = Field(
@@ -384,7 +429,7 @@ class CompleteStructure(BaseModel):
             )
         return v
 
-    @root_validator(pre=True)
+    @root_validator
     def validate_root_nodes_parent_ids_are_none(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Check if each parent_external_node_id exists in at least one other node
 
@@ -403,7 +448,7 @@ class CompleteStructure(BaseModel):
                 )
         return values
 
-    @root_validator(pre=True)
+    @root_validator
     def check_for_duplicate_key_and_id_pairs(cls, values: dict[str, Any]) -> dict[str, Any]:
         for element_name, element_list in values.items():
             seen = set()
@@ -421,7 +466,7 @@ class CompleteStructure(BaseModel):
                 seen.add(key_id_pair)
         return values
 
-    @root_validator(pre=True)
+    @root_validator
     def check_for_duplicate_ids_in_thing_node_external_ids(
         cls, values: dict[str, Any]
     ) -> dict[str, Any]:
