@@ -478,4 +478,3 @@ def delete_structure() -> None:
             msg = f"Unexpected Error while deleting structure: {str(e)}"
             logger.error(msg)
             raise DBError(msg) from e
-
