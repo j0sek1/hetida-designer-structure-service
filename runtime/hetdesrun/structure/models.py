@@ -384,7 +384,7 @@ class CompleteStructure(BaseModel):
             )
         return v
 
-    @root_validator(pre=True)
+    @root_validator
     def validate_root_nodes_parent_ids_are_none(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Check if each parent_external_node_id exists in at least one other node
 
@@ -403,7 +403,7 @@ class CompleteStructure(BaseModel):
                 )
         return values
 
-    @root_validator(pre=True)
+    @root_validator
     def check_for_duplicate_key_and_id_pairs(cls, values: dict[str, Any]) -> dict[str, Any]:
         for element_name, element_list in values.items():
             seen = set()
@@ -444,7 +444,7 @@ class CompleteStructure(BaseModel):
                     seen.add(parent_id)
         return values
 
-    @root_validator(pre=True)
+    @root_validator
     def check_stakeholder_key_consistency(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Retrieve the list of thing_nodes from the input values.
         # If 'thing_nodes' is not provided, default to an empty list.
@@ -510,7 +510,7 @@ class CompleteStructure(BaseModel):
         # If all hierarchies have consistent stakeholder_keys, return the validated values.
         return values
 
-    @root_validator(pre=True)
+    @root_validator
     def check_for_circular_reference(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Checks for circular references in the thing_nodes hierarchy
         # by recursively visiting parent nodes.
@@ -554,7 +554,7 @@ class CompleteStructure(BaseModel):
         # If no circular references are detected, return the validated values.
         return values
 
-    @root_validator(pre=True)
+    @root_validator
     def validate_source_sink_references(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Ensure that all sources and sinks reference valid thing_nodes by checking their
         # thing_node_external_ids against the set of known thing_node IDs.
