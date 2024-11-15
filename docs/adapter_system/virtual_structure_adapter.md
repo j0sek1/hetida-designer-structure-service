@@ -23,9 +23,11 @@ The key concepts of the Virtual Structure Adapter are described below:
 
 ### How to provide a structure
 
-The hierarchical structure can be provided in two ways:
+The hierarchical structure can be provided in two configurative ways:
 1. Via a JSON directly assigned to the environment variable `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` in the backend container.
 2. Via a filepath pointing to a JSON-file assigned to the environment variable `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` in the backend container.
+
+During start of the hetida designer backend this configuration is applied and persisted according to the configuration described below. This process is called prepopulation.
 
 Below is a specification for the JSON file:
 
@@ -60,7 +62,7 @@ Below is a specification for the JSON file:
             "type": STRING, // Representing the hetida designer datatype e.g. "timeseries(float)"
             "adapter_key": STRING, // Key of the adapter that actually handles data in- and egestion, 
                                    // e.g. "demo-adapter-python"
-            "source_id": STRING,  // ID of the source in the target adapter
+            "source_id": STRING,   // ID of the source in the target adapter
             "ref_key": STRING,  // Optional key of the referenced metadatum, 
                                 // only used for sources of type metadata(any)
             "ref_id": STRING,  // Optional ID of the thingnode in the mapped adapter hierarchy,
@@ -71,7 +73,7 @@ Below is a specification for the JSON file:
             "passthrough_filters": [  // Values for filters that should be modifyable be the user
                 {
                     "name": STRING,
-                    "type": STRING,  // Which type the filter has, the designer defines specific types
+                    "type": STRING,   // Which type the filter has, the designer defines specific types
                     "required": BOOL  // Whether this filter is required for the source to work properly
                 },...
             ]
@@ -280,25 +282,28 @@ An example of such a JSON file is provided below, demonstrating how the Virtual 
 
 ## Configuration
 
-There are several environment variables which can be used to configure the use of the virtual structure adapter.  
-They can either be provided in two different ways:
-1. Directly set in the backend docker container, e.g. in the section environment of hetida-designer-backend in the docker-compose file. 
-2. Defined in the contents of the environment variable `HD_VST_ADAPTER_ENVIRONMENT_FILE`, which has to be set in the docker container.  
+Configuration can be set via an env file which must be configured via the `HD_VST_ADAPTER_ENVIRONMENT_FILE` environment variable.
+Additionally environment variables can be set directly (overriding possible settings from an env file).
 
-It is strongly advised to use either method 1 or method 2, but not both in conjunction.  
-If an environment variable is set both directly and in `HD_VST_ADAPTER_ENVIRONMENT_FILE`, the directly set variable will take precedence.  
-The following is a list of all environment variables available to configure the virtual structure adapter.  
-"default" refers to the behavior occurring if the variable is not set:  
+Note that most configuration options have to be set for the backend service no matter where the webservice part of the virtual structure adapter is running (configured via `VST_ADAPTER_SERVICE_IN_RUNTIME`).
 
-* `VST_ADAPTER_ACTIVE` (default `True`): Whether the adapter is active (registered in the designer application).
-* `VST_ADAPTER_SERVICE_IN_RUNTIME` (default `True`): Whether the adapter is part of the backend or the runtime.
-* `PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP` (default `False`): Set to `True` if you wish to provide a structure for the adapter at designer startup.
-* `PREPOPULATE_VST_ADAPTER_VIA_FILE` (default `False`): Whether to load the structure from a JSON-file or not.
-* `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a JSON defining a structure to this variable.
-* `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` (default `None`): One can assign a filepath pointing to a JSON-file containing the structure.
-* `COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP` (default `True`): This option controls whether a potentially existing structure in the database is removed during startup of the backend, provided that prepopulation is enabled. When set to `True` (default), the existing structure is deleted entirely before the new structure specified in `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` is inserted. If set to `False`, the existing structure is retained and updated. New elements from the provided JSON structure will be added, and existing elements will be updated. Existing elements not specified in the new JSON structure will remain unchanged. To fully replace an existing structure, it must first be deleted, before inserting the new one.
+### Adapter Activation and Registration
+`VST_ADAPTER_ACTIVE` (default `true`) activates the adapter.
+
+By default the virtual structure adapter is registered to run at the runtime service, corresponding to the default value `True` of `VST_ADAPTER_SERVICE_IN_RUNTIME`. The latter configuration should be set equally for both backend and runtime.
+
+### Prepopulation configuration
+All the following configuration options must be set for the hetida designer backend, no matter where the webservice runs.
+
+Prepopulation works as follows:
+
+* `PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP` (default `false`): Only if this is `true` prepopulation will be run at each hetida designer backend startup. 
+* `PREPOPULATE_VST_ADAPTER_VIA_FILE` (default `false`): Whether to load the structure from a JSON-file or not. This has precedence over setting the structure directly via `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER`. The path to the file has to be set via `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER`.
+* `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` (default `null`): If no file is used, one can assign a JSON string defining the structure to this variable.
+* `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` (default `null`): One can assign a filepath pointing to a JSON-file containing the structure, which is used if `PREPOPULATE_VST_ADAPTER_VIA_FILE` is `true`.
+* `COMPLETELY_OVERWRITE_EXISTING_VIRTUAL_STRUCTURE_AT_HD_STARTUP` (default `true`): This option controls whether a potentially existing structure in the database is removed during startup of the backend, provided that prepopulation is enabled. When set to `true` (default), the existing structure is deleted entirely before the new structure specified in `STRUCTURE_TO_PREPOPULATE_VST_ADAPTER` or via the file from `STRUCTURE_FILEPATH_TO_PREPOPULATE_VST_ADAPTER` is inserted. If set to `false`, the existing structure is retained and updated. New elements from the provided JSON structure will be added, and existing elements will be updated. Existing elements not specified in the new JSON structure will remain unchanged. To fully replace an existing structure, it must first be deleted, before inserting the new one.
 
 ## Technical Information
 
 To process wirings with virtual structure adapter sources and sinks, an additional step in the execution pipeline of the hetida designer was introduced.  
-Before the data is actually loaded from or passed to an adapter, all virtual structure adapter related information is removed from the wiring and replaced with information on the referenced source or sink. 
+Before the data is actually loaded from or passed to an adapter, all virtual structure adapter related wiring information is resolved to the referenced source or sink.
