@@ -27,8 +27,10 @@ def get_virtual_sources_and_sinks_from_structure_service(
 def get_enumerated_ids_of_vst_sources_or_sinks(
     wirings: list[InputWiring] | list[OutputWiring],
 ) -> tuple[list[int], list[str]]:
-    """Takes a wiring, finds the index of all sources or sinks of the virtual structure adapter
-    and returns a list of said indices and a list of the corresponding source or sink ids.
+    """Takes a wiring and finds the index of all sources or sinks of the virtual structure adapter.
+
+    Returns:
+    - A list of said indices and a list of the corresponding source or sink ids.
     """
     indices, ref_ids = [], []
     for i, wiring in enumerate(wirings):

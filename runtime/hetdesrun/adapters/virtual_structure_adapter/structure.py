@@ -29,7 +29,9 @@ def get_children_from_structure_service(
     list[VirtualStructureAdapterSink],
 ]:
     """Retrieves all children of the node with the given parent_id.
-    And returns their respective structure-representation (for the frontend).
+
+    Returns:
+    - Their respective structure-representation (for the frontend).
     """
     try:
         thing_nodes, sources, sinks = get_children(parent_id)

@@ -47,7 +47,7 @@ async def get_info_endpoint() -> VirtualStructureAdapterInfoResponse:
     dependencies=get_auth_deps(),
 )
 async def get_structure_endpoint(parentId: UUID | None = None) -> VirtualStructureAdapterResponse:
-    """Returns one level of the thingnode hierarchy for lazy-loading in the frontend"""
+    """Returns one level of the thingnode hierarchy for lazy-loading in the frontend."""
     return get_structure(parent_id=parentId)
 
 
@@ -57,7 +57,7 @@ async def get_structure_endpoint(parentId: UUID | None = None) -> VirtualStructu
     dependencies=get_auth_deps(),
 )
 async def get_thingnode_metadata_endpoint(node_id: UUID) -> list:  # noqa: ARG001
-    """Get metadata attached to thing nodes
+    """Get metadata attached to thing nodes.
 
     This adapter does not implement metadata yet.
     """
@@ -101,7 +101,7 @@ async def get_sources_endpoint(
     dependencies=get_auth_deps(),
 )
 async def get_source_metadata_endpoint(source_id: UUID) -> list:  # noqa: ARG001
-    """Get metadata attached to sources
+    """Get metadata attached to sources.
 
     This adapter does not implement metadata yet.
     """
@@ -144,7 +144,7 @@ async def get_sinks_endpoint(
     dependencies=get_auth_deps(),
 )
 async def get_sink_metadata_endpoint(sink_id: UUID) -> list:  # noqa: ARG001
-    """Get metadata attached to sinks
+    """Get metadata attached to sinks.
 
     This adapter does not implement metadata yet.
     """
