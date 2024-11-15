@@ -11,6 +11,7 @@ from hetdesrun.structure.models import (
     CompleteStructure,
     Filter,
     StructureServiceElementType,
+    StructureServiceSink,
     StructureServiceSource,
     StructureServiceThingNode,
 )
@@ -58,7 +59,7 @@ def test_complete_structure_element_type_not_empty_validator():
             "to be valid."
         ),
     ):
-        _ = CompleteStructure(element_types=[])
+        CompleteStructure(element_types=[])
 
 
 def test_complete_structure_duplicate_key_id_validator():
@@ -70,7 +71,7 @@ def test_complete_structure_duplicate_key_id_validator():
         ValidationError,
         match="The stakeholder key and external id pair",
     ):
-        _ = CompleteStructure(**structure_json)
+        CompleteStructure(**structure_json)
 
 
 def test_complete_structure_duplicate_thingnode_external_id_validator():
@@ -82,7 +83,7 @@ def test_complete_structure_duplicate_thingnode_external_id_validator():
         ValidationError,
         match="The thing_node_external_ids attribute",
     ):
-        _ = CompleteStructure(**structure_json)
+        CompleteStructure(**structure_json)
 
 
 @pytest.fixture()
@@ -94,24 +95,77 @@ def filter_json():
 
 
 def test_filter_class_internal_name_field_creation(filter_json):
-    # No value is provided
+    # No value is provided for internal_name but name is provided
     filter_with_no_internal_name_provided = Filter(**filter_json["filter_without_internal_name"])
     assert filter_with_no_internal_name_provided.internal_name == "upper_threshold"
 
-    # A value is provided
-    filter_with_internal_name_provided = Filter(**filter_json["filter_with_internal_name"])
-    assert filter_with_internal_name_provided.internal_name == "lower_threshold"
+    # A valid value is provided for internal_name
+    filter_with_internal_name_provided = Filter(**filter_json["filter_with_valid_internal_name"])
+    assert filter_with_internal_name_provided.internal_name == "lower_threshold1"
 
-    # A value with uncommon whitespace is provided
+    # An invalid value is provided for internal_name
+    with pytest.raises(
+        ValidationError,
+        match="The internal_name of the filter can only contain "
+        "alphanumeric characters and underscores.",
+    ):
+        Filter(**filter_json["filter_with_invalid_internal_name"])
+
+    # A value with uncommon whitespace is provided for name
+    # No internal_name provided
     filter_with_weird_name_provided = Filter(
         **filter_json["filter_without_internal_name_with_uncommon_whitespace"]
     )
     assert filter_with_weird_name_provided.internal_name == "min_max"
 
 
-def test_filter_class_initialization_with_empty_string_as_name(filter_json):
-    with pytest.raises(ValidationError, match="The name of the filter must be set"):
-        _ = Filter(**filter_json["filter_with_empty_string_as_name"])
+def test_filter_class_name_validation(filter_json):
+    # Test with empty name
+    with pytest.raises(
+        ValidationError,
+        match="The name of the filter must be set to a non-empty string, "
+        "that only contains alphanumeric characters, underscores and spaces.",
+    ):
+        Filter(**filter_json["filter_with_empty_string_as_name"])
+
+    # Test with invalid name
+    with pytest.raises(
+        ValidationError,
+        match="The name of the filter must be set to a non-empty string, "
+        "that only contains alphanumeric characters, underscores and spaces.",
+    ):
+        Filter(**filter_json["filter_with_invalid_string_as_name"])
+
+
+def test_source_sink_passthrough_filters_no_duplicate_keys_validator(filter_json):
+    example_source = {
+        "external_id": "EnergyUsage_PumpSystem_StorageTank",
+        "stakeholder_key": "GW",
+        "name": "nf",
+        "type": "multitsframe",
+        "adapter_key": "sql-adapter",
+        "source_id": "nf",
+        "thing_node_external_ids": ["Waterworks1"],
+        "passthrough_filters": [
+            filter_json["filter_with_valid_internal_name"],
+            filter_json["filter_with_valid_internal_name"],
+        ],
+    }
+
+    with pytest.raises(
+        ValidationError,
+        match="is shared by atleast two filters, provided for this source, it must be unique.",
+    ):
+        StructureServiceSource(**example_source)
+
+    example_sink = example_source
+    example_sink["sink_id"] = example_sink.pop("source_id")
+
+    with pytest.raises(
+        ValidationError,
+        match="is shared by atleast two filters, provided for this sink, it must be unique.",
+    ):
+        StructureServiceSink(**example_sink)
 
 
 def test_validate_root_nodes_parent_ids_are_none(mocked_clean_test_db_session):
