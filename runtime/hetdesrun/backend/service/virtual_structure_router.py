@@ -13,8 +13,8 @@ from hetdesrun.structure.db.exceptions import (
     DBUpdateError,
 )
 from hetdesrun.structure.db.structure_service import (
+    are_structure_tables_empty,
     delete_structure,
-    is_structure_empty,
     update_structure,
 )
 from hetdesrun.structure.models import CompleteStructure
@@ -71,7 +71,7 @@ async def update_structure_endpoint(
         )
 
     logger.info("Starting to update the vst structure via the API endpoint")
-    if delete_existing_structure and not is_structure_empty():
+    if delete_existing_structure and not are_structure_tables_empty():
         logger.info("Starting to delete existing structure")
         try:
             delete_structure()

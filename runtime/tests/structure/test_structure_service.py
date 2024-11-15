@@ -31,9 +31,9 @@ from hetdesrun.structure.db.source_sink_service import (
     upsert_sources,
 )
 from hetdesrun.structure.db.structure_service import (
+    are_structure_tables_empty,
     delete_structure,
     get_children,
-    is_structure_empty,
     load_structure_from_json_file,
     populate_element_type_ids,
     sort_thing_nodes,
@@ -725,13 +725,13 @@ def test_update_structure_no_elements_deleted():
             )
 
 
-def test_is_structure_empty_when_empty(mocked_clean_test_db_session):
-    assert is_structure_empty(), "Database should be empty but is not."
+def test_are_structure_tables_empty_when_empty(mocked_clean_test_db_session):
+    assert are_structure_tables_empty(), "Database should be empty but is not."
 
 
 @pytest.mark.usefixtures("_db_test_structure")
-def test_is_structure_empty_when_not_empty(mocked_clean_test_db_session):
-    assert not is_structure_empty(), "Database should not be empty but it is."
+def test_are_structure_tables_empty_when_not_empty(mocked_clean_test_db_session):
+    assert not are_structure_tables_empty(), "Database should not be empty but it is."
 
 
 @pytest.mark.usefixtures("_db_test_unordered_structure")

@@ -309,7 +309,7 @@ def update_structure_from_file(file_path: str) -> None:
         raise
 
 
-def is_structure_empty() -> bool:
+def are_structure_tables_empty() -> bool:
     """Check if the structure-related tables in the database are empty.
 
     Verifies the presence of records in structure-specific tables.
