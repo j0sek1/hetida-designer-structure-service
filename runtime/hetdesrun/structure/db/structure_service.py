@@ -231,14 +231,10 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
             thing_node_keys = {
                 (tn.stakeholder_key, tn.external_id) for tn in complete_structure.thing_nodes
             }
-            source_keys = {
-                (src.stakeholder_key, src.external_id) for src in complete_structure.sources
-            }
             sink_keys = {(snk.stakeholder_key, snk.external_id) for snk in complete_structure.sinks}
 
             existing_element_types = fetch_element_types(session, element_type_keys, batch_size)
             existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys, batch_size)
-            existing_sources = fetch_sources(session, source_keys, batch_size)
             existing_sinks = fetch_sinks(session, sink_keys, batch_size)
 
             upsert_element_types(session, complete_structure.element_types, existing_element_types)
@@ -253,9 +249,7 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
 
             existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys)
 
-            upsert_sources(
-                session, complete_structure.sources, existing_sources, existing_thing_nodes
-            )
+            upsert_sources(session, complete_structure.sources, existing_thing_nodes)
             upsert_sinks(session, complete_structure.sinks, existing_sinks, existing_thing_nodes)
 
     except IntegrityError as e:

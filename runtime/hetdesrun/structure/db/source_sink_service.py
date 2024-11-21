@@ -3,7 +3,11 @@ from itertools import batched
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import tuple_
+from sqlalchemy import Connection, Engine, tuple_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.postgresql.dml import Insert as pg_insert_typing
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.sqlite.dml import Insert as sqlite_insert_typing
 from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
@@ -22,6 +26,7 @@ from hetdesrun.structure.models import (
     StructureServiceSink,
     StructureServiceSource,
 )
+from hetdesrun.structure.utils import is_postgresql, is_sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -333,7 +338,6 @@ def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceS
 def upsert_sources(
     session: SQLAlchemySession,
     sources: list[StructureServiceSource],
-    existing_sources: dict[tuple[str, str], StructureServiceSourceDBModel],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """Insert or update source records in the database.
@@ -341,69 +345,58 @@ def upsert_sources(
     For each StructureServiceSource, updates existing records if they are found;
     otherwise, creates new records.
     """
+    if not sources:
+        return
+    source_dicts = [src.dict() for src in sources]
+
     try:
-        new_records = []
+        engine: Engine | Connection = session.get_bind()
+        if isinstance(engine, Connection):
+            raise ValueError("The session in use has to be bound to an Engine not a Connection.")
 
-        for source in sources:
-            key = (source.stakeholder_key, source.external_id)
-            db_source = existing_sources.get(key)
+        upsert_stmt: sqlite_insert_typing | pg_insert_typing
 
-            if db_source:
-                logger.debug("Updating StructureServiceSourceDBModel with key %s.", key)
-                # Update fields
-                db_source.name = source.name
-                db_source.type = source.type
-                db_source.visible = source.visible
-                db_source.display_path = source.display_path
-                db_source.adapter_key = source.adapter_key
-                db_source.source_id = source.source_id
-                db_source.ref_key = source.ref_key
-                db_source.ref_id = source.ref_id
-                db_source.meta_data = source.meta_data
-                db_source.preset_filters = source.preset_filters
-                db_source.passthrough_filters = source.passthrough_filters
+        if is_postgresql(engine):
+            upsert_stmt = pg_insert(StructureServiceSourceDBModel).values(source_dicts)
+        elif is_sqlite(engine):
+            upsert_stmt = sqlite_insert(StructureServiceSourceDBModel).values(source_dicts)
+        else:
+            raise ValueError(
+                f"Unsupported database engine: {engine}. Please use either Postgres or SQLITE."
+            )
 
-                # Clear and set relationships
-                db_source.thing_nodes = [
-                    existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
-                    for tn_external_id in source.thing_node_external_ids or []
-                    if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-            else:
-                logger.debug("Creating new StructureServiceSourceDBModel with key %s.", key)
-                new_source = StructureServiceSourceDBModel(
-                    id=source.id,
-                    external_id=source.external_id,
-                    stakeholder_key=source.stakeholder_key,
-                    name=source.name,
-                    type=source.type,
-                    visible=source.visible,
-                    display_path=source.display_path,
-                    adapter_key=source.adapter_key,
-                    source_id=source.source_id,
-                    ref_key=source.ref_key,
-                    ref_id=source.ref_id,
-                    meta_data=source.meta_data,
-                    preset_filters=source.preset_filters,
-                    passthrough_filters=source.passthrough_filters,  # type: ignore
-                )
+        upsert_stmt = upsert_stmt.on_conflict_do_update(
+            index_elements=[
+                "external_id",
+                "stakeholder_key",
+            ],  # Columns where insert looks for a conflict
+            set_={
+                col: upsert_stmt.excluded[col] for col in source_dicts[0] if col != "id"
+            },  # Exclude primary key from update
+        ).returning(StructureServiceSourceDBModel)  # type: ignore
 
-                # Assign relationships
-                new_source.thing_nodes = [
-                    existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
-                    for tn_external_id in source.thing_node_external_ids or []
-                    if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-                new_records.append(new_source)
+        # ORM models returned by the upsert query
+        sources_dbmodels = session.scalars(
+            upsert_stmt,
+            execution_options={"populate_existing": True},
+        )
 
-        if new_records:
-            session.add_all(new_records)
+        # Assign relationships
+        for source in sources_dbmodels:
+            source.thing_nodes = [
+                existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
+                for tn_external_id in source.thing_node_external_ids or []
+                if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
+            ]
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSourceDBModel: %s", e)
         raise DBIntegrityError(
             "Integrity Error while upserting StructureServiceSourceDBModel"
         ) from e
+    except ValueError as e:
+        logger.error("Value error while upserting StructureServiceSourceDBModel: %s", e)
+        raise DBError("Value error while upserting StructureServiceSourceDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceSourceDBModel: %s", e)
         raise DBUpdateError("Unexpected error while upserting StructureServiceSourceDBModel") from e
