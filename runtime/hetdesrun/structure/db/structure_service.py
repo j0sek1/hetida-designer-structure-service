@@ -31,7 +31,6 @@ from hetdesrun.structure.db.exceptions import (
 )
 from hetdesrun.structure.db.source_sink_service import (
     fetch_sinks,
-    fetch_sources,
     upsert_sinks,
     upsert_sources,
 )
