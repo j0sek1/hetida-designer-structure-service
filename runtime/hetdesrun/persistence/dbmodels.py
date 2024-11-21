@@ -43,6 +43,7 @@ class TransformationRevisionDBModel(Base):
     component_code: Mapped[str | None] = mapped_column(String, nullable=True)
     io_interface: Mapped[dict] = mapped_column(JSON, nullable=False)
     test_wiring: Mapped[dict] = mapped_column(JSON, nullable=False)
+    release_wiring: Mapped[dict] = mapped_column(JSON, nullable=False)
     released_timestamp: Mapped[DateTime | None] = mapped_column(DateTime, nullable=True)
     disabled_timestamp: Mapped[DateTime | None] = mapped_column(DateTime, nullable=True)
 
