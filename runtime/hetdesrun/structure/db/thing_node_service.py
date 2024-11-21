@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingNode:
-    """Retrieve a single StructureServiceThingNode by its unique ID.
+    """Fetch a single thing node by its unique ID.
 
-    Returns the thing node if found.
+    Looks up a StructureServiceThingNode in the database by its ID. Returns the node
+    if found; raises DBNotFoundError if no matching record is found.
     """
     logger.debug("Fetching single StructureServiceThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
@@ -45,9 +46,11 @@ def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingN
 def fetch_thing_nodes(
     session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceThingNodeDBModel]:
-    """Retrieve StructureServiceThingNodeDBModel records by stakeholder_key and external_id.
+    """Fetch thing nodes records by stakeholder_key and external_id.
 
-    Returns a dictionary mapping keys to StructureServiceThingNodeDBModel instances  in batches.
+    Retrieves StructureServiceThingNodeDBModel records matching the provided keys
+    (stakeholder_key, external_id) and returns a dictionary mapping keys to the
+    corresponding database instances.
     """
     existing_tns_mapping: dict[tuple[str, str], StructureServiceThingNodeDBModel] = {}
     if not keys:
@@ -82,9 +85,10 @@ def fetch_thing_nodes(
 def search_thing_nodes_by_name(
     session: SQLAlchemySession, name_query: str
 ) -> list[StructureServiceThingNodeDBModel]:
-    """Search for StructureServiceThingNodeDBModel records by partial or full name match.
+    """Search for thing nodes by name substring.
 
-    Returns a list of matching StructureServiceThingNodeDBModel instances.
+    Performs a case-insensitive search for StructureServiceThingNodeDBModel records
+    whose names contain the provided substring. Returns a list of matching instances.
     """
     try:
         thing_nodes = (
@@ -121,11 +125,11 @@ def upsert_thing_nodes(
     thing_nodes: list[StructureServiceThingNode],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
-    """Insert or update StructureServiceThingNodeDBModel records in the database.
+    """Insert or update thing node records in the database.
 
-    Updates existing records or creates new ones if they do not exist.
+    For each StructureServiceThingNodeDBModel, updates existing records if they are found;
+    otherwise, creates new records.
     """
-
     try:
         required_keys = {
             (node.stakeholder_key, node.element_type_external_id) for node in thing_nodes

@@ -11,8 +11,8 @@ from hetdesrun.structure.db.exceptions import (
     JsonParsingError,
 )
 from hetdesrun.structure.db.structure_service import (
+    are_structure_tables_empty,
     delete_structure,
-    is_structure_empty,
     load_structure_from_json_file,
     update_structure,
 )
@@ -50,7 +50,7 @@ def prepopulate_structure() -> None:
     # Overwrite structure if configured
     if (
         get_vst_adapter_config().completely_overwrite_an_existing_virtual_structure_at_hd_startup
-        and not is_structure_empty()
+        and not are_structure_tables_empty()
     ):
         logger.info(
             "An existing structure was found in the database. The deletion process starts now"

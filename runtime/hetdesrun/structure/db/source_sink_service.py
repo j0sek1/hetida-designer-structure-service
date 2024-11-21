@@ -27,9 +27,10 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_all_sources_from_db() -> list[StructureServiceSource]:
-    """Retrieve all StructureServiceSource records from the database.
+    """Fetch all source records from the database.
 
-    Returns a list of all sources.
+    Retrieves all instances of StructureServiceSource from the database and returns
+    them as a list of StructureServiceSource objects.
     """
     logger.debug("Fetching all StructureServiceSources from the database.")
     with get_session()() as session:
@@ -40,9 +41,10 @@ def fetch_all_sources_from_db() -> list[StructureServiceSource]:
 
 
 def fetch_all_sinks_from_db() -> list[StructureServiceSink]:
-    """Retrieve all StructureServiceSink records from the database.
+    """Fetch all sink records from the database.
 
-    Returns a list of all sinks.
+    Retrieves all instances of StructureServiceSink from the database and returns
+    them as a list of StructureServiceSink objects.
     """
     logger.debug("Fetching all StructureServiceSinks from the database.")
     with get_session()() as session:
@@ -53,9 +55,9 @@ def fetch_all_sinks_from_db() -> list[StructureServiceSink]:
 
 
 def fetch_single_sink_from_db_by_id(sink_id: UUID) -> StructureServiceSink:
-    """Retrieve a single StructureServiceSink by its unique ID.
+    """Fetch a single sink by its ID.
 
-    Returns the sink if found.
+    Looks up a StructureServiceSink object using its unique identifier.
     """
     logger.debug("Fetching single StructureServiceSink from database with ID: %s", sink_id)
     with get_session()() as session:
@@ -73,9 +75,9 @@ def fetch_single_sink_from_db_by_id(sink_id: UUID) -> StructureServiceSink:
 
 
 def fetch_single_source_from_db_by_id(src_id: UUID) -> StructureServiceSource:
-    """Retrieve a single StructureServiceSource by its unique ID.
+    """Fetch a single source by its ID.
 
-    Returns the source if found.
+    Looks up a StructureServiceSource object using its unique identifier.
     """
     logger.debug("Fetching single StructureServiceSource from database with ID: %s", src_id)
     with get_session()() as session:
@@ -95,9 +97,10 @@ def fetch_single_source_from_db_by_id(src_id: UUID) -> StructureServiceSource:
 def fetch_collection_of_sources_from_db_by_id(
     src_ids: list[UUID], batch_size: int = 500
 ) -> dict[UUID, StructureServiceSource]:
-    """Retrieve a collection of StructureServiceSource records by their unique IDs.
+    """Fetch multiple sources by their unique IDs.
 
-    Returns a dictionary mapping source IDs to their corresponding records.
+    Retrieves a collection of StructureServiceSource records from the database,
+    returning a dictionary that maps each source ID to its corresponding record.
     """
     sources: dict[UUID, StructureServiceSource] = {}
     if not src_ids:
@@ -129,9 +132,10 @@ def fetch_collection_of_sources_from_db_by_id(
 def fetch_collection_of_sinks_from_db_by_id(
     sink_ids: list[UUID], batch_size: int = 500
 ) -> dict[UUID, StructureServiceSink]:
-    """Retrieve a collection of StructureServiceSink records by their unique IDs.
+    """Fetch multiple sinks by their unique IDs.
 
-    Returns a dictionary mapping sink IDs to their corresponding records.
+    Retrieves a collection of StructureServiceSink records from the database,
+    returning a dictionary that maps each sink ID to its corresponding record.
     """
     sinks: dict[UUID, StructureServiceSink] = {}
     if not sink_ids:
@@ -165,9 +169,11 @@ def fetch_collection_of_sinks_from_db_by_id(
 def fetch_sources(
     session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceSourceDBModel]:
-    """Retrieve StructureServiceSourceDBModel records by stakeholder_key and external_id.
+    """Fetch source records by stakeholder_key and external_id.
 
-    Returns a dictionary mapping keys to StructureServiceSourceDBModel instances.
+    Retrieves StructureServiceSourceDBModel records matching the provided keys
+    (stakeholder_key, external_id) and returns a dictionary mapping keys to the
+    corresponding database instances.
     """
     existing_sources_mapping: dict[tuple[str, str], StructureServiceSourceDBModel] = {}
     if not keys:
@@ -204,9 +210,11 @@ def fetch_sources(
 def fetch_sinks(
     session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceSinkDBModel]:
-    """Retrieve StructureServiceSinkDBModel records by stakeholder_key and external_id.
+    """Fetch sink records by stakeholder_key and external_id.
 
-    Returns a dictionary mapping keys to StructureServiceSinkDBModel instances.
+    Retrieves StructureServiceSinkDBModel records matching the provided keys
+    (stakeholder_key, external_id) and returns a dictionary mapping keys to the
+    corresponding database instances.
     """
     existing_sinks_mapping: dict[tuple[str, str], StructureServiceSinkDBModel] = {}
     if not keys:
@@ -239,9 +247,11 @@ def fetch_sinks(
 
 
 def fetch_sources_by_substring_match(filter_string: str) -> list[StructureServiceSource]:
-    """Search for StructureServiceSource records with names matching a substring.
+    """Search for sources with names matching a substring.
 
-    Returns a list of matching StructureServiceSource instances.
+    Performs a case-insensitive search for StructureServiceSource records
+    whose names contain the given substring. Returns a list of matching
+    source instances.
     """
     with get_session()() as session:
         try:
@@ -279,9 +289,11 @@ def fetch_sources_by_substring_match(filter_string: str) -> list[StructureServic
 
 
 def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceSink]:
-    """Search for StructureServiceSink records with names matching a substring.
+    """Search for sinks with names matching a substring.
 
-    Returns a list of matching StructureServiceSink instances.
+    Performs a case-insensitive search for StructureServiceSink records
+    whose names contain the given substring. Returns a list of matching
+    sink instances.
     """
     with get_session()() as session:
         try:
@@ -324,9 +336,10 @@ def upsert_sources(
     existing_sources: dict[tuple[str, str], StructureServiceSourceDBModel],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
-    """Insert or update StructureServiceSourceDBModel records in the database.
+    """Insert or update source records in the database.
 
-    Updates existing records or creates new ones if they do not exist.
+    For each StructureServiceSource, updates existing records if they are found;
+    otherwise, creates new records.
     """
     try:
         new_records = []
@@ -402,9 +415,10 @@ def upsert_sinks(
     existing_sinks: dict[tuple[str, str], StructureServiceSinkDBModel],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
-    """Insert or update StructureServiceSinkDBModel records in the database.
+    """Insert or update sink records in the database.
 
-    Updates existing records or creates new ones if they do not exist.
+    For each StructureServiceSink, updates existing records if they are found;
+    otherwise, creates new records.
     """
     try:
         new_records = []

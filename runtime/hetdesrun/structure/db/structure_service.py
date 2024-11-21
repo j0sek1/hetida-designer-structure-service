@@ -101,7 +101,7 @@ def sort_thing_nodes(
 ) -> list[StructureServiceThingNode]:
     """Sort and flatten StructureServiceThingNodes by hierarchical levels.
 
-    Returns a list of sorted nodes and excludes orphan nodes.
+    Returns a list of sorted nodes, excluding orphan nodes.
     """
     logger.debug("Sorting and flattening StructureServiceThingNodes, excluding orphan nodes.")
 
@@ -218,7 +218,7 @@ def populate_element_type_ids(
 def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
     """Update or insert a complete structure into the database.
 
-    Existing records are updated, and new records are inserted as needed.
+    Updates existing records and insert new records as needed.
     """
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
@@ -285,7 +285,7 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
 def update_structure_from_file(file_path: str) -> None:
     """Update the database structure using a JSON file.
 
-    Loads the structure from the file and updates the database records.
+    Loads the structure from the file and update the database records.
     """
     logger.debug("Updating structure from JSON file at path: %s.", file_path)
 
@@ -306,7 +306,7 @@ def update_structure_from_file(file_path: str) -> None:
         raise
 
 
-def is_structure_empty() -> bool:
+def are_structure_tables_empty() -> bool:
     """Check if the structure-related tables in the database are empty.
 
     Verifies the presence of records in structure-specific tables.
@@ -329,9 +329,7 @@ def get_children(
 ) -> tuple[
     list[StructureServiceThingNode], list[StructureServiceSource], list[StructureServiceSink]
 ]:
-    """
-    Retrieves the child nodes, sources, and sinks associated with a given parent
-    node from the database.
+    """Retrieve the child nodes associated with a given parent node from the database.
 
     If `parent_id` is None, returns the root nodes (nodes without a parent),
     along with any sources and sinks associated with the root nodes. Otherwise,
