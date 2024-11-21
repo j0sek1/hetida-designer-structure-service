@@ -753,7 +753,7 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         }
 
         # Run the sort function using the new sort_thing_nodes method
-        sorted_nodes = sort_thing_nodes(thing_nodes_in_db, existing_thing_nodes)
+        sorted_nodes = sort_thing_nodes(thing_nodes_in_db)
 
         # Verify that the sorted_nodes is a list
         assert isinstance(sorted_nodes, list), "sorted_nodes should be a list"
@@ -798,7 +798,7 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db.append(orphan_node)
 
         # Re-run the sort function with the orphan node added
-        sorted_nodes_with_orphan = sort_thing_nodes(thing_nodes_in_db, existing_thing_nodes)
+        sorted_nodes_with_orphan = sort_thing_nodes(thing_nodes_in_db)
 
         # Verify that the orphan node is not placed in the list
         assert (
@@ -954,8 +954,6 @@ def test_search_element_types_by_name_no_matches(mocked_clean_test_db_session):
 
 def test_upsert_element_types_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        existing_elements = {}
-
         # Create StructureServiceElementType objects to upsert
         elements = [
             StructureServiceElementType(
@@ -968,7 +966,7 @@ def test_upsert_element_types_success(mocked_clean_test_db_session):
         ]
 
         # Call the function
-        upsert_element_types(session, elements, existing_elements)
+        upsert_element_types(session, elements)
         session.commit()
 
         # Verify that the StructureServiceElementTypeDBModel was added to the database
@@ -983,7 +981,6 @@ def test_upsert_element_types_success(mocked_clean_test_db_session):
 
 def test_upsert_sinks_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        existing_sinks = {}
         existing_thing_nodes = {}
 
         # Create StructureServiceSink object to upsert
@@ -1005,7 +1002,7 @@ def test_upsert_sinks_success(mocked_clean_test_db_session):
             thing_node_external_ids=[],
         )
 
-        upsert_sinks(session, [sink], existing_sinks, existing_thing_nodes)
+        upsert_sinks(session, [sink])
         session.commit()
 
         # Verify that the StructureServiceSinkDBModel was added to the database
@@ -1018,7 +1015,6 @@ def test_upsert_sinks_success(mocked_clean_test_db_session):
 
 def test_upsert_sources_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        existing_sources = {}
         existing_thing_nodes = {}
 
         # Create StructureServiceSource object to upsert
@@ -1041,7 +1037,7 @@ def test_upsert_sources_success(mocked_clean_test_db_session):
         )
 
         # Call the function
-        upsert_sources(session, [source], existing_sources, existing_thing_nodes)
+        upsert_sources(session, [source])
         session.commit()
 
         # Verify that the StructureServiceSourceDBModel was added to the database
@@ -1144,7 +1140,6 @@ def test_search_thing_nodes_by_name_no_matches(mocked_clean_test_db_session):
 
 def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
     with mocked_clean_test_db_session() as session:
-        existing_thing_nodes = {}
         # Add an StructureServiceElementTypeDBModel to the session
         element_type_id = uuid.uuid4()
         element_type = StructureServiceElementTypeDBModel(
@@ -1171,7 +1166,7 @@ def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
         )
 
         # Call the function
-        upsert_thing_nodes(session, [node], existing_thing_nodes)
+        upsert_thing_nodes(session, [node])
         session.commit()
 
         # Verify that the StructureServiceThingNodeDBModel was added to the database

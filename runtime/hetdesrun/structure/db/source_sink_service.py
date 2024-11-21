@@ -3,7 +3,7 @@ from itertools import batched
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import tuple_
+from sqlalchemy import and_, bindparam, delete, insert, select, tuple_
 from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
@@ -11,6 +11,8 @@ from hetdesrun.persistence.structure_service_dbmodels import (
     StructureServiceSinkDBModel,
     StructureServiceSourceDBModel,
     StructureServiceThingNodeDBModel,
+    thingnode_sink_association,
+    thingnode_source_association,
 )
 from hetdesrun.structure.db.exceptions import (
     DBError,
@@ -18,6 +20,7 @@ from hetdesrun.structure.db.exceptions import (
     DBNotFoundError,
     DBUpdateError,
 )
+from hetdesrun.structure.db.utils import get_insert_statement
 from hetdesrun.structure.models import (
     StructureServiceSink,
     StructureServiceSource,
@@ -167,7 +170,7 @@ def fetch_collection_of_sinks_from_db_by_id(
 
 
 def fetch_sources(
-    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
+    session: SQLAlchemySession, keys: set[tuple[str, str]]
 ) -> dict[tuple[str, str], StructureServiceSourceDBModel]:
     """Fetch source records by stakeholder_key and external_id.
 
@@ -179,18 +182,16 @@ def fetch_sources(
     if not keys:
         return existing_sources_mapping
     try:
-        # Loop through keys in batches of size <batch_size> or less
-        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
-            batch_query = session.query(StructureServiceSourceDBModel).filter(
-                tuple_(
-                    StructureServiceSourceDBModel.stakeholder_key,
-                    StructureServiceSourceDBModel.external_id,
-                ).in_(key_batch)
-            )
-            batch_results = batch_query.all()
-            for source in batch_results:
-                key = (source.stakeholder_key, source.external_id)
-                existing_sources_mapping[key] = source
+        query = session.query(StructureServiceSourceDBModel).filter(
+            tuple_(
+                StructureServiceSourceDBModel.stakeholder_key,
+                StructureServiceSourceDBModel.external_id,
+            ).in_(keys)
+        )
+        results = query.all()
+        for source in results:
+            key = (source.stakeholder_key, source.external_id)
+            existing_sources_mapping[key] = source
         logger.debug(
             "Fetched %d StructureServiceSourceDBModel items from the database for %d keys.",
             len(existing_sources_mapping),
@@ -208,7 +209,7 @@ def fetch_sources(
 
 
 def fetch_sinks(
-    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
+    session: SQLAlchemySession, keys: set[tuple[str, str]]
 ) -> dict[tuple[str, str], StructureServiceSinkDBModel]:
     """Fetch sink records by stakeholder_key and external_id.
 
@@ -220,18 +221,16 @@ def fetch_sinks(
     if not keys:
         return existing_sinks_mapping
     try:
-        # Loop through keys in batches of size <batch_size> or less
-        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
-            batch_query = session.query(StructureServiceSinkDBModel).filter(
-                tuple_(
-                    StructureServiceSinkDBModel.stakeholder_key,
-                    StructureServiceSinkDBModel.external_id,
-                ).in_(key_batch)
-            )
-            batch_results = batch_query.all()
-            for sink in batch_results:
-                key = (sink.stakeholder_key, sink.external_id)
-                existing_sinks_mapping[key] = sink
+        query = session.query(StructureServiceSinkDBModel).filter(
+            tuple_(
+                StructureServiceSinkDBModel.stakeholder_key,
+                StructureServiceSinkDBModel.external_id,
+            ).in_(keys)
+        )
+        results = query.all()
+        for sink in results:
+            key = (sink.stakeholder_key, sink.external_id)
+            existing_sinks_mapping[key] = sink
         logger.debug(
             "Fetched %d StructureServiceSinkDBModel items from the database for %d keys.",
             len(existing_sinks_mapping),
@@ -333,8 +332,6 @@ def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceS
 def upsert_sources(
     session: SQLAlchemySession,
     sources: list[StructureServiceSource],
-    existing_sources: dict[tuple[str, str], StructureServiceSourceDBModel],
-    existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """Insert or update source records in the database.
 
@@ -342,62 +339,171 @@ def upsert_sources(
     otherwise, creates new records.
     """
     try:
-        new_records = []
+        # Prepare data for upsert
+        insert_data = [
+            {
+                "id": src.id,
+                "external_id": src.external_id,
+                "stakeholder_key": src.stakeholder_key,
+                "name": src.name,
+                "type": src.type,
+                "visible": src.visible,
+                "display_path": src.display_path,
+                "preset_filters": src.preset_filters,
+                "passthrough_filters": [f.dict() for f in src.passthrough_filters]
+                if src.passthrough_filters
+                else None,
+                "adapter_key": src.adapter_key,
+                "source_id": src.source_id,
+                "ref_key": src.ref_key,
+                "ref_id": src.ref_id,
+                "meta_data": src.meta_data,
+            }
+            for src in sources
+        ]
 
-        for source in sources:
-            key = (source.stakeholder_key, source.external_id)
-            db_source = existing_sources.get(key)
+        # Create upsert statement
+        insert_stmt = get_insert_statement(session, StructureServiceSourceDBModel).values(
+            insert_data
+        )
 
-            if db_source:
-                logger.debug("Updating StructureServiceSourceDBModel with key %s.", key)
-                # Update fields
-                db_source.name = source.name
-                db_source.type = source.type
-                db_source.visible = source.visible
-                db_source.display_path = source.display_path
-                db_source.adapter_key = source.adapter_key
-                db_source.source_id = source.source_id
-                db_source.ref_key = source.ref_key
-                db_source.ref_id = source.ref_id
-                db_source.meta_data = source.meta_data
-                db_source.preset_filters = source.preset_filters
-                db_source.passthrough_filters = source.passthrough_filters
+        insert_stmt = insert_stmt.on_conflict_do_update(
+            index_elements=["external_id", "stakeholder_key"],
+            set_={
+                "name": insert_stmt.excluded.name,
+                "type": insert_stmt.excluded.type,
+                "visible": insert_stmt.excluded.visible,
+                "display_path": insert_stmt.excluded.display_path,
+                "preset_filters": insert_stmt.excluded.preset_filters,
+                "passthrough_filters": insert_stmt.excluded.passthrough_filters,
+                "adapter_key": insert_stmt.excluded.adapter_key,
+                "source_id": insert_stmt.excluded.source_id,
+                "ref_key": insert_stmt.excluded.ref_key,
+                "ref_id": insert_stmt.excluded.ref_id,
+                "meta_data": insert_stmt.excluded.meta_data,
+            },
+        )
 
-                # Clear and set relationships
-                db_source.thing_nodes = [
-                    existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
-                    for tn_external_id in source.thing_node_external_ids or []
-                    if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-            else:
-                logger.debug("Creating new StructureServiceSourceDBModel with key %s.", key)
-                new_source = StructureServiceSourceDBModel(
-                    id=source.id,
-                    external_id=source.external_id,
-                    stakeholder_key=source.stakeholder_key,
-                    name=source.name,
-                    type=source.type,
-                    visible=source.visible,
-                    display_path=source.display_path,
-                    adapter_key=source.adapter_key,
-                    source_id=source.source_id,
-                    ref_key=source.ref_key,
-                    ref_id=source.ref_id,
-                    meta_data=source.meta_data,
-                    preset_filters=source.preset_filters,
-                    passthrough_filters=source.passthrough_filters,  # type: ignore
+        session.execute(insert_stmt)
+
+        # Now, update associations in batch
+
+        # Identify sources with thing_node_external_ids
+        sources_with_tn_ids = [src for src in sources if src.thing_node_external_ids]
+
+        if not sources_with_tn_ids:
+            return  # No associations to update
+
+        # Build mappings for source and thing node identifiers
+        source_thingnode_mappings = []
+        for src in sources_with_tn_ids:
+            for tn_external_id in src.thing_node_external_ids:
+                source_thingnode_mappings.append(
+                    {
+                        "source_external_id": src.external_id,
+                        "source_stakeholder_key": src.stakeholder_key,
+                        "thing_node_external_id": tn_external_id,
+                        "thing_node_stakeholder_key": src.stakeholder_key,  # Assuming same stakeholder_key
+                    }
                 )
 
-                # Assign relationships
-                new_source.thing_nodes = [
-                    existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
-                    for tn_external_id in source.thing_node_external_ids or []
-                    if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-                new_records.append(new_source)
+        # Get unique source identifiers
+        unique_source_identifiers = {
+            (mapping["source_external_id"], mapping["source_stakeholder_key"])
+            for mapping in source_thingnode_mappings
+        }
 
-        if new_records:
-            session.add_all(new_records)
+        # Get unique thing node identifiers
+        unique_thingnode_identifiers = {
+            (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
+            for mapping in source_thingnode_mappings
+        }
+
+        # Query source IDs
+        source_id_rows = (
+            session.query(
+                StructureServiceSourceDBModel.external_id,
+                StructureServiceSourceDBModel.stakeholder_key,
+                StructureServiceSourceDBModel.id,
+            )
+            .filter(
+                tuple_(
+                    StructureServiceSourceDBModel.external_id,
+                    StructureServiceSourceDBModel.stakeholder_key,
+                ).in_(unique_source_identifiers)
+            )
+            .all()
+        )
+
+        source_id_map = {(row.external_id, row.stakeholder_key): row.id for row in source_id_rows}
+
+        # Query thing node IDs
+        thingnode_id_rows = (
+            session.query(
+                StructureServiceThingNodeDBModel.external_id,
+                StructureServiceThingNodeDBModel.stakeholder_key,
+                StructureServiceThingNodeDBModel.id,
+            )
+            .filter(
+                tuple_(
+                    StructureServiceThingNodeDBModel.external_id,
+                    StructureServiceThingNodeDBModel.stakeholder_key,
+                ).in_(unique_thingnode_identifiers)
+            )
+            .all()
+        )
+
+        thingnode_id_map = {
+            (row.external_id, row.stakeholder_key): row.id for row in thingnode_id_rows
+        }
+
+        # Build association insert data
+        association_insert_data = []
+        for mapping in source_thingnode_mappings:
+            source_id = source_id_map.get(
+                (mapping["source_external_id"], mapping["source_stakeholder_key"])
+            )
+            thingnode_id = thingnode_id_map.get(
+                (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
+            )
+            if source_id and thingnode_id:
+                association_insert_data.append(
+                    {
+                        "source_id": source_id,
+                        "thingnode_id": thingnode_id,
+                    }
+                )
+            else:
+                logger.error(
+                    "Missing ID for source (%s, %s) or thing node (%s, %s)",
+                    mapping["source_external_id"],
+                    mapping["source_stakeholder_key"],
+                    mapping["thing_node_external_id"],
+                    mapping["thing_node_stakeholder_key"],
+                )
+
+        # Collect source IDs for deletion
+        source_ids_to_delete = list(source_id_map.values())
+
+        if source_ids_to_delete:
+            # Delete existing associations
+            delete_stmt = delete(thingnode_source_association).where(
+                thingnode_source_association.c.source_id.in_(source_ids_to_delete)
+            )
+            session.execute(delete_stmt)
+
+        # Insert new associations
+        if association_insert_data:
+            association_insert_stmt = get_insert_statement(
+                session, thingnode_source_association
+            ).values(association_insert_data)
+
+            # Use on_conflict_do_nothing to avoid duplicate entries
+            association_insert_stmt = association_insert_stmt.on_conflict_do_nothing(
+                index_elements=["source_id", "thingnode_id"]
+            )
+
+            session.execute(association_insert_stmt)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSourceDBModel: %s", e)
@@ -412,8 +518,6 @@ def upsert_sources(
 def upsert_sinks(
     session: SQLAlchemySession,
     sinks: list[StructureServiceSink],
-    existing_sinks: dict[tuple[str, str], StructureServiceSinkDBModel],
-    existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """Insert or update sink records in the database.
 
@@ -421,62 +525,169 @@ def upsert_sinks(
     otherwise, creates new records.
     """
     try:
-        new_records = []
+        # Prepare data for upsert
+        insert_data = [
+            {
+                "id": sink.id,
+                "external_id": sink.external_id,
+                "stakeholder_key": sink.stakeholder_key,
+                "name": sink.name,
+                "type": sink.type,
+                "visible": sink.visible,
+                "display_path": sink.display_path,
+                "preset_filters": sink.preset_filters,
+                "passthrough_filters": [f.dict() for f in sink.passthrough_filters]
+                if sink.passthrough_filters
+                else None,
+                "adapter_key": sink.adapter_key,
+                "sink_id": sink.sink_id,
+                "ref_key": sink.ref_key,
+                "ref_id": sink.ref_id,
+                "meta_data": sink.meta_data,
+            }
+            for sink in sinks
+        ]
 
-        for sink in sinks:
-            key = (sink.stakeholder_key, sink.external_id)
-            db_sink = existing_sinks.get(key)
+        # Create upsert statement
+        insert_stmt = get_insert_statement(session, StructureServiceSinkDBModel).values(insert_data)
 
-            if db_sink:
-                logger.debug("Updating StructureServiceSinkDBModel with key %s.", key)
-                # Update fields
-                db_sink.name = sink.name
-                db_sink.type = sink.type
-                db_sink.visible = sink.visible
-                db_sink.display_path = sink.display_path
-                db_sink.adapter_key = sink.adapter_key
-                db_sink.sink_id = sink.sink_id
-                db_sink.ref_key = sink.ref_key
-                db_sink.ref_id = sink.ref_id
-                db_sink.meta_data = sink.meta_data
-                db_sink.preset_filters = sink.preset_filters
-                db_sink.passthrough_filters = sink.passthrough_filters
+        insert_stmt = insert_stmt.on_conflict_do_update(
+            index_elements=["external_id", "stakeholder_key"],
+            set_={
+                "name": insert_stmt.excluded.name,
+                "type": insert_stmt.excluded.type,
+                "visible": insert_stmt.excluded.visible,
+                "display_path": insert_stmt.excluded.display_path,
+                "preset_filters": insert_stmt.excluded.preset_filters,
+                "passthrough_filters": insert_stmt.excluded.passthrough_filters,
+                "adapter_key": insert_stmt.excluded.adapter_key,
+                "sink_id": insert_stmt.excluded.sink_id,
+                "ref_key": insert_stmt.excluded.ref_key,
+                "ref_id": insert_stmt.excluded.ref_id,
+                "meta_data": insert_stmt.excluded.meta_data,
+            },
+        )
 
-                # Clear and set relationships
-                db_sink.thing_nodes = [
-                    existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
-                    for tn_external_id in sink.thing_node_external_ids or []
-                    if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-            else:
-                logger.debug("Creating new StructureServiceSinkDBModel with key %s.", key)
-                new_sink = StructureServiceSinkDBModel(
-                    id=sink.id,
-                    external_id=sink.external_id,
-                    stakeholder_key=sink.stakeholder_key,
-                    name=sink.name,
-                    type=sink.type,
-                    visible=sink.visible,
-                    display_path=sink.display_path,
-                    adapter_key=sink.adapter_key,
-                    sink_id=sink.sink_id,
-                    ref_key=sink.ref_key,
-                    ref_id=sink.ref_id,
-                    meta_data=sink.meta_data,
-                    preset_filters=sink.preset_filters,
-                    passthrough_filters=sink.passthrough_filters,  # type: ignore
+        session.execute(insert_stmt)
+
+        # Now, update associations in batch
+
+        # Identify sinks with thing_node_external_ids
+        sinks_with_tn_ids = [sink for sink in sinks if sink.thing_node_external_ids]
+
+        if not sinks_with_tn_ids:
+            return  # No associations to update
+
+        # Build mappings for sink and thing node identifiers
+        sink_thingnode_mappings = []
+        for sink in sinks_with_tn_ids:
+            for tn_external_id in sink.thing_node_external_ids:
+                sink_thingnode_mappings.append(
+                    {
+                        "sink_external_id": sink.external_id,
+                        "sink_stakeholder_key": sink.stakeholder_key,
+                        "thing_node_external_id": tn_external_id,
+                        "thing_node_stakeholder_key": sink.stakeholder_key,  # Assuming same stakeholder_key
+                    }
                 )
 
-                # Assign relationships
-                new_sink.thing_nodes = [
-                    existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
-                    for tn_external_id in sink.thing_node_external_ids or []
-                    if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-                new_records.append(new_sink)
+        # Get unique sink identifiers
+        unique_sink_identifiers = {
+            (mapping["sink_external_id"], mapping["sink_stakeholder_key"])
+            for mapping in sink_thingnode_mappings
+        }
 
-        if new_records:
-            session.add_all(new_records)
+        # Get unique thing node identifiers
+        unique_thingnode_identifiers = {
+            (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
+            for mapping in sink_thingnode_mappings
+        }
+
+        # Query sink IDs
+        sink_id_rows = (
+            session.query(
+                StructureServiceSinkDBModel.external_id,
+                StructureServiceSinkDBModel.stakeholder_key,
+                StructureServiceSinkDBModel.id,
+            )
+            .filter(
+                tuple_(
+                    StructureServiceSinkDBModel.external_id,
+                    StructureServiceSinkDBModel.stakeholder_key,
+                ).in_(unique_sink_identifiers)
+            )
+            .all()
+        )
+
+        sink_id_map = {(row.external_id, row.stakeholder_key): row.id for row in sink_id_rows}
+
+        # Query thing node IDs
+        thingnode_id_rows = (
+            session.query(
+                StructureServiceThingNodeDBModel.external_id,
+                StructureServiceThingNodeDBModel.stakeholder_key,
+                StructureServiceThingNodeDBModel.id,
+            )
+            .filter(
+                tuple_(
+                    StructureServiceThingNodeDBModel.external_id,
+                    StructureServiceThingNodeDBModel.stakeholder_key,
+                ).in_(unique_thingnode_identifiers)
+            )
+            .all()
+        )
+
+        thingnode_id_map = {
+            (row.external_id, row.stakeholder_key): row.id for row in thingnode_id_rows
+        }
+
+        # Build association insert data
+        association_insert_data = []
+        for mapping in sink_thingnode_mappings:
+            sink_id = sink_id_map.get(
+                (mapping["sink_external_id"], mapping["sink_stakeholder_key"])
+            )
+            thingnode_id = thingnode_id_map.get(
+                (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
+            )
+            if sink_id and thingnode_id:
+                association_insert_data.append(
+                    {
+                        "sink_id": sink_id,
+                        "thingnode_id": thingnode_id,
+                    }
+                )
+            else:
+                logger.error(
+                    "Missing ID for sink (%s, %s) or thing node (%s, %s)",
+                    mapping["sink_external_id"],
+                    mapping["sink_stakeholder_key"],
+                    mapping["thing_node_external_id"],
+                    mapping["thing_node_stakeholder_key"],
+                )
+
+        # Collect sink IDs for deletion
+        sink_ids_to_delete = list(sink_id_map.values())
+
+        if sink_ids_to_delete:
+            # Delete existing associations
+            delete_stmt = delete(thingnode_sink_association).where(
+                thingnode_sink_association.c.sink_id.in_(sink_ids_to_delete)
+            )
+            session.execute(delete_stmt)
+
+        # Insert new associations
+        if association_insert_data:
+            association_insert_stmt = get_insert_statement(
+                session, thingnode_sink_association
+            ).values(association_insert_data)
+
+            # Use on_conflict_do_nothing to avoid duplicate entries
+            association_insert_stmt = association_insert_stmt.on_conflict_do_nothing(
+                index_elements=["sink_id", "thingnode_id"]
+            )
+
+            session.execute(association_insert_stmt)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSinkDBModel: %s", e)
