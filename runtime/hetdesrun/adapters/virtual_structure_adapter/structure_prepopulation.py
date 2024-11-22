@@ -40,7 +40,7 @@ def prepopulate_structure() -> None:
             ) from e
     else:
         logger.info(
-            "Prepopulating the virtual structure adapter via"
+            "Prepopulating the virtual structure adapter via "
             "structure_to_prepopulate_virtual_structure_adapter"
         )
         complete_structure = (
