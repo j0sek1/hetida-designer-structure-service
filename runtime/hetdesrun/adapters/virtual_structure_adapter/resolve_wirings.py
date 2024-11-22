@@ -13,10 +13,7 @@ def update_wirings(
     wiring: InputWiring | OutputWiring,
     source_or_sink: StructureServiceSource | StructureServiceSink,
 ) -> InputWiring | OutputWiring:
-    """
-    Updates Input- or OutputWiring objects that contain information about sources or sinks
-    of the virtual structure adapter with the corresponding information of the referenced
-    sources or sinks.
+    """Replaces vst source or sink info with that of their referenced source or sink.
 
     Returns:
     - Updated InputWiring or OutputWiring instance.
@@ -46,9 +43,10 @@ def update_wirings(
 def resolve_virtual_structure_wirings(
     workflow_wiring: WorkflowWiring,
 ) -> None:
-    """Takes a WorkflowWiring, finds all vst sources and sinks to be replaced,
-    retrieves their referenced sources and sinks to be inserted
-    and calls the function to actually replace the input and output wirings."""
+    """Resolves vst sources and sinks to their referenced sources and sinks.
+
+    The WorkflowWiring object is modified in place.
+    """
 
     # Retrieve IDs of wirings referencing vst-adapter
     # and keep track of the indices for easier replacement later on

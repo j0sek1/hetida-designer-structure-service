@@ -22,7 +22,7 @@ kaleido
 keras
 libcst
 numba!=0.56.2 # due to setuptools dependency resolution problems
-numpy
+numpy<2.1,>=1.22
 odfpy
 openpyxl
 ortools
@@ -38,9 +38,10 @@ requests
 scikit-learn
 scipy
 shapely
-sqlalchemy[mypy]<2
+sqlalchemy[mypy,asyncio]>=2.0,<3
 statsmodels
 tables
+typing-extensions
 uvicorn>=0.17.2
 uvloop
 xlrd>=2.0

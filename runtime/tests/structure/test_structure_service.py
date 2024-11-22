@@ -1037,7 +1037,7 @@ def test_upsert_sources_success(mocked_clean_test_db_session):
         )
 
         # Call the function
-        upsert_sources(session, [source])
+        upsert_sources(session, [source], existing_thing_nodes)
         session.commit()
 
         # Verify that the StructureServiceSourceDBModel was added to the database

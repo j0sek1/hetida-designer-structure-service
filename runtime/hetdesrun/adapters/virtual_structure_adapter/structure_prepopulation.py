@@ -21,9 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def prepopulate_structure() -> None:
-    """Handles the population of the virtual structure adapter
-    with a user defined structure.
-    """
+    """Handles the population of the virtual structure adapter with a user defined structure."""
+
     # Set the structure for prepopulation
     if get_vst_adapter_config().prepopulate_virtual_structure_adapter_via_file:
         structure_filepath = (

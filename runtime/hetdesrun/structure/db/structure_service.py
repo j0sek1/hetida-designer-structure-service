@@ -29,8 +29,12 @@ from hetdesrun.structure.db.exceptions import (
     DBUpdateError,
     JsonParsingError,
 )
-from hetdesrun.structure.db.source_sink_service import upsert_sinks, upsert_sources
-from hetdesrun.structure.db.thing_node_service import upsert_thing_nodes
+from hetdesrun.structure.db.source_sink_service import (
+    fetch_sinks,
+    upsert_sinks,
+    upsert_sources,
+)
+from hetdesrun.structure.db.thing_node_service import fetch_thing_nodes, upsert_thing_nodes
 from hetdesrun.structure.models import (
     CompleteStructure,
     StructureServiceSink,
@@ -206,18 +210,34 @@ def update_structure(complete_structure: CompleteStructure) -> None:
     logger.debug("Starting update or insert operation for the complete structure in the database.")
     try:
         with get_session()() as session, session.begin():
-            # Upsert ElementTypes
-            upsert_element_types(session, complete_structure.element_types)
+            # Disable autoflush temporarily to prevent premature inserts
 
-            # Sort ThingNodes to ensure parents are inserted before children
-            sorted_thing_nodes = sort_thing_nodes(complete_structure.thing_nodes)
+            element_type_keys = {
+                (et.stakeholder_key, et.external_id) for et in complete_structure.element_types
+            }
+            thing_node_keys = {
+                (tn.stakeholder_key, tn.external_id) for tn in complete_structure.thing_nodes
+            }
+            sink_keys = {(snk.stakeholder_key, snk.external_id) for snk in complete_structure.sinks}
 
-            # Upsert ThingNodes
-            upsert_thing_nodes(session, sorted_thing_nodes)
+            existing_element_types = fetch_element_types(session, element_type_keys, batch_size)
+            existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys, batch_size)
+            existing_sinks = fetch_sinks(session, sink_keys, batch_size)
 
-            # Upsert Sources and Sinks, associations will use internal IDs from fetched ThingNodes
-            upsert_sources(session, complete_structure.sources)
-            upsert_sinks(session, complete_structure.sinks)
+            upsert_element_types(session, complete_structure.element_types, existing_element_types)
+
+            existing_element_types = fetch_element_types(session, element_type_keys)
+
+            sorted_thing_nodes = sort_thing_nodes(
+                complete_structure.thing_nodes, existing_thing_nodes
+            )
+            populate_element_type_ids(sorted_thing_nodes, existing_element_types)
+            upsert_thing_nodes(session, sorted_thing_nodes, existing_thing_nodes)
+
+            existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys)
+
+            upsert_sources(session, complete_structure.sources, existing_thing_nodes)
+            upsert_sinks(session, complete_structure.sinks, existing_sinks, existing_thing_nodes)
 
     except IntegrityError as e:
         logger.error("Integrity Error while updating or inserting the structure: %s", e)

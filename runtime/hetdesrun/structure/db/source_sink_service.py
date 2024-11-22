@@ -3,7 +3,11 @@ from itertools import batched
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import and_, bindparam, delete, insert, select, tuple_
+from sqlalchemy import Connection, Engine, tuple_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.postgresql.dml import Insert as pg_insert_typing
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.sqlite.dml import Insert as sqlite_insert_typing
 from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
@@ -25,6 +29,7 @@ from hetdesrun.structure.models import (
     StructureServiceSink,
     StructureServiceSource,
 )
+from hetdesrun.structure.utils import is_postgresql, is_sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -332,184 +337,65 @@ def fetch_sinks_by_substring_match(filter_string: str) -> list[StructureServiceS
 def upsert_sources(
     session: SQLAlchemySession,
     sources: list[StructureServiceSource],
+    existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """Insert or update source records in the database.
 
     For each StructureServiceSource, updates existing records if they are found;
     otherwise, creates new records.
     """
+    if not sources:
+        return
+    source_dicts = [src.dict() for src in sources]
+
     try:
-        # Prepare data for upsert
-        insert_data = [
-            {
-                "id": src.id,
-                "external_id": src.external_id,
-                "stakeholder_key": src.stakeholder_key,
-                "name": src.name,
-                "type": src.type,
-                "visible": src.visible,
-                "display_path": src.display_path,
-                "preset_filters": src.preset_filters,
-                "passthrough_filters": [f.dict() for f in src.passthrough_filters]
-                if src.passthrough_filters
-                else None,
-                "adapter_key": src.adapter_key,
-                "source_id": src.source_id,
-                "ref_key": src.ref_key,
-                "ref_id": src.ref_id,
-                "meta_data": src.meta_data,
-            }
-            for src in sources
-        ]
+        engine: Engine | Connection = session.get_bind()
+        if isinstance(engine, Connection):
+            raise ValueError("The session in use has to be bound to an Engine not a Connection.")
 
-        # Create upsert statement
-        insert_stmt = get_insert_statement(session, StructureServiceSourceDBModel).values(
-            insert_data
-        )
+        upsert_stmt: sqlite_insert_typing | pg_insert_typing
 
-        insert_stmt = insert_stmt.on_conflict_do_update(
-            index_elements=["external_id", "stakeholder_key"],
+        if is_postgresql(engine):
+            upsert_stmt = pg_insert(StructureServiceSourceDBModel).values(source_dicts)
+        elif is_sqlite(engine):
+            upsert_stmt = sqlite_insert(StructureServiceSourceDBModel).values(source_dicts)
+        else:
+            raise ValueError(
+                f"Unsupported database engine: {engine}. Please use either Postgres or SQLITE."
+            )
+
+        upsert_stmt = upsert_stmt.on_conflict_do_update(
+            index_elements=[
+                "external_id",
+                "stakeholder_key",
+            ],  # Columns where insert looks for a conflict
             set_={
-                "name": insert_stmt.excluded.name,
-                "type": insert_stmt.excluded.type,
-                "visible": insert_stmt.excluded.visible,
-                "display_path": insert_stmt.excluded.display_path,
-                "preset_filters": insert_stmt.excluded.preset_filters,
-                "passthrough_filters": insert_stmt.excluded.passthrough_filters,
-                "adapter_key": insert_stmt.excluded.adapter_key,
-                "source_id": insert_stmt.excluded.source_id,
-                "ref_key": insert_stmt.excluded.ref_key,
-                "ref_id": insert_stmt.excluded.ref_id,
-                "meta_data": insert_stmt.excluded.meta_data,
-            },
+                col: upsert_stmt.excluded[col] for col in source_dicts[0] if col != "id"
+            },  # Exclude primary key from update
+        ).returning(StructureServiceSourceDBModel)  # type: ignore
+
+        # ORM models returned by the upsert query
+        sources_dbmodels = session.scalars(
+            upsert_stmt,
+            execution_options={"populate_existing": True},
         )
 
-        session.execute(insert_stmt)
-
-        # Now, update associations in batch
-
-        # Identify sources with thing_node_external_ids
-        sources_with_tn_ids = [src for src in sources if src.thing_node_external_ids]
-
-        if not sources_with_tn_ids:
-            return  # No associations to update
-
-        # Build mappings for source and thing node identifiers
-        source_thingnode_mappings = []
-        for src in sources_with_tn_ids:
-            for tn_external_id in src.thing_node_external_ids:
-                source_thingnode_mappings.append(
-                    {
-                        "source_external_id": src.external_id,
-                        "source_stakeholder_key": src.stakeholder_key,
-                        "thing_node_external_id": tn_external_id,
-                        "thing_node_stakeholder_key": src.stakeholder_key,  # Assuming same stakeholder_key
-                    }
-                )
-
-        # Get unique source identifiers
-        unique_source_identifiers = {
-            (mapping["source_external_id"], mapping["source_stakeholder_key"])
-            for mapping in source_thingnode_mappings
-        }
-
-        # Get unique thing node identifiers
-        unique_thingnode_identifiers = {
-            (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
-            for mapping in source_thingnode_mappings
-        }
-
-        # Query source IDs
-        source_id_rows = (
-            session.query(
-                StructureServiceSourceDBModel.external_id,
-                StructureServiceSourceDBModel.stakeholder_key,
-                StructureServiceSourceDBModel.id,
-            )
-            .filter(
-                tuple_(
-                    StructureServiceSourceDBModel.external_id,
-                    StructureServiceSourceDBModel.stakeholder_key,
-                ).in_(unique_source_identifiers)
-            )
-            .all()
-        )
-
-        source_id_map = {(row.external_id, row.stakeholder_key): row.id for row in source_id_rows}
-
-        # Query thing node IDs
-        thingnode_id_rows = (
-            session.query(
-                StructureServiceThingNodeDBModel.external_id,
-                StructureServiceThingNodeDBModel.stakeholder_key,
-                StructureServiceThingNodeDBModel.id,
-            )
-            .filter(
-                tuple_(
-                    StructureServiceThingNodeDBModel.external_id,
-                    StructureServiceThingNodeDBModel.stakeholder_key,
-                ).in_(unique_thingnode_identifiers)
-            )
-            .all()
-        )
-
-        thingnode_id_map = {
-            (row.external_id, row.stakeholder_key): row.id for row in thingnode_id_rows
-        }
-
-        # Build association insert data
-        association_insert_data = []
-        for mapping in source_thingnode_mappings:
-            source_id = source_id_map.get(
-                (mapping["source_external_id"], mapping["source_stakeholder_key"])
-            )
-            thingnode_id = thingnode_id_map.get(
-                (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
-            )
-            if source_id and thingnode_id:
-                association_insert_data.append(
-                    {
-                        "source_id": source_id,
-                        "thingnode_id": thingnode_id,
-                    }
-                )
-            else:
-                logger.error(
-                    "Missing ID for source (%s, %s) or thing node (%s, %s)",
-                    mapping["source_external_id"],
-                    mapping["source_stakeholder_key"],
-                    mapping["thing_node_external_id"],
-                    mapping["thing_node_stakeholder_key"],
-                )
-
-        # Collect source IDs for deletion
-        source_ids_to_delete = list(source_id_map.values())
-
-        if source_ids_to_delete:
-            # Delete existing associations
-            delete_stmt = delete(thingnode_source_association).where(
-                thingnode_source_association.c.source_id.in_(source_ids_to_delete)
-            )
-            session.execute(delete_stmt)
-
-        # Insert new associations
-        if association_insert_data:
-            association_insert_stmt = get_insert_statement(
-                session, thingnode_source_association
-            ).values(association_insert_data)
-
-            # Use on_conflict_do_nothing to avoid duplicate entries
-            association_insert_stmt = association_insert_stmt.on_conflict_do_nothing(
-                index_elements=["source_id", "thingnode_id"]
-            )
-
-            session.execute(association_insert_stmt)
+        # Assign relationships
+        for source in sources_dbmodels:
+            source.thing_nodes = [
+                existing_thing_nodes.get((source.stakeholder_key, tn_external_id))
+                for tn_external_id in source.thing_node_external_ids or []
+                if (source.stakeholder_key, tn_external_id) in existing_thing_nodes
+            ]
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSourceDBModel: %s", e)
         raise DBIntegrityError(
             "Integrity Error while upserting StructureServiceSourceDBModel"
         ) from e
+    except ValueError as e:
+        logger.error("Value error while upserting StructureServiceSourceDBModel: %s", e)
+        raise DBError("Value error while upserting StructureServiceSourceDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceSourceDBModel: %s", e)
         raise DBUpdateError("Unexpected error while upserting StructureServiceSourceDBModel") from e

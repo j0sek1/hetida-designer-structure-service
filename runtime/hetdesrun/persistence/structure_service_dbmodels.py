@@ -6,14 +6,20 @@ from sqlalchemy import (
     Column,
     ForeignKey,
     Index,
+    MetaData,
     String,
     Table,
     UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy_utils import UUIDType
 
-Base = declarative_base()
+metadata = MetaData()
+
+
+class Base(DeclarativeBase):
+    metadata = metadata
+
 
 # Association table between ThingNode and Source
 thingnode_source_association = Table(
@@ -47,17 +53,17 @@ thingnode_sink_association = Table(
 # ORM model for ElementType
 class StructureServiceElementTypeDBModel(Base):
     __tablename__ = "structure_element_type"
-    id: UUIDType = Column(
+    id: Mapped[UUIDType] = mapped_column(
         UUIDType(binary=False),
         primary_key=True,  # Primary key for unique identification
         nullable=False,
         default=uuid4,
     )
-    external_id = Column(String(255), nullable=False)
-    stakeholder_key = Column(String(36), nullable=False)
-    name = Column(String(255), index=True, nullable=False, unique=True)
-    description = Column(String(1024), nullable=True)
-    thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
+    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), index=True, nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    thing_nodes: Mapped[list["StructureServiceThingNodeDBModel"]] = relationship(
         "StructureServiceThingNodeDBModel",
         back_populates="element_type",
         # 'back_populates' specifies reciprocal relationship in
@@ -86,24 +92,24 @@ class StructureServiceElementTypeDBModel(Base):
 # ORM model for Source
 class StructureServiceSourceDBModel(Base):
     __tablename__ = "structure_source"
-    id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
-    external_id = Column(String(255), nullable=False)
-    stakeholder_key = Column(String(36), nullable=False)
-    name: str = Column(String(255), nullable=False, unique=True)
-    type: str = Column(String(255), nullable=False)
-    visible: bool = Column(Boolean, default=True)
-    display_path: str = Column(String(255), nullable=False)
-    adapter_key: str = Column(String(255), nullable=False)
-    source_id: str = Column(String(255), nullable=False)
-    ref_key: str | None = Column(String(255), nullable=True)
-    ref_id: str = Column(String(255), nullable=False)
-    meta_data: dict | None = Column(JSON, nullable=True)
-    preset_filters: dict = Column(JSON, nullable=False)
-    passthrough_filters: list[dict] | None = Column(JSON, nullable=True)
-    thing_node_external_ids: list[str] = Column(JSON, nullable=True)
+    id: Mapped[UUIDType] = mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
+    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    type: Mapped[str] = mapped_column(String(255), nullable=False)
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    display_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    adapter_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    ref_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ref_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    preset_filters: Mapped[dict] = mapped_column(JSON, nullable=False)
+    passthrough_filters: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    thing_node_external_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
-    thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
+    thing_nodes: Mapped[list["StructureServiceThingNodeDBModel"]] = relationship(
         "StructureServiceThingNodeDBModel",
         # Association table for Many-to-Many relation:
         secondary=thingnode_source_association,
@@ -132,24 +138,24 @@ class StructureServiceSourceDBModel(Base):
 # ORM model for Sink
 class StructureServiceSinkDBModel(Base):
     __tablename__ = "structure_sink"
-    id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
-    external_id = Column(String(255), nullable=False)
-    stakeholder_key = Column(String(36), nullable=False)
-    name: str = Column(String(255), nullable=False, unique=True)
-    type: str = Column(String(255), nullable=False)
-    visible: bool = Column(Boolean, default=True)
-    display_path: str = Column(String(255), nullable=False)
-    adapter_key: str = Column(String(255), nullable=False)
-    sink_id: str = Column(String(255), nullable=False)
-    ref_key: str | None = Column(String(255), nullable=True)
-    ref_id: str = Column(String(255), nullable=False)
-    meta_data: dict | None = Column(JSON, nullable=True)
-    preset_filters: dict = Column(JSON, nullable=False)
-    passthrough_filters: list[dict] | None = Column(JSON, nullable=True)
-    thing_node_external_ids: list[str] = Column(JSON, nullable=True)
+    id: Mapped[UUIDType] = mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
+    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    type: Mapped[str] = mapped_column(String(255), nullable=False)
+    visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    display_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    adapter_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    sink_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    ref_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ref_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    preset_filters: Mapped[dict] = mapped_column(JSON, nullable=False)
+    passthrough_filters: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    thing_node_external_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     # Defines Many-to-Many relationship with StructureServiceThingNodeDBModel
-    thing_nodes: list["StructureServiceThingNodeDBModel"] = relationship(
+    thing_nodes: Mapped[list["StructureServiceThingNodeDBModel"]] = relationship(
         "StructureServiceThingNodeDBModel",
         # Association table for Many-to-Many relation:
         secondary=thingnode_sink_association,
@@ -178,28 +184,28 @@ class StructureServiceSinkDBModel(Base):
 # ORM model for ThingNode
 class StructureServiceThingNodeDBModel(Base):
     __tablename__ = "structure_thing_node"
-    id: UUIDType = Column(UUIDType(binary=False), primary_key=True, default=uuid4)
-    external_id = Column(String(255), nullable=False)
-    stakeholder_key = Column(String(36), nullable=False)
-    name = Column(String(255), index=True, nullable=False, unique=True)
-    description = Column(String(1024), nullable=True)
-    parent_node_id: UUIDType = Column(
+    id: Mapped[UUIDType] = mapped_column(UUIDType(binary=False), primary_key=True, default=uuid4)
+    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    stakeholder_key: Mapped[str] = mapped_column(String(36), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), index=True, nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    parent_node_id: Mapped[UUIDType | None] = mapped_column(
         UUIDType(binary=False), ForeignKey("structure_thing_node.id"), nullable=True
     )
-    parent_external_node_id = Column(String(255), nullable=True)
-    element_type_id: UUIDType = Column(
+    parent_external_node_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    element_type_id: Mapped[UUIDType] = mapped_column(
         UUIDType(binary=False),
         ForeignKey("structure_element_type.id"),
         nullable=False,
     )
-    element_type_external_id = Column(String(255), nullable=False)
-    meta_data = Column(JSON, nullable=True)
+    element_type_external_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     element_type: Mapped["StructureServiceElementTypeDBModel"] = relationship(
         "StructureServiceElementTypeDBModel", back_populates="thing_nodes", uselist=False
     )
 
     # Defines Many-to-Many relationship with StructureServiceSourceDBModel
-    sources: list["StructureServiceSourceDBModel"] = relationship(
+    sources: Mapped[list["StructureServiceSourceDBModel"]] = relationship(
         "StructureServiceSourceDBModel",
         # Association table for Many-to-Many relation:
         secondary=thingnode_source_association,
@@ -212,7 +218,7 @@ class StructureServiceThingNodeDBModel(Base):
     )
 
     # Defines Many-to-Many relationship with StructureServiceSinkDBModel
-    sinks: list["StructureServiceSinkDBModel"] = relationship(
+    sinks: Mapped[list["StructureServiceSinkDBModel"]] = relationship(
         "StructureServiceSinkDBModel",
         # Association table for Many-to-Many relation:
         secondary=thingnode_sink_association,
