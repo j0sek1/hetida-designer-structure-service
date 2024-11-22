@@ -51,8 +51,11 @@ def get_db_engine(override_db_url: SecretStr | str | URL | None = None) -> Engin
     if isinstance(db_url_to_use, SecretStr):
         db_url_to_use = db_url_to_use.get_secret_value()
 
+    if isinstance(db_url_to_use, URL):
+        db_url_to_use = db_url_to_use.render_as_string(hide_password=False)
+
     engine = create_engine(  # type: ignore
-        str(db_url_to_use),
+        db_url_to_use,
         future=True,
         json_serializer=dumps,
         **(
