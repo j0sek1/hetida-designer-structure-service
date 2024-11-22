@@ -230,11 +230,9 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
             thing_node_keys = {
                 (tn.stakeholder_key, tn.external_id) for tn in complete_structure.thing_nodes
             }
-            sink_keys = {(snk.stakeholder_key, snk.external_id) for snk in complete_structure.sinks}
 
             existing_element_types = fetch_element_types(session, element_type_keys, batch_size)
             existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys, batch_size)
-            existing_sinks = fetch_sinks(session, sink_keys, batch_size)
 
             upsert_element_types(session, complete_structure.element_types, existing_element_types)
 
