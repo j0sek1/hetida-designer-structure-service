@@ -414,7 +414,7 @@ def upsert_sinks(
     """
     if not sinks:
         return
-    sink_dicts = [src.dict() for src in sinks]
+    sink_dicts = [sink.dict() for sink in sinks]
 
     try:
         engine: Engine | Connection = session.get_bind()
