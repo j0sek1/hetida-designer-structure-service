@@ -30,7 +30,6 @@ from hetdesrun.structure.db.exceptions import (
     JsonParsingError,
 )
 from hetdesrun.structure.db.source_sink_service import (
-    fetch_sinks,
     upsert_sinks,
     upsert_sources,
 )

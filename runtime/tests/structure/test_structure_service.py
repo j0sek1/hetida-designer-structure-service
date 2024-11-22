@@ -1002,7 +1002,7 @@ def test_upsert_sinks_success(mocked_clean_test_db_session):
             thing_node_external_ids=[],
         )
 
-        upsert_sinks(session, [sink])
+        upsert_sinks(session, [sink], existing_thing_nodes)
         session.commit()
 
         # Verify that the StructureServiceSinkDBModel was added to the database
