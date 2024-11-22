@@ -8,14 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession
 from hetdesrun.persistence.structure_service_dbmodels import StructureServiceElementTypeDBModel
 from hetdesrun.structure.db.exceptions import DBError, DBIntegrityError, DBUpdateError
-from hetdesrun.structure.db.utils import get_insert_statement
 from hetdesrun.structure.models import StructureServiceElementType
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_element_types(
-    session: SQLAlchemySession, keys: set[tuple[str, str]]
+    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceElementTypeDBModel]:
     """Fetch element types by stakeholder_key and external_id.
 
@@ -25,16 +24,18 @@ def fetch_element_types(
     if not keys:
         return existing_ets_mapping
     try:
-        query = session.query(StructureServiceElementTypeDBModel).filter(
-            tuple_(
-                StructureServiceElementTypeDBModel.stakeholder_key,
-                StructureServiceElementTypeDBModel.external_id,
-            ).in_(keys)
-        )
-        results = query.all()
-        for et in results:
-            key = (et.stakeholder_key, et.external_id)
-            existing_ets_mapping[key] = et
+        # Loop through keys in batches of size <batch_size> or less
+        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
+            batch_query = session.query(StructureServiceElementTypeDBModel).filter(
+                tuple_(
+                    StructureServiceElementTypeDBModel.stakeholder_key,
+                    StructureServiceElementTypeDBModel.external_id,
+                ).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for et in batch_results:
+                key = (et.stakeholder_key, et.external_id)
+                existing_ets_mapping[key] = et
         logger.debug(
             "Fetched %d StructureServiceElementTypeDBModel items from the database for %d keys.",
             len(existing_ets_mapping),
@@ -89,36 +90,37 @@ def search_element_types_by_name(
 def upsert_element_types(
     session: SQLAlchemySession,
     elements: list[StructureServiceElementType],
+    existing_elements: dict[tuple[str, str], StructureServiceElementTypeDBModel],
 ) -> None:
     """Insert or update element types.
 
     Updates existing records or creates new ones if they do not exist.
     """
     try:
-        insert_data = [
-            {
-                "id": element.id,
-                "external_id": element.external_id,
-                "stakeholder_key": element.stakeholder_key,
-                "name": element.name,
-                "description": element.description,
-            }
-            for element in elements
-        ]
+        new_records = []
 
-        insert_stmt = get_insert_statement(session, StructureServiceElementTypeDBModel).values(
-            insert_data
-        )
+        for element in elements:
+            key = (element.stakeholder_key, element.external_id)
+            db_element = existing_elements.get(key)
 
-        upsert_stmt = insert_stmt.on_conflict_do_update(
-            index_elements=["external_id", "stakeholder_key"],
-            set_={
-                "name": insert_stmt.excluded.name,
-                "description": insert_stmt.excluded.description,
-            },
-        )
+            if db_element:
+                logger.debug("Updating StructureServiceElementTypeDBModel with key %s.", key)
+                db_element.name = element.name
+                db_element.description = element.description
+            else:
+                logger.debug("Creating new StructureServiceElementTypeDBModel with key %s.", key)
+                new_records.append(
+                    StructureServiceElementTypeDBModel(
+                        id=element.id,
+                        external_id=element.external_id,
+                        stakeholder_key=element.stakeholder_key,
+                        name=element.name,
+                        description=element.description,
+                    )
+                )
 
-        session.execute(upsert_stmt)
+        if new_records:
+            session.add_all(new_records)
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceElementTypeDBModel: %s", e)

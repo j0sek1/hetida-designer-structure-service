@@ -96,6 +96,7 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
 
 def sort_thing_nodes(
     thing_nodes: list[StructureServiceThingNode],
+    existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> list[StructureServiceThingNode]:
     """Sort and flatten StructureServiceThingNodes by hierarchical levels.
 
@@ -105,6 +106,17 @@ def sort_thing_nodes(
 
     # Create a mapping for quick parent lookup
     thing_node_map = {(tn.stakeholder_key, tn.external_id): tn for tn in thing_nodes}
+
+    # Assign IDs from existing database entries
+    for tn in thing_nodes:
+        key = (tn.stakeholder_key, tn.external_id)
+        if key in existing_thing_nodes:
+            tn.id = existing_thing_nodes[key].id
+            logger.debug(
+                "StructureServiceThingNode %s matched existing node with ID %s.", tn.name, tn.id
+            )
+        else:
+            logger.debug("StructureServiceThingNode %s is new with ID %s.", tn.name, tn.id)
 
     # Build child lists per node ID and handle root nodes
     children_by_node_id: dict[UUID, list[StructureServiceThingNode]] = defaultdict(list)
@@ -202,7 +214,7 @@ def populate_element_type_ids(
                 )
 
 
-def update_structure(complete_structure: CompleteStructure) -> None:
+def update_structure(complete_structure: CompleteStructure, batch_size: int = 500) -> None:
     """Update or insert a complete structure into the database.
 
     Updates existing records and insert new records as needed.
@@ -237,7 +249,7 @@ def update_structure(complete_structure: CompleteStructure) -> None:
             existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys)
 
             upsert_sources(session, complete_structure.sources, existing_thing_nodes)
-            upsert_sinks(session, complete_structure.sinks, existing_sinks, existing_thing_nodes)
+            upsert_sinks(session, complete_structure.sinks, existing_thing_nodes)
 
     except IntegrityError as e:
         logger.error("Integrity Error while updating or inserting the structure: %s", e)

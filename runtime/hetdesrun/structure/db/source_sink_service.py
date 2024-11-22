@@ -22,7 +22,6 @@ from hetdesrun.structure.db.exceptions import (
     DBNotFoundError,
     DBUpdateError,
 )
-from hetdesrun.structure.db.utils import get_insert_statement
 from hetdesrun.structure.models import (
     StructureServiceSink,
     StructureServiceSource,
@@ -173,7 +172,7 @@ def fetch_collection_of_sinks_from_db_by_id(
 
 
 def fetch_sources(
-    session: SQLAlchemySession, keys: set[tuple[str, str]]
+    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceSourceDBModel]:
     """Fetch source records by stakeholder_key and external_id.
 
@@ -185,16 +184,18 @@ def fetch_sources(
     if not keys:
         return existing_sources_mapping
     try:
-        query = session.query(StructureServiceSourceDBModel).filter(
-            tuple_(
-                StructureServiceSourceDBModel.stakeholder_key,
-                StructureServiceSourceDBModel.external_id,
-            ).in_(keys)
-        )
-        results = query.all()
-        for source in results:
-            key = (source.stakeholder_key, source.external_id)
-            existing_sources_mapping[key] = source
+        # Loop through keys in batches of size <batch_size> or less
+        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
+            batch_query = session.query(StructureServiceSourceDBModel).filter(
+                tuple_(
+                    StructureServiceSourceDBModel.stakeholder_key,
+                    StructureServiceSourceDBModel.external_id,
+                ).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for source in batch_results:
+                key = (source.stakeholder_key, source.external_id)
+                existing_sources_mapping[key] = source
         logger.debug(
             "Fetched %d StructureServiceSourceDBModel items from the database for %d keys.",
             len(existing_sources_mapping),
@@ -212,7 +213,7 @@ def fetch_sources(
 
 
 def fetch_sinks(
-    session: SQLAlchemySession, keys: set[tuple[str, str]]
+    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
 ) -> dict[tuple[str, str], StructureServiceSinkDBModel]:
     """Fetch sink records by stakeholder_key and external_id.
 
@@ -224,16 +225,18 @@ def fetch_sinks(
     if not keys:
         return existing_sinks_mapping
     try:
-        query = session.query(StructureServiceSinkDBModel).filter(
-            tuple_(
-                StructureServiceSinkDBModel.stakeholder_key,
-                StructureServiceSinkDBModel.external_id,
-            ).in_(keys)
-        )
-        results = query.all()
-        for sink in results:
-            key = (sink.stakeholder_key, sink.external_id)
-            existing_sinks_mapping[key] = sink
+        # Loop through keys in batches of size <batch_size> or less
+        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
+            batch_query = session.query(StructureServiceSinkDBModel).filter(
+                tuple_(
+                    StructureServiceSinkDBModel.stakeholder_key,
+                    StructureServiceSinkDBModel.external_id,
+                ).in_(key_batch)
+            )
+            batch_results = batch_query.all()
+            for sink in batch_results:
+                key = (sink.stakeholder_key, sink.external_id)
+                existing_sinks_mapping[key] = sink
         logger.debug(
             "Fetched %d StructureServiceSinkDBModel items from the database for %d keys.",
             len(existing_sinks_mapping),
