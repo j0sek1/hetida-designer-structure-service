@@ -455,13 +455,10 @@ def upsert_sinks(
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSinkDBModel: %s", e)
-        raise DBIntegrityError(
-            "Integrity Error while upserting StructureServiceSinkDBModel"
-        ) from e
+        raise DBIntegrityError("Integrity Error while upserting StructureServiceSinkDBModel") from e
     except ValueError as e:
         logger.error("Value error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBError("Value error while upserting StructureServiceSinkDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBUpdateError("Unexpected error while upserting StructureServiceSinkDBModel") from e
-
