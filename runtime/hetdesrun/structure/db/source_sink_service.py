@@ -15,8 +15,6 @@ from hetdesrun.persistence.structure_service_dbmodels import (
     StructureServiceSinkDBModel,
     StructureServiceSourceDBModel,
     StructureServiceThingNodeDBModel,
-    thingnode_sink_association,
-    thingnode_source_association,
 )
 from hetdesrun.structure.db.exceptions import (
     DBError,
@@ -404,180 +402,66 @@ def upsert_sources(
 def upsert_sinks(
     session: SQLAlchemySession,
     sinks: list[StructureServiceSink],
+    existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """Insert or update sink records in the database.
 
     For each StructureServiceSink, updates existing records if they are found;
     otherwise, creates new records.
     """
+    if not sinks:
+        return
+    sink_dicts = [src.dict() for src in sinks]
+
     try:
-        # Prepare data for upsert
-        insert_data = [
-            {
-                "id": sink.id,
-                "external_id": sink.external_id,
-                "stakeholder_key": sink.stakeholder_key,
-                "name": sink.name,
-                "type": sink.type,
-                "visible": sink.visible,
-                "display_path": sink.display_path,
-                "preset_filters": sink.preset_filters,
-                "passthrough_filters": [f.dict() for f in sink.passthrough_filters]
-                if sink.passthrough_filters
-                else None,
-                "adapter_key": sink.adapter_key,
-                "sink_id": sink.sink_id,
-                "ref_key": sink.ref_key,
-                "ref_id": sink.ref_id,
-                "meta_data": sink.meta_data,
-            }
-            for sink in sinks
-        ]
+        engine: Engine | Connection = session.get_bind()
+        if isinstance(engine, Connection):
+            raise ValueError("The session in use has to be bound to an Engine not a Connection.")
 
-        # Create upsert statement
-        insert_stmt = get_insert_statement(session, StructureServiceSinkDBModel).values(insert_data)
+        upsert_stmt: sqlite_insert_typing | pg_insert_typing
 
-        insert_stmt = insert_stmt.on_conflict_do_update(
-            index_elements=["external_id", "stakeholder_key"],
+        if is_postgresql(engine):
+            upsert_stmt = pg_insert(StructureServiceSinkDBModel).values(sink_dicts)
+        elif is_sqlite(engine):
+            upsert_stmt = sqlite_insert(StructureServiceSinkDBModel).values(sink_dicts)
+        else:
+            raise ValueError(
+                f"Unsupported database engine: {engine}. Please use either Postgres or SQLITE."
+            )
+
+        upsert_stmt = upsert_stmt.on_conflict_do_update(
+            index_elements=[
+                "external_id",
+                "stakeholder_key",
+            ],  # Columns where insert looks for a conflict
             set_={
-                "name": insert_stmt.excluded.name,
-                "type": insert_stmt.excluded.type,
-                "visible": insert_stmt.excluded.visible,
-                "display_path": insert_stmt.excluded.display_path,
-                "preset_filters": insert_stmt.excluded.preset_filters,
-                "passthrough_filters": insert_stmt.excluded.passthrough_filters,
-                "adapter_key": insert_stmt.excluded.adapter_key,
-                "sink_id": insert_stmt.excluded.sink_id,
-                "ref_key": insert_stmt.excluded.ref_key,
-                "ref_id": insert_stmt.excluded.ref_id,
-                "meta_data": insert_stmt.excluded.meta_data,
-            },
+                col: upsert_stmt.excluded[col] for col in sink_dicts[0] if col != "id"
+            },  # Exclude primary key from update
+        ).returning(StructureServiceSinkDBModel)  # type: ignore
+
+        # ORM models returned by the upsert query
+        sinks_dbmodels = session.scalars(
+            upsert_stmt,
+            execution_options={"populate_existing": True},
         )
 
-        session.execute(insert_stmt)
-
-        # Now, update associations in batch
-
-        # Identify sinks with thing_node_external_ids
-        sinks_with_tn_ids = [sink for sink in sinks if sink.thing_node_external_ids]
-
-        if not sinks_with_tn_ids:
-            return  # No associations to update
-
-        # Build mappings for sink and thing node identifiers
-        sink_thingnode_mappings = []
-        for sink in sinks_with_tn_ids:
-            for tn_external_id in sink.thing_node_external_ids:
-                sink_thingnode_mappings.append(
-                    {
-                        "sink_external_id": sink.external_id,
-                        "sink_stakeholder_key": sink.stakeholder_key,
-                        "thing_node_external_id": tn_external_id,
-                        "thing_node_stakeholder_key": sink.stakeholder_key,  # Assuming same stakeholder_key
-                    }
-                )
-
-        # Get unique sink identifiers
-        unique_sink_identifiers = {
-            (mapping["sink_external_id"], mapping["sink_stakeholder_key"])
-            for mapping in sink_thingnode_mappings
-        }
-
-        # Get unique thing node identifiers
-        unique_thingnode_identifiers = {
-            (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
-            for mapping in sink_thingnode_mappings
-        }
-
-        # Query sink IDs
-        sink_id_rows = (
-            session.query(
-                StructureServiceSinkDBModel.external_id,
-                StructureServiceSinkDBModel.stakeholder_key,
-                StructureServiceSinkDBModel.id,
-            )
-            .filter(
-                tuple_(
-                    StructureServiceSinkDBModel.external_id,
-                    StructureServiceSinkDBModel.stakeholder_key,
-                ).in_(unique_sink_identifiers)
-            )
-            .all()
-        )
-
-        sink_id_map = {(row.external_id, row.stakeholder_key): row.id for row in sink_id_rows}
-
-        # Query thing node IDs
-        thingnode_id_rows = (
-            session.query(
-                StructureServiceThingNodeDBModel.external_id,
-                StructureServiceThingNodeDBModel.stakeholder_key,
-                StructureServiceThingNodeDBModel.id,
-            )
-            .filter(
-                tuple_(
-                    StructureServiceThingNodeDBModel.external_id,
-                    StructureServiceThingNodeDBModel.stakeholder_key,
-                ).in_(unique_thingnode_identifiers)
-            )
-            .all()
-        )
-
-        thingnode_id_map = {
-            (row.external_id, row.stakeholder_key): row.id for row in thingnode_id_rows
-        }
-
-        # Build association insert data
-        association_insert_data = []
-        for mapping in sink_thingnode_mappings:
-            sink_id = sink_id_map.get(
-                (mapping["sink_external_id"], mapping["sink_stakeholder_key"])
-            )
-            thingnode_id = thingnode_id_map.get(
-                (mapping["thing_node_external_id"], mapping["thing_node_stakeholder_key"])
-            )
-            if sink_id and thingnode_id:
-                association_insert_data.append(
-                    {
-                        "sink_id": sink_id,
-                        "thingnode_id": thingnode_id,
-                    }
-                )
-            else:
-                logger.error(
-                    "Missing ID for sink (%s, %s) or thing node (%s, %s)",
-                    mapping["sink_external_id"],
-                    mapping["sink_stakeholder_key"],
-                    mapping["thing_node_external_id"],
-                    mapping["thing_node_stakeholder_key"],
-                )
-
-        # Collect sink IDs for deletion
-        sink_ids_to_delete = list(sink_id_map.values())
-
-        if sink_ids_to_delete:
-            # Delete existing associations
-            delete_stmt = delete(thingnode_sink_association).where(
-                thingnode_sink_association.c.sink_id.in_(sink_ids_to_delete)
-            )
-            session.execute(delete_stmt)
-
-        # Insert new associations
-        if association_insert_data:
-            association_insert_stmt = get_insert_statement(
-                session, thingnode_sink_association
-            ).values(association_insert_data)
-
-            # Use on_conflict_do_nothing to avoid duplicate entries
-            association_insert_stmt = association_insert_stmt.on_conflict_do_nothing(
-                index_elements=["sink_id", "thingnode_id"]
-            )
-
-            session.execute(association_insert_stmt)
+        # Assign relationships
+        for sink in sinks_dbmodels:
+            sink.thing_nodes = [
+                existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
+                for tn_external_id in sink.thing_node_external_ids or []
+                if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
+            ]
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSinkDBModel: %s", e)
-        raise DBIntegrityError("Integrity Error while upserting StructureServiceSinkDBModel") from e
+        raise DBIntegrityError(
+            "Integrity Error while upserting StructureServiceSinkDBModel"
+        ) from e
+    except ValueError as e:
+        logger.error("Value error while upserting StructureServiceSinkDBModel: %s", e)
+        raise DBError("Value error while upserting StructureServiceSinkDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBUpdateError("Unexpected error while upserting StructureServiceSinkDBModel") from e
+
