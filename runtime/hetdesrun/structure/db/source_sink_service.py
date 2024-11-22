@@ -405,7 +405,6 @@ def upsert_sources(
 def upsert_sinks(
     session: SQLAlchemySession,
     sinks: list[StructureServiceSink],
-    existing_sinks: dict[tuple[str, str], StructureServiceSinkDBModel],
     existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:
     """Insert or update sink records in the database.
@@ -413,67 +412,56 @@ def upsert_sinks(
     For each StructureServiceSink, updates existing records if they are found;
     otherwise, creates new records.
     """
+    if not sinks:
+        return
+    sink_dicts = [src.dict() for src in sinks]
+
     try:
-        new_records = []
+        engine: Engine | Connection = session.get_bind()
+        if isinstance(engine, Connection):
+            raise ValueError("The session in use has to be bound to an Engine not a Connection.")
 
-        for sink in sinks:
-            key = (sink.stakeholder_key, sink.external_id)
-            db_sink = existing_sinks.get(key)
+        upsert_stmt: sqlite_insert_typing | pg_insert_typing
 
-            if db_sink:
-                logger.debug("Updating StructureServiceSinkDBModel with key %s.", key)
-                # Update fields
-                db_sink.name = sink.name
-                db_sink.type = sink.type
-                db_sink.visible = sink.visible
-                db_sink.display_path = sink.display_path
-                db_sink.adapter_key = sink.adapter_key
-                db_sink.sink_id = sink.sink_id
-                db_sink.ref_key = sink.ref_key
-                db_sink.ref_id = sink.ref_id
-                db_sink.meta_data = sink.meta_data
-                db_sink.preset_filters = sink.preset_filters
-                db_sink.passthrough_filters = sink.passthrough_filters
+        if is_postgresql(engine):
+            upsert_stmt = pg_insert(StructureServiceSinkDBModel).values(sink_dicts)
+        elif is_sqlite(engine):
+            upsert_stmt = sqlite_insert(StructureServiceSinkDBModel).values(sink_dicts)
+        else:
+            raise ValueError(
+                f"Unsupported database engine: {engine}. Please use either Postgres or SQLITE."
+            )
 
-                # Clear and set relationships
-                db_sink.thing_nodes = [
-                    existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
-                    for tn_external_id in sink.thing_node_external_ids or []
-                    if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-            else:
-                logger.debug("Creating new StructureServiceSinkDBModel with key %s.", key)
-                new_sink = StructureServiceSinkDBModel(
-                    id=sink.id,
-                    external_id=sink.external_id,
-                    stakeholder_key=sink.stakeholder_key,
-                    name=sink.name,
-                    type=sink.type,
-                    visible=sink.visible,
-                    display_path=sink.display_path,
-                    adapter_key=sink.adapter_key,
-                    sink_id=sink.sink_id,
-                    ref_key=sink.ref_key,
-                    ref_id=sink.ref_id,
-                    meta_data=sink.meta_data,
-                    preset_filters=sink.preset_filters,
-                    passthrough_filters=sink.passthrough_filters,  # type: ignore
-                )
+        upsert_stmt = upsert_stmt.on_conflict_do_update(
+            index_elements=[
+                "external_id",
+                "stakeholder_key",
+            ],  # Columns where insert looks for a conflict
+            set_={
+                col: upsert_stmt.excluded[col] for col in sink_dicts[0] if col != "id"
+            },  # Exclude primary key from update
+        ).returning(StructureServiceSinkDBModel)  # type: ignore
 
-                # Assign relationships
-                new_sink.thing_nodes = [
-                    existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
-                    for tn_external_id in sink.thing_node_external_ids or []
-                    if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
-                ]
-                new_records.append(new_sink)
+        # ORM models returned by the upsert query
+        sinks_dbmodels = session.scalars(
+            upsert_stmt,
+            execution_options={"populate_existing": True},
+        )
 
-        if new_records:
-            session.add_all(new_records)
+        # Assign relationships
+        for sink in sinks_dbmodels:
+            sink.thing_nodes = [
+                existing_thing_nodes.get((sink.stakeholder_key, tn_external_id))
+                for tn_external_id in sink.thing_node_external_ids or []
+                if (sink.stakeholder_key, tn_external_id) in existing_thing_nodes
+            ]
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBIntegrityError("Integrity Error while upserting StructureServiceSinkDBModel") from e
+    except ValueError as e:
+        logger.error("Value error while upserting StructureServiceSinkDBModel: %s", e)
+        raise DBError("Value error while upserting StructureServiceSinkDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceSinkDBModel: %s", e)
         raise DBUpdateError("Unexpected error while upserting StructureServiceSinkDBModel") from e

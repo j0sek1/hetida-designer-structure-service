@@ -249,7 +249,7 @@ def update_structure(complete_structure: CompleteStructure, batch_size: int = 50
             existing_thing_nodes = fetch_thing_nodes(session, thing_node_keys)
 
             upsert_sources(session, complete_structure.sources, existing_thing_nodes)
-            upsert_sinks(session, complete_structure.sinks, existing_sinks, existing_thing_nodes)
+            upsert_sinks(session, complete_structure.sinks, existing_thing_nodes)
 
     except IntegrityError as e:
         logger.error("Integrity Error while updating or inserting the structure: %s", e)
