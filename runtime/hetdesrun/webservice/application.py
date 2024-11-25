@@ -213,8 +213,6 @@ def init_app() -> FastAPI:  # noqa: PLR0912,PLR0915
             app.include_router(
                 blob_storage_adapter_router
             )  # auth dependency set individually per endpoint
-        if get_vst_adapter_config().active and get_vst_adapter_config().service_in_runtime:
-            app.include_router(virtual_structure_adapter_router)
         app.include_router(
             runtime_router, prefix="/engine"
         )  # auth dependency set individually per endpoint
@@ -235,7 +233,7 @@ def init_app() -> FastAPI:  # noqa: PLR0912,PLR0915
             app.include_router(
                 kafka_adapter_router
             )  # auth dependency set individually per endpoint
-        if get_vst_adapter_config().active and not get_vst_adapter_config().service_in_runtime:
+        if get_vst_adapter_config().active:
             app.include_router(virtual_structure_adapter_router)
         app.include_router(adapter_router, prefix="/api", dependencies=get_auth_deps())
         app.include_router(base_item_router, prefix="/api", dependencies=get_auth_deps())

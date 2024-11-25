@@ -8,17 +8,8 @@ from hetdesrun.structure.models import CompleteStructure
 class VirtualStructureAdapterConfig(BaseSettings):
     active: bool = Field(
         True,
-        description="Whether to use the adapter or not",
+        description="Whether to register the adapter or not",
         env="VST_ADAPTER_ACTIVE",
-    )
-
-    service_in_runtime: bool = Field(
-        True,
-        description=(
-            "Whether the API part serving the hd frontend is started as part"
-            " of the runtime API service as opposed to as part of the backend API."
-        ),
-        env="VST_ADAPTER_SERVICE_IN_RUNTIME",
     )
 
     prepopulate_virtual_structure_adapter_at_designer_startup: bool = Field(

@@ -288,7 +288,7 @@ Additionally environment variables can be set directly (overriding possible sett
 Note that most configuration options have to be set for the backend service no matter where the webservice part of the virtual structure adapter is running (configured via `VST_ADAPTER_SERVICE_IN_RUNTIME`).
 
 ### Adapter Activation and Registration
-`VST_ADAPTER_ACTIVE` (default `true`) activates the adapter.
+`VST_ADAPTER_ACTIVE` (default `true`) determines whether the adapter is registered or not.
 
 By default the virtual structure adapter is registered to run at the runtime service, corresponding to the default value `True` of `VST_ADAPTER_SERVICE_IN_RUNTIME`. The latter configuration should be set equally for both backend and runtime.
 
