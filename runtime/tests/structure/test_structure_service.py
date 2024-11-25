@@ -1161,9 +1161,7 @@ def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
         )
 
         # Create existing_element_types dictionary
-        existing_element_types = {
-            ("GW", "type1"): element_type
-        }
+        existing_element_types = {("GW", "type1"): element_type}
 
         # Call the function
         upsert_thing_nodes(session, [node], existing_element_types)
