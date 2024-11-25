@@ -10,6 +10,10 @@ from uuid import UUID, uuid4
 import httpx
 from pydantic import ValidationError
 
+from hetdesrun.adapters.exceptions import AdapterHandlingException
+from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
+    resolve_virtual_structure_wirings,
+)
 from hetdesrun.backend.models.info import ExecutionResponseFrontendDto
 from hetdesrun.models.component import ComponentNode
 from hetdesrun.models.execution import ExecByIdInput
@@ -280,8 +284,27 @@ async def execute_transformation_revision(
     repr_reference = deepcopy(exec_by_id_input.resolved_reproducibility_references)
     set_reproducibility_reference_context(repr_reference)
 
-    # prepare execution input
+    # Resolve virtual wirings if necessary
+    if exec_by_id_input.wiring:
+        try:
+            resolve_wirings_measured_step = PerformanceMeasuredStep.create_and_begin(
+                "resolve_virtual_wirings_if_contained"
+            )
+            resolve_virtual_structure_wirings(exec_by_id_input.wiring)
+            logger.debug(
+                "Resolved virtual structure wirings: \n%s",
+                exec_by_id_input.wiring,
+            )
 
+            resolve_wirings_measured_step.stop()
+        except AdapterHandlingException as exc:
+            logger.info(
+                "Adapter Handling Exception during the resolution of the virtual wirings",
+                exc_info=True,
+            )
+            raise TrafoExecutionError() from exc
+
+    # prepare execution input
     prep_exec_input_measured_step = PerformanceMeasuredStep.create_and_begin(
         "prepare_execution_input"
     )

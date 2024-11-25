@@ -1,9 +1,6 @@
 from fastapi.encoders import jsonable_encoder
 
 from hetdesrun.adapters import AdapterHandlingException
-from hetdesrun.adapters.virtual_structure_adapter.resolve_wirings import (
-    resolve_virtual_structure_wirings,
-)
 from hetdesrun.datatypes import NamedDataTypedValue
 from hetdesrun.models.run import (
     PerformanceMeasuredStep,
@@ -76,30 +73,6 @@ async def runtime_service(  # noqa: PLR0911, PLR0912, PLR0915
     except WorkflowInputDataValidationError as exc:
         runtime_logger.info(
             "Workflow Input Data Validation Exception during workflow execution",
-            exc_info=True,
-        )
-        return WorkflowExecutionResult.from_exception(
-            exc,
-            currently_executed_process_stage,
-            runtime_input.job_id,
-        )
-
-    # Resolve virtual wirings if necessary
-    currently_executed_process_stage = ProcessStage.RESOLVE_VIRTUAL_STRUCTURE_WIRINGS
-    try:
-        resolve_wirings_measured_step = PerformanceMeasuredStep.create_and_begin(
-            currently_executed_process_stage.value
-        )
-        resolve_virtual_structure_wirings(runtime_input.workflow_wiring)
-        runtime_logger.debug(
-            "Resolved virtual structure wirings: \n%s",
-            runtime_input.workflow_wiring,
-        )
-
-        resolve_wirings_measured_step.stop()
-    except AdapterHandlingException as exc:
-        runtime_logger.info(
-            "Adapter Handling Exception during the resolution of the virtual wirings",
             exc_info=True,
         )
         return WorkflowExecutionResult.from_exception(

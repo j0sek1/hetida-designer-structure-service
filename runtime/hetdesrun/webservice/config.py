@@ -336,7 +336,7 @@ class RuntimeConfig(BaseSettings):
         "|http://localhost:8090/adapters/kafka"
         "|http://localhost:8090/adapters/kafka,"
         "virtual-structure-adapter|Virtual Structure Adapter"
-        "|http://localhost:8090/adapters/virtual_structure"
+        "|http://localhost:8080/adapters/virtual_structure"
         "|http://localhost:8090/adapters/virtual_structure,"
         "external-sources|External Sources"
         "|http://localhost:8090/adapters/external_sources"
