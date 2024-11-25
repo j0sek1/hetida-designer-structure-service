@@ -747,11 +747,6 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db = fetch_thing_nodes(session, thing_node_keys)
         thing_nodes_in_db = list(thing_nodes_in_db.values())
 
-        # Create a mapping of thing nodes for the sort function
-        existing_thing_nodes = {
-            (tn.stakeholder_key, tn.external_id): tn for tn in thing_nodes_in_db
-        }
-
         # Run the sort function using the new sort_thing_nodes method
         sorted_nodes = sort_thing_nodes(thing_nodes_in_db)
 

@@ -3,7 +3,11 @@ from itertools import batched
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import Connection, Engine, tuple_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.postgresql.dml import Insert as pg_insert_typing
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.sqlite.dml import Insert as sqlite_insert_typing
 from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession, get_session
@@ -18,6 +22,7 @@ from hetdesrun.structure.db.exceptions import (
     DBUpdateError,
 )
 from hetdesrun.structure.models import StructureServiceThingNode
+from hetdesrun.structure.utils import is_postgresql, is_sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -123,76 +128,91 @@ def search_thing_nodes_by_name(
 def upsert_thing_nodes(
     session: SQLAlchemySession,
     thing_nodes: list[StructureServiceThingNode],
-    existing_thing_nodes: dict[tuple[str, str], StructureServiceThingNodeDBModel],
-) -> None:
+    existing_element_types: dict[tuple[str, str], StructureServiceElementTypeDBModel],
+) -> dict[tuple[str, str], StructureServiceThingNodeDBModel]:
     """Insert or update thing node records in the database.
 
-    For each StructureServiceThingNodeDBModel, updates existing records if they are found;
-    otherwise, creates new records.
+    For each StructureServiceThingNode, updates existing records if they are found;
+    otherwise, creates new records. Uses provided element types and returns the
+    thing node as a dictionary indexed by (stakeholder_key, external_id).
     """
-    try:
-        required_keys = {
-            (node.stakeholder_key, node.element_type_external_id) for node in thing_nodes
-        }
-        element_type_stmt = select(StructureServiceElementTypeDBModel).where(
-            tuple_(
-                StructureServiceElementTypeDBModel.stakeholder_key,
-                StructureServiceElementTypeDBModel.external_id,
-            ).in_(required_keys)
+    if not thing_nodes:
+        return {}
+
+    # Prepare thing node records
+    # Ensure the associated element type exists 
+    # to prevent foreign key constraint errors
+    thing_node_dicts = []
+    for node in thing_nodes:
+        element_type = existing_element_types.get(
+            (node.stakeholder_key, node.element_type_external_id)
         )
-        element_types = {
-            (et.stakeholder_key, et.external_id): et
-            for et in session.execute(element_type_stmt).scalars().all()
+        if not element_type:
+            logger.warning(
+                "StructureServiceElementType with key (%s, %s) not found for "
+                "StructureServiceThingNode %s. Skipping update.",
+                node.stakeholder_key,
+                node.element_type_external_id,
+                node.name,
+            )
+            continue
+
+        # Use node.dict() and add/override specific fields
+        node_dict = node.dict()
+        node_dict.update({
+            "element_type_id": element_type.id,  # Add foreign key
+        })
+        thing_node_dicts.append(node_dict)
+
+    if not thing_node_dicts:
+        return {}
+
+    try:
+        engine: Engine | Connection = session.get_bind()
+        if isinstance(engine, Connection):
+            raise ValueError("The session in use has to be bound to an Engine, not a Connection.")
+
+        upsert_stmt: sqlite_insert_typing | pg_insert_typing
+
+        if is_postgresql(engine):
+            upsert_stmt = pg_insert(StructureServiceThingNodeDBModel).values(thing_node_dicts)
+        elif is_sqlite(engine):
+            upsert_stmt = sqlite_insert(StructureServiceThingNodeDBModel).values(thing_node_dicts)
+        else:
+            raise ValueError(
+                f"Unsupported database engine: {engine}. Please use either Postgres or SQLite."
+            )
+
+        upsert_stmt = upsert_stmt.on_conflict_do_update(
+            index_elements=[
+                "external_id",
+                "stakeholder_key"
+            ],  # Columns where insert looks for a conflict
+            set_= {
+                col: upsert_stmt.excluded[col] for col in thing_node_dicts[0] if col != "id"},
+        ).returning(StructureServiceThingNodeDBModel)  # type: ignore
+
+        # ORM models returned by the upsert query
+        thing_node_dbmodels = session.scalars(
+            upsert_stmt,
+            execution_options={"populate_existing": True},
+        )
+
+        # Convert to dictionary indexed by (stakeholder_key, external_id)
+        thing_node_dbmodel_dict = {
+            (tn.stakeholder_key, tn.external_id): tn for tn in thing_node_dbmodels
         }
 
-        new_records = []
-        for node in thing_nodes:
-            key = (node.stakeholder_key, node.external_id)
-            db_node = existing_thing_nodes.get(key)
-
-            element_type = element_types.get((node.stakeholder_key, node.element_type_external_id))
-            if not element_type:
-                logger.warning(
-                    "StructureServiceElementType with key (%s, %s) not found for "
-                    "StructureServiceThingNode %s. Skipping update.",
-                    node.stakeholder_key,
-                    node.element_type_external_id,
-                    node.name,
-                )
-                continue
-
-            if db_node:
-                logger.debug("Updating StructureServiceThingNodeDBModel with key %s.", key)
-                db_node.name = node.name
-                db_node.description = node.description
-                db_node.element_type_id = element_type.id
-                db_node.meta_data = node.meta_data
-                db_node.parent_node_id = node.parent_node_id
-                db_node.parent_external_node_id = node.parent_external_node_id
-            else:
-                new_records.append(
-                    StructureServiceThingNodeDBModel(
-                        id=node.id,
-                        external_id=node.external_id,
-                        stakeholder_key=node.stakeholder_key,
-                        name=node.name,
-                        description=node.description,
-                        parent_node_id=node.parent_node_id,
-                        parent_external_node_id=node.parent_external_node_id,
-                        element_type_id=element_type.id,
-                        element_type_external_id=node.element_type_external_id,
-                        meta_data=node.meta_data,
-                    )
-                )
-
-        if new_records:
-            session.add_all(new_records)
+        return thing_node_dbmodel_dict
 
     except IntegrityError as e:
         logger.error("Integrity Error while upserting StructureServiceThingNodeDBModel: %s", e)
         raise DBIntegrityError(
             "Integrity Error while upserting StructureServiceThingNodeDBModel"
         ) from e
+    except ValueError as e:
+        logger.error("Value error while upserting StructureServiceThingNodeDBModel: %s", e)
+        raise DBError("Value error while upserting StructureServiceThingNodeDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceThingNodeDBModel: %s", e)
         raise DBUpdateError(
