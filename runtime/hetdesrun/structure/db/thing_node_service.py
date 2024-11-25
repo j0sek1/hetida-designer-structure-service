@@ -136,8 +136,6 @@ def upsert_thing_nodes(
     otherwise, creates new records. Uses provided element types and returns the
     thing node as a dictionary indexed by (stakeholder_key, external_id).
     """
-    if not thing_nodes:
-        return {}
 
     # Prepare thing node records
     # Ensure the associated element type exists
@@ -185,12 +183,20 @@ def upsert_thing_nodes(
                 f"Unsupported database engine: {engine}. Please use either Postgres or SQLite."
             )
 
+        excluded_dict = {}
+        for col in thing_node_dicts[0]:
+            # Exclude primary key (id) and parent_node_id as it is not read from db
+            # but created in CompleteStructure
+            if col in ("id", "parent_node_id"):
+                continue
+            excluded_dict[col] = upsert_stmt.excluded[col]
+
         upsert_stmt = upsert_stmt.on_conflict_do_update(
             index_elements=[
                 "external_id",
                 "stakeholder_key",
             ],  # Columns where insert looks for a conflict
-            set_={col: upsert_stmt.excluded[col] for col in thing_node_dicts[0] if col != "id"},
+            set_=excluded_dict,
         ).returning(StructureServiceThingNodeDBModel)  # type: ignore
 
         # ORM models returned by the upsert query
