@@ -140,7 +140,7 @@ def upsert_thing_nodes(
         return {}
 
     # Prepare thing node records
-    # Ensure the associated element type exists 
+    # Ensure the associated element type exists
     # to prevent foreign key constraint errors
     thing_node_dicts = []
     for node in thing_nodes:
@@ -159,9 +159,11 @@ def upsert_thing_nodes(
 
         # Use node.dict() and add/override specific fields
         node_dict = node.dict()
-        node_dict.update({
-            "element_type_id": element_type.id,  # Add foreign key
-        })
+        node_dict.update(
+            {
+                "element_type_id": element_type.id,  # Add foreign key
+            }
+        )
         thing_node_dicts.append(node_dict)
 
     if not thing_node_dicts:
@@ -186,10 +188,9 @@ def upsert_thing_nodes(
         upsert_stmt = upsert_stmt.on_conflict_do_update(
             index_elements=[
                 "external_id",
-                "stakeholder_key"
+                "stakeholder_key",
             ],  # Columns where insert looks for a conflict
-            set_= {
-                col: upsert_stmt.excluded[col] for col in thing_node_dicts[0] if col != "id"},
+            set_={col: upsert_stmt.excluded[col] for col in thing_node_dicts[0] if col != "id"},
         ).returning(StructureServiceThingNodeDBModel)  # type: ignore
 
         # ORM models returned by the upsert query
