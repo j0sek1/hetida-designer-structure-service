@@ -33,6 +33,7 @@ from hetdesrun.persistence.dbservice.revision import (
 from hetdesrun.persistence.models.transformation import TransformationRevision
 from hetdesrun.persistence.models.workflow import WorkflowContent
 from hetdesrun.reference_context import (
+    get_deepcopy_of_reproducibility_reference_context,
     set_reproducibility_reference_context,
 )
 from hetdesrun.runtime.logging import execution_context_filter
@@ -301,6 +302,10 @@ async def execute_transformation_revision(
             logger.info(
                 "Adapter Handling Exception during the resolution of the virtual wirings",
                 exc_info=True,
+            )
+            logger.info(
+                "Reproducibility reference contents at time of wiring resolution: %s",
+                get_deepcopy_of_reproducibility_reference_context().dict(),
             )
             raise TrafoExecutionError() from exc
 
