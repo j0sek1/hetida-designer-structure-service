@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import NamedTuple
 from uuid import UUID, uuid4
 
@@ -44,8 +45,8 @@ class TransformationRevisionDBModel(Base):
     io_interface: Mapped[dict] = mapped_column(JSON, nullable=False)
     test_wiring: Mapped[dict] = mapped_column(JSON, nullable=False)
     release_wiring: Mapped[dict] = mapped_column(JSON, nullable=False)
-    released_timestamp: Mapped[DateTime | None] = mapped_column(DateTime, nullable=True)
-    disabled_timestamp: Mapped[DateTime | None] = mapped_column(DateTime, nullable=True)
+    released_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    disabled_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (
         UniqueConstraint(

@@ -747,11 +747,6 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db = fetch_thing_nodes(session, thing_node_keys)
         thing_nodes_in_db = list(thing_nodes_in_db.values())
 
-        # Create a mapping of thing nodes for the sort function
-        existing_thing_nodes = {
-            (tn.stakeholder_key, tn.external_id): tn for tn in thing_nodes_in_db
-        }
-
         # Run the sort function using the new sort_thing_nodes method
         sorted_nodes = sort_thing_nodes(thing_nodes_in_db)
 
@@ -1165,8 +1160,13 @@ def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
             meta_data={},
         )
 
+        # Create existing_element_types dictionary
+        existing_element_types = {
+            ("GW", "type1"): element_type
+        }
+
         # Call the function
-        upsert_thing_nodes(session, [node])
+        upsert_thing_nodes(session, [node], existing_element_types)
         session.commit()
 
         # Verify that the StructureServiceThingNodeDBModel was added to the database
