@@ -147,7 +147,7 @@ def upsert_element_types(
             execution_options={"populate_existing": True},
         )
 
-        # Convert to dictionary indexed by (stakeholder_key, external_id)
+        # Wrap DB models in dictionary for easier lookup
         element_dbmodel_dict = {(et.stakeholder_key, et.external_id): et for et in element_dbmodels}
 
         return element_dbmodel_dict
