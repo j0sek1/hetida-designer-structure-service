@@ -87,44 +87,6 @@ def fetch_thing_nodes(
         raise DBError("Unexpected error while fetching StructureServiceThingNodes") from e
 
 
-def search_thing_nodes_by_name(
-    session: SQLAlchemySession, name_query: str
-) -> list[StructureServiceThingNodeDBModel]:
-    """Search for thing nodes by name substring.
-
-    Performs a case-insensitive search for StructureServiceThingNodeDBModel records
-    whose names contain the provided substring. Returns a list of matching instances.
-    """
-    try:
-        thing_nodes = (
-            session.query(StructureServiceThingNodeDBModel)
-            .filter(StructureServiceThingNodeDBModel.name.ilike(f"%{name_query}%"))
-            .all()
-        )
-        logger.debug(
-            "Found %d StructureServiceThingNodeDBModel items matching "
-            "name query '%s' from %d total records.",
-            len(thing_nodes),
-            name_query,
-            session.query(StructureServiceThingNodeDBModel).count(),
-        )
-        return thing_nodes
-    except IntegrityError as e:
-        logger.error(
-            "Integrity Error while searching StructureServiceThingNodeDBModel by name: %s", e
-        )
-        raise DBIntegrityError(
-            "Integrity Error while searching StructureServiceThingNodeDBModel by name"
-        ) from e
-    except Exception as e:
-        logger.error(
-            "Unexpected error while searching StructureServiceThingNodeDBModel by name: %s", e
-        )
-        raise DBError(
-            "Unexpected error while searching StructureServiceThingNodeDBModel by name"
-        ) from e
-
-
 def update_parent_ids(
     thing_node_dbmodel_dict: dict[tuple[str, str], StructureServiceThingNodeDBModel],
 ) -> None:

@@ -55,43 +55,6 @@ def fetch_element_types(
         raise DBError("Unexpected error while fetching StructureServiceElementTypes") from e
 
 
-def search_element_types_by_name(
-    session: SQLAlchemySession, name_query: str
-) -> list[StructureServiceElementTypeDBModel]:
-    """Search element types by name.
-
-    Finds element types using case-insensitive substring matching.
-    """
-    try:
-        element_types = (
-            session.query(StructureServiceElementTypeDBModel)
-            .filter(StructureServiceElementTypeDBModel.name.ilike(f"%{name_query}%"))
-            .all()
-        )
-        logger.debug(
-            "Found %d StructureServiceElementTypeDBModel items matching "
-            "name query '%s' from %d total records.",
-            len(element_types),
-            name_query,
-            session.query(StructureServiceElementTypeDBModel).count(),
-        )
-        return element_types
-    except IntegrityError as e:
-        logger.error(
-            "Integrity Error while searching StructureServiceElementTypeDBModel by name: %s", e
-        )
-        raise DBIntegrityError(
-            "Integrity Error while searching StructureServiceElementTypeDBModel by name"
-        ) from e
-    except Exception as e:
-        logger.error(
-            "Unexpected error while searching StructureServiceElementTypeDBModel by name: %s", e
-        )
-        raise DBError(
-            "Unexpected error while searching StructureServiceElementTypeDBModel by name"
-        ) from e
-
-
 def upsert_element_types(
     session: SQLAlchemySession,
     elements: list[StructureServiceElementType],
