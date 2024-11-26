@@ -35,7 +35,6 @@ from hetdesrun.structure.db.structure_service import (
     delete_structure,
     get_children,
     load_structure_from_json_file,
-    populate_element_type_ids,
     sort_thing_nodes,
     update_structure,
 )
@@ -814,76 +813,6 @@ def test_fetch_sources_exception_handling(mocked_clean_test_db_session):
     ):
         # This will raise an error due to malformed input (tuple is incomplete)
         fetch_sources(session, invalid_keys)
-
-
-def test_populate_element_type_ids_success(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
-        # Create an StructureServiceElementTypeDBModel and add it to the session
-        element_type_id = uuid.uuid4()
-        element_type_orm = StructureServiceElementTypeDBModel(
-            id=element_type_id,
-            external_id="type1",
-            stakeholder_key="GW",
-            name="Test StructureServiceElementType",
-            description="Description",
-        )
-        session.add(element_type_orm)
-        session.commit()
-
-        # Existing StructureServiceElementTypes mapping
-        existing_element_types = {("GW", "type1"): element_type_orm}
-
-        # Create StructureServiceThingNodes that reference the StructureServiceElementType
-        thing_nodes = [
-            StructureServiceThingNode(
-                id=uuid.uuid4(),
-                stakeholder_key="GW",
-                external_id="node1",
-                element_type_external_id="type1",
-                name="Node 1",
-                description="Test Node",
-            )
-        ]
-
-        # Call the function
-        populate_element_type_ids(thing_nodes, existing_element_types)
-
-        # Assert that the element_type_id was set correctly
-        assert thing_nodes[0].element_type_id == element_type_id
-
-
-def test_populate_element_type_ids_element_type_not_found(mocked_clean_test_db_session, caplog):
-    # Empty existing StructureServiceElementTypes mapping
-    existing_element_types = {}
-
-    # Create StructureServiceThingNodes that reference a non-existing StructureServiceElementType
-    thing_nodes = [
-        StructureServiceThingNode(
-            id=uuid.uuid4(),
-            stakeholder_key="GW",
-            external_id="node1",
-            element_type_external_id="non_existing_type",
-            name="Node 1",
-            description="Test Node",
-        )
-    ]
-
-    # Store the original element_type_id
-    original_element_type_id = thing_nodes[0].element_type_id
-
-    # Test that ValueError is raised
-    with pytest.raises(ValueError, match="No StructureServiceElementType found for the key"):
-        populate_element_type_ids(thing_nodes, existing_element_types)
-
-    # Assert that element_type_id remains unchanged
-    assert thing_nodes[0].element_type_id == original_element_type_id
-
-    # Check that a warning was logged
-    assert any(
-        "StructureServiceElementType with key ('GW', 'non_existing_type') not found "
-        "for StructureServiceThingNode node1." in record.message
-        for record in caplog.records
-    )
 
 
 def test_search_element_types_by_name_success(mocked_clean_test_db_session):

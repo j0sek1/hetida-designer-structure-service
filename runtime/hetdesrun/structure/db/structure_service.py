@@ -168,39 +168,6 @@ def set_parent_ids_and_sort_nodes(
     return flattened_nodes
 
 
-def populate_element_type_ids(
-    thing_nodes: list[StructureServiceThingNode],
-    existing_element_types: dict[tuple[str, str], StructureServiceElementTypeDBModel],
-) -> None:
-    """Populate element_type_id for each StructureServiceThingNode.
-
-    Uses existing StructureServiceElementTypes for lookup.
-    """
-    logger.debug("Populating element_type_id for StructureServiceThingNodes.")
-    for tn in thing_nodes:
-        if tn.element_type_external_id:
-            key = (tn.stakeholder_key, tn.element_type_external_id)
-            db_et = existing_element_types.get(key)
-            if db_et:
-                tn.element_type_id = db_et.id
-                logger.debug(
-                    "Set element_type_id %s for StructureServiceThingNode %s.",
-                    db_et.id,
-                    tn.external_id,
-                )
-            else:
-                logger.warning(
-                    "StructureServiceElementType with key %s not found for "
-                    "StructureServiceThingNode %s.",
-                    key,
-                    tn.external_id,
-                )
-                raise ValueError(
-                    f"No StructureServiceElementType found for the key {key}. "
-                    f"Cannot set element_type_id for StructureServiceThingNode {tn.external_id}."
-                )
-
-
 def update_structure(complete_structure: CompleteStructure) -> None:
     """Update or insert a complete structure into the database."""
     logger.debug("Starting update or insert operation for the complete structure in the database.")
