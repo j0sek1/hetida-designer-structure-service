@@ -125,6 +125,22 @@ def search_thing_nodes_by_name(
         ) from e
 
 
+def update_parent_ids(
+    thing_node_dbmodel_dict: dict[tuple[str, str], StructureServiceThingNodeDBModel],
+) -> None:
+    """Update parent IDs for thing nodes based on the current child-parent relationships.
+
+    Ensures that `parent_node_id` attributes are updated in-place to reflect potential changes
+    in the hierarchical structure defined in the incoming data.
+    """
+    for tn in thing_node_dbmodel_dict.values():
+        if tn.parent_external_node_id:
+            parent_key = (tn.stakeholder_key, tn.parent_external_node_id)
+            parent = thing_node_dbmodel_dict.get(parent_key)
+            if parent:
+                tn.parent_node_id = parent.id
+
+
 def upsert_thing_nodes(
     session: SQLAlchemySession,
     thing_nodes: list[StructureServiceThingNode],
@@ -205,10 +221,12 @@ def upsert_thing_nodes(
             execution_options={"populate_existing": True},
         )
 
-        # Convert to dictionary indexed by (stakeholder_key, external_id)
+        # Wrap DB models in dictionary for easier lookup
         thing_node_dbmodel_dict = {
             (tn.stakeholder_key, tn.external_id): tn for tn in thing_node_dbmodels
         }
+
+        update_parent_ids(thing_node_dbmodel_dict)
 
         return thing_node_dbmodel_dict
 
