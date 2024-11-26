@@ -92,7 +92,7 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         ) from e
 
 
-def sort_thing_nodes(
+def set_parent_ids_and_sort_nodes(
     thing_nodes: list[StructureServiceThingNode],
 ) -> list[StructureServiceThingNode]:
     """Sort and flatten StructureServiceThingNodes by hierarchical levels.
@@ -120,6 +120,7 @@ def sort_thing_nodes(
                     tn.name,
                     parent_tn.id,
                 )
+                # In-place modification: Setting parent_node_id directly on the node
                 tn.parent_node_id = parent_tn.id
             else:
                 # Exclude orphan nodes with missing parent
@@ -207,10 +208,10 @@ def update_structure(complete_structure: CompleteStructure) -> None:
         with get_session()() as session, session.begin():
             existing_element_types = upsert_element_types(session, complete_structure.element_types)
 
-            sorted_thing_nodes = sort_thing_nodes(complete_structure.thing_nodes)
+            set_parent_ids_and_sort_nodes(complete_structure.thing_nodes)
 
             existing_thing_nodes = upsert_thing_nodes(
-                session, sorted_thing_nodes, existing_element_types
+                session, complete_structure.thing_nodes, existing_element_types
             )
 
             upsert_sources(session, complete_structure.sources, existing_thing_nodes)
