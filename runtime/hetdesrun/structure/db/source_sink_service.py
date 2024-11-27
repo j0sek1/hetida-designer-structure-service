@@ -3,7 +3,7 @@ from itertools import batched
 from math import ceil
 from uuid import UUID
 
-from sqlalchemy import Connection, Engine, tuple_
+from sqlalchemy import Connection, Engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.postgresql.dml import Insert as pg_insert_typing
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
