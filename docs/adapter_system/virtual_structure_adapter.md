@@ -285,15 +285,13 @@ An example of such a JSON file is provided below, demonstrating how the Virtual 
 Configuration can be set via an env file which must be configured via the `HD_VST_ADAPTER_ENVIRONMENT_FILE` environment variable.
 Additionally environment variables can be set directly (overriding possible settings from an env file).
 
-Note that most configuration options have to be set for the backend service no matter where the webservice part of the virtual structure adapter is running (configured via `VST_ADAPTER_SERVICE_IN_RUNTIME`).
+Note that all configuration options have to be set for the backend service, where the adapter runs.
 
-### Adapter Activation and Registration
+### Adapter Registration
 `VST_ADAPTER_ACTIVE` (default `true`) determines whether the adapter is registered or not.
 
-By default the virtual structure adapter is registered to run at the runtime service, corresponding to the default value `True` of `VST_ADAPTER_SERVICE_IN_RUNTIME`. The latter configuration should be set equally for both backend and runtime.
-
 ### Prepopulation configuration
-All the following configuration options must be set for the hetida designer backend, no matter where the webservice runs.
+All the following configuration options must be set for the hetida designer backend.
 
 Prepopulation works as follows:
 
@@ -306,4 +304,4 @@ Prepopulation works as follows:
 ## Technical Information
 
 To process wirings with virtual structure adapter sources and sinks, an additional step in the execution pipeline of the hetida designer was introduced.  
-Before the data is actually loaded from or passed to an adapter, all virtual structure adapter related wiring information is resolved to the referenced source or sink.
+Before the execution input object (WorkflowExecutionInput) is prepared, all virtual structure adapter related wiring information is resolved to the referenced source or sink.
