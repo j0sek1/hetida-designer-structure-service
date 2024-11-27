@@ -17,7 +17,6 @@ from hetdesrun.persistence.structure_service_dbmodels import (
 )
 from hetdesrun.structure.db.element_type_service import (
     fetch_element_types,
-    search_element_types_by_name,
     upsert_element_types,
 )
 from hetdesrun.structure.db.exceptions import (
@@ -25,8 +24,6 @@ from hetdesrun.structure.db.exceptions import (
     JsonParsingError,
 )
 from hetdesrun.structure.db.source_sink_service import (
-    fetch_sinks,
-    fetch_sources,
     upsert_sinks,
     upsert_sources,
 )
@@ -35,12 +32,11 @@ from hetdesrun.structure.db.structure_service import (
     delete_structure,
     get_children,
     load_structure_from_json_file,
-    sort_thing_nodes,
+    set_parent_ids_and_sort_nodes,
     update_structure,
 )
 from hetdesrun.structure.db.thing_node_service import (
     fetch_thing_nodes,
-    search_thing_nodes_by_name,
     upsert_thing_nodes,
 )
 from hetdesrun.structure.models import (
@@ -50,6 +46,10 @@ from hetdesrun.structure.models import (
     StructureServiceSink,
     StructureServiceSource,
     StructureServiceThingNode,
+)
+from tests.structure.utils import (
+    fetch_sinks,
+    fetch_sources,
 )
 
 # Enable Foreign Key Constraints for SQLite Connections
@@ -661,7 +661,11 @@ def test_update_structure_no_elements_deleted():
 
     # Define paths to the JSON files
     old_file_path = "tests/structure/data/db_test_structure.json"
-    new_file_path = "tests/structure/data/db_test_incomplete_structure.json"
+
+    # The new structure simplifies parent-child relationships,
+    # directly linking StorageTank1 to Waterworks1,
+    # missing detailed intermediate hierarchies and additional nodes
+    new_file_path = "tests/structure/data/db_test_incomplete_structure2.json"
 
     # Load initial structure from JSON file
     initial_structure: CompleteStructure = load_structure_from_json_file(old_file_path)
@@ -705,6 +709,19 @@ def test_update_structure_no_elements_deleted():
                 == 1
             )
 
+        root_node = (
+            session.query(StructureServiceThingNodeDBModel)
+            .filter_by(external_id="Waterworks1")
+            .first()
+        )
+        node = (
+            session.query(StructureServiceThingNodeDBModel)
+            .filter_by(external_id="Waterworks1_Plant1_StorageTank1")
+            .first()
+        )
+
+        assert node.parent_node_id == root_node.id
+
         # StructureServiceSources
         for source in initial_structure.sources:
             assert (
@@ -722,6 +739,71 @@ def test_update_structure_no_elements_deleted():
                 .count()
                 == 1
             )
+
+
+@pytest.mark.skip(
+    reason="The test fails solely due to the validator "
+    "validate_source_sink_references' in the CompleteStructure model, "
+    "as it only accounts for the new JSON structure. A solution needs "
+    "to be implemented for this issue. Potentially, a flag could be "
+    "introduced to distinguish between a complete or partial update."
+)
+@pytest.mark.usefixtures("_db_test_structure")
+def test_update_structure_modified_source_thing_node_relation_with_missing_thing_node():
+    # Verify structure before update
+    with get_session()() as session:
+        source_from_db_initial = (
+            session.query(StructureServiceSourceDBModel)
+            .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
+            .first()
+        )
+
+        print("\n---  DB structure before update:")
+        print(f"Source ID in DB: {source_from_db_initial.id}")
+        print(f"Source external ID in DB: {source_from_db_initial.external_id}")
+        print(f"Thing node external IDs in DB: {source_from_db_initial.thing_node_external_ids}")
+
+    # Define paths to the JSON files
+    file_path = "tests/structure/data/db_test_incomplete_structure3.json"
+
+    # Load structure from new JSON file
+    updated_structure: CompleteStructure = load_structure_from_json_file(file_path)
+    source_from_structure = updated_structure.sources[0]
+
+    print("\n--- New JSON partial structure before update:")
+    print(f"Source ID in new structure: {source_from_structure.id}")
+    print(f"Source external ID in new structure: {source_from_structure.external_id}")
+    print(
+        f"Thing node external IDs in new structure: {source_from_structure.thing_node_external_ids}"
+    )
+
+    # Update the structure in the database with new structure
+    # The new structure links a single source (EnergyUsage_PumpSystem_StorageTank)
+    # to thing node 'Plant1' that is not contained in the new structure
+    # but in the existing DB structure.
+    update_structure(updated_structure)
+
+    # Verify structure after update
+    with get_session()() as session:
+        source_from_db_updated = (
+            session.query(StructureServiceSourceDBModel)
+            .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
+            .first()
+        )
+
+        print("\n---  DB structure after update:")
+        print(f"Updated Source ID in DB: {source_from_db_updated.id}")
+        print(f"Updated Source external ID in DB: {source_from_db_updated.external_id}")
+        print(
+            "Updated thing node external IDs in DB: "
+            f"{source_from_db_updated.thing_node_external_ids}"
+        )
+
+        assert source_from_db_updated.id == source_from_db_initial.id
+        assert (
+            source_from_db_updated.thing_node_external_ids
+            == source_from_structure.thing_node_external_ids
+        )
 
 
 def test_are_structure_tables_empty_when_empty(mocked_clean_test_db_session):
@@ -747,7 +829,7 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db = list(thing_nodes_in_db.values())
 
         # Run the sort function using the new sort_thing_nodes method
-        sorted_nodes = sort_thing_nodes(thing_nodes_in_db)
+        sorted_nodes = set_parent_ids_and_sort_nodes(thing_nodes_in_db)
 
         # Verify that the sorted_nodes is a list
         assert isinstance(sorted_nodes, list), "sorted_nodes should be a list"
@@ -792,7 +874,7 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db.append(orphan_node)
 
         # Re-run the sort function with the orphan node added
-        sorted_nodes_with_orphan = sort_thing_nodes(thing_nodes_in_db)
+        sorted_nodes_with_orphan = set_parent_ids_and_sort_nodes(thing_nodes_in_db)
 
         # Verify that the orphan node is not placed in the list
         assert (
@@ -813,67 +895,6 @@ def test_fetch_sources_exception_handling(mocked_clean_test_db_session):
     ):
         # This will raise an error due to malformed input (tuple is incomplete)
         fetch_sources(session, invalid_keys)
-
-
-def test_search_element_types_by_name_success(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
-        # Add StructureServiceElementTypeDBModels to the session
-        session.add_all(
-            [
-                StructureServiceElementTypeDBModel(
-                    id=uuid.uuid4(),
-                    external_id="type1",
-                    stakeholder_key="GW",
-                    name="Test StructureServiceElementType",
-                    description="Description",
-                ),
-                StructureServiceElementTypeDBModel(
-                    id=uuid.uuid4(),
-                    external_id="type2",
-                    stakeholder_key="GW",
-                    name="Another StructureServiceElementType",
-                    description="Another Description",
-                ),
-            ]
-        )
-        session.commit()
-
-        # Search for 'Test'
-        result = search_element_types_by_name(session, "Test")
-
-        # Assert that the correct StructureServiceElementTypeDBModel is returned
-        assert len(result) == 1
-        assert result[0].name == "Test StructureServiceElementType"
-
-
-def test_search_element_types_by_name_no_matches(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
-        # Add StructureServiceElementTypeDBModels to the session
-        session.add_all(
-            [
-                StructureServiceElementTypeDBModel(
-                    id=uuid.uuid4(),
-                    external_id="type1",
-                    stakeholder_key="GW",
-                    name="Sample StructureServiceElementType",
-                    description="Description",
-                ),
-                StructureServiceElementTypeDBModel(
-                    id=uuid.uuid4(),
-                    external_id="type2",
-                    stakeholder_key="GW",
-                    name="Another StructureServiceElementType",
-                    description="Another Description",
-                ),
-            ]
-        )
-        session.commit()
-
-        # Search for 'Nonexistent'
-        result = search_element_types_by_name(session, "Nonexistent")
-
-        # Assert that no StructureServiceElementTypeDBModel is returned
-        assert len(result) == 0
 
 
 def test_upsert_element_types_success(mocked_clean_test_db_session):
@@ -972,94 +993,6 @@ def test_upsert_sources_success(mocked_clean_test_db_session):
         )
         assert result is not None
         assert result.name == "Test StructureServiceSource"
-
-
-def test_search_thing_nodes_by_name_success(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
-        # Add StructureServiceElementTypeDBModel to the session
-        element_type = StructureServiceElementTypeDBModel(
-            id=uuid.uuid4(),
-            external_id="type1",
-            stakeholder_key="GW",
-            name="Test Type",
-            description="A test element type",
-        )
-        session.add(element_type)
-        session.commit()
-
-        # Add StructureServiceThingNodeDBModels to the session with the element_type
-        session.add_all(
-            [
-                StructureServiceThingNodeDBModel(
-                    id=uuid.uuid4(),
-                    external_id="node1",
-                    stakeholder_key="GW",
-                    name="Test Node",
-                    description="Description",
-                    parent_node_id=None,
-                    parent_external_node_id=None,
-                    element_type_id=element_type.id,  # Link to StructureServiceElementTypeDBModel
-                    element_type_external_id="type1",
-                    meta_data={},
-                ),
-                StructureServiceThingNodeDBModel(
-                    id=uuid.uuid4(),
-                    external_id="node2",
-                    stakeholder_key="GW",
-                    name="Another Node",
-                    description="Description",
-                    parent_node_id=None,
-                    parent_external_node_id=None,
-                    element_type_id=element_type.id,
-                    element_type_external_id="type1",
-                    meta_data={},
-                ),
-            ]
-        )
-        session.commit()
-
-        # Search for 'Test'
-        result = search_thing_nodes_by_name(session, "Test")
-
-        # Assert that the correct StructureServiceThingNodeDBModel is returned
-        assert len(result) == 1
-        assert result[0].name == "Test Node"
-
-
-def test_search_thing_nodes_by_name_no_matches(mocked_clean_test_db_session):
-    with mocked_clean_test_db_session() as session:
-        # Add StructureServiceElementTypeDBModel to the session
-        element_type = StructureServiceElementTypeDBModel(
-            id=uuid.uuid4(),
-            external_id="type1",
-            stakeholder_key="GW",
-            name="type1",
-            description="A test element type",
-        )
-        session.add(element_type)
-        session.commit()
-        # Add StructureServiceThingNodeDBModel to the session
-        session.add(
-            StructureServiceThingNodeDBModel(
-                id=uuid.uuid4(),
-                external_id="node1",
-                stakeholder_key="GW",
-                name="Sample Node",
-                description="Description",
-                parent_node_id=None,
-                parent_external_node_id=None,
-                element_type_id=element_type.id,
-                element_type_external_id="type1",
-                meta_data={},
-            )
-        )
-        session.commit()
-
-        # Search for 'Nonexistent'
-        result = search_thing_nodes_by_name(session, "Nonexistent")
-
-        # Assert that no StructureServiceThingNodeDBModel is returned
-        assert len(result) == 0
 
 
 def test_upsert_thing_nodes_success(mocked_clean_test_db_session):
