@@ -656,16 +656,11 @@ def test_update_structure_from_file(mocked_clean_test_db_session):
 @pytest.mark.usefixtures("_db_test_structure")
 def test_update_structure_no_elements_deleted():
     # This test ensures that no elements are deleted when updating the structure
-    # with a new JSON file that omits some elements. It verifies that the total number of elements
-    # remains unchanged and that specific elements from the original structure are still present.
+    # with a new JSON file that omits some elements.
 
     # Define paths to the JSON files
     old_file_path = "tests/structure/data/db_test_structure.json"
-
-    # The new structure simplifies parent-child relationships,
-    # directly linking StorageTank1 to Waterworks1,
-    # missing detailed intermediate hierarchies and additional nodes
-    new_file_path = "tests/structure/data/db_test_incomplete_structure2.json"
+    new_file_path = "tests/structure/data/db_test_incomplete_structure.json"
 
     # Load initial structure from JSON file
     initial_structure: CompleteStructure = load_structure_from_json_file(old_file_path)
@@ -678,7 +673,7 @@ def test_update_structure_no_elements_deleted():
 
     # Verify structure after update
     with get_session()() as session:
-        # Check the number of elements after update
+        # Check the total number of elements remains unchanged
         assert session.query(StructureServiceElementTypeDBModel).count() == len(
             initial_structure.element_types
         )
@@ -691,7 +686,6 @@ def test_update_structure_no_elements_deleted():
         assert session.query(StructureServiceSinkDBModel).count() == len(initial_structure.sinks)
 
         # Verify specific elements from the initial structure are still present
-        # Element Types
         for element_type in initial_structure.element_types:
             assert (
                 session.query(StructureServiceElementTypeDBModel)
@@ -700,7 +694,6 @@ def test_update_structure_no_elements_deleted():
                 == 1
             )
 
-        # Thing Nodes
         for thing_node in initial_structure.thing_nodes:
             assert (
                 session.query(StructureServiceThingNodeDBModel)
@@ -709,20 +702,6 @@ def test_update_structure_no_elements_deleted():
                 == 1
             )
 
-        root_node = (
-            session.query(StructureServiceThingNodeDBModel)
-            .filter_by(external_id="Waterworks1")
-            .first()
-        )
-        node = (
-            session.query(StructureServiceThingNodeDBModel)
-            .filter_by(external_id="Waterworks1_Plant1_StorageTank1")
-            .first()
-        )
-
-        assert node.parent_node_id == root_node.id
-
-        # StructureServiceSources
         for source in initial_structure.sources:
             assert (
                 session.query(StructureServiceSourceDBModel)
@@ -731,7 +710,6 @@ def test_update_structure_no_elements_deleted():
                 == 1
             )
 
-        # StructureServiceSinks
         for sink in initial_structure.sinks:
             assert (
                 session.query(StructureServiceSinkDBModel)
@@ -741,9 +719,41 @@ def test_update_structure_no_elements_deleted():
             )
 
 
+@pytest.mark.usefixtures("_db_test_structure")
+def test_update_structure_modify_parent_child_relationship():
+    # This test ensures that the modification of parent-child relationships
+    # in thing nodes is correctly reflected after an update.
+
+    # Define paths to the JSON files
+    new_file_path = "tests/structure/data/db_test_incomplete_structure2.json"
+
+    # Load updated structure from new JSON file
+    updated_structure: CompleteStructure = load_structure_from_json_file(new_file_path)
+
+    # Update the structure in the database with new structure
+    update_structure(updated_structure)
+
+    # Verify structure after update
+    with get_session()() as session:
+        # Check parent-child relationships
+        root_node = (
+            session.query(StructureServiceThingNodeDBModel)
+            .filter_by(external_id="Waterworks1")
+            .first()
+        )
+        storage_tank_node = (
+            session.query(StructureServiceThingNodeDBModel)
+            .filter_by(external_id="Waterworks1_Plant1_StorageTank1")
+            .first()
+        )
+
+        # Ensure the parent node is now directly linked to the root node
+        assert storage_tank_node.parent_node_id == root_node.id
+
+
 @pytest.mark.skip(
     reason="The test fails solely due to the validator "
-    "validate_source_sink_references' in the CompleteStructure model, "
+    "'validate_source_sink_references' in the CompleteStructure model, "
     "as it only accounts for the new JSON structure. A solution needs "
     "to be implemented for this issue. Potentially, a flag could be "
     "introduced to distinguish between a complete or partial update."
