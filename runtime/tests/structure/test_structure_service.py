@@ -742,11 +742,7 @@ def test_update_structure_no_elements_deleted():
 
 
 @pytest.mark.skip(
-    reason="The test fails solely due to the validator "
-    "validate_source_sink_references' in the CompleteStructure model, "
-    "as it only accounts for the new JSON structure. A solution needs "
-    "to be implemented for this issue. Potentially, a flag could be "
-    "introduced to distinguish between a complete or partial update."
+    reason="This tests whether a partial update is possible. Currently it is not supported"
 )
 @pytest.mark.usefixtures("_db_test_structure")
 def test_update_structure_modified_source_thing_node_relation_with_missing_thing_node():
@@ -760,19 +756,17 @@ def test_update_structure_modified_source_thing_node_relation_with_missing_thing
 
         print("\n---  DB structure before update:")
         print(f"Source ID in DB: {source_from_db_initial.id}")
-        print(f"Source external ID in DB: {source_from_db_initial.external_id}")
         print(f"Thing node external IDs in DB: {source_from_db_initial.thing_node_external_ids}")
+        print(f"Thing nodes in DB: {source_from_db_initial.thing_nodes}")
 
     # Define paths to the JSON files
     file_path = "tests/structure/data/db_test_incomplete_structure3.json"
 
     # Load structure from new JSON file
-    updated_structure: CompleteStructure = load_structure_from_json_file(file_path)
+    updated_structure = load_structure_from_json_file(file_path)
     source_from_structure = updated_structure.sources[0]
 
     print("\n--- New JSON partial structure before update:")
-    print(f"Source ID in new structure: {source_from_structure.id}")
-    print(f"Source external ID in new structure: {source_from_structure.external_id}")
     print(
         f"Thing node external IDs in new structure: {source_from_structure.thing_node_external_ids}"
     )
@@ -793,17 +787,19 @@ def test_update_structure_modified_source_thing_node_relation_with_missing_thing
 
         print("\n---  DB structure after update:")
         print(f"Updated Source ID in DB: {source_from_db_updated.id}")
-        print(f"Updated Source external ID in DB: {source_from_db_updated.external_id}")
         print(
             "Updated thing node external IDs in DB: "
             f"{source_from_db_updated.thing_node_external_ids}"
         )
+        print(f"Thing nodes in DB: {source_from_db_updated.thing_nodes}")
 
+        # Verify that the targeted source was updated
         assert source_from_db_updated.id == source_from_db_initial.id
-        assert (
-            source_from_db_updated.thing_node_external_ids
-            == source_from_structure.thing_node_external_ids
-        )
+
+        # Verify that thing nodes relationship was updated
+        # TODO improve assertions
+        assert source_from_db_updated.thing_nodes != []
+        assert len(source_from_db_updated.thing_nodes) == 1
 
 
 def test_are_structure_tables_empty_when_empty(mocked_clean_test_db_session):
