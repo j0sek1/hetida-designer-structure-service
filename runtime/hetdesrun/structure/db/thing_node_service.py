@@ -26,11 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingNode:
-    """Fetch a single thing node by its unique ID.
-
-    Looks up a StructureServiceThingNode in the database by its ID. Returns the node
-    if found; raises DBNotFoundError if no matching record is found.
-    """
     logger.debug("Fetching single StructureServiceThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
         thing_node = (

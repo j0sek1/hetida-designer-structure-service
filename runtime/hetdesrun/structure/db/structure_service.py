@@ -44,10 +44,6 @@ logger = logging.getLogger(__name__)
 
 
 def load_structure_from_json_file(file_path: str) -> CompleteStructure:
-    """Load and parse a JSON file to create a CompleteStructure instance.
-
-    Reads the file, validates its content, and converts it to CompleteStructure.
-    """
     logger.debug("Loading structure from JSON file at %s.", file_path)
     try:
         with open(file_path) as file:
@@ -267,7 +263,6 @@ def get_children(
         logger.debug("Fetching children for parent_id: %s", parent_id)
 
         with get_session()() as session:
-            # Fetch StructureServiceThingNodes where parent_id matches
             child_nodes_orm = (
                 session.query(StructureServiceThingNodeDBModel)
                 .filter(StructureServiceThingNodeDBModel.parent_node_id == parent_id)
@@ -280,12 +275,11 @@ def get_children(
             )
 
             if parent_id is None:
-                # Handle root nodes separately if needed
+                # Handle root nodes separately
                 logger.debug("Fetching sources and sinks for root nodes.")
                 sources_orm = []
                 sinks_orm = []
             else:
-                # Fetch the parent node to get its stakeholder_key and external_id
                 parent_node = (
                     session.query(StructureServiceThingNodeDBModel)
                     .filter(StructureServiceThingNodeDBModel.id == parent_id)
