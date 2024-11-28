@@ -108,6 +108,7 @@ register_sink_adapter(adapter_key="kafka", send_func=kafka_adapter_send_data)
 
 # TODO Make sequence of importing and registering the same in the entire file
 # If there is no reason for the current state
+# Either 'import import reg reg' or 'import reg import reg'
 
 # Registering File Support Handlers for the local file adapter
 from hetdesrun.adapters.local_file.extensions import (  # noqa: E402

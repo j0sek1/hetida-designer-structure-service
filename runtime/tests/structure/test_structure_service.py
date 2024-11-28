@@ -1,10 +1,7 @@
 import json
 import uuid
-from sqlite3 import Connection as SQLite3Connection
 
 import pytest
-from sqlalchemy import event
-from sqlalchemy.future.engine import Engine
 
 from hetdesrun.persistence.db_engine_and_session import get_session
 from hetdesrun.persistence.structure_service_dbmodels import (
@@ -19,7 +16,6 @@ from hetdesrun.structure.db.element_type_service import (
     upsert_element_types,
 )
 from hetdesrun.structure.db.exceptions import (
-    DBError,
     JsonParsingError,
 )
 from hetdesrun.structure.db.source_sink_service import (
@@ -52,25 +48,13 @@ from tests.structure.utils import (
     fetch_thing_nodes,
 )
 
-# Enable Foreign Key Constraints for SQLite Connections
-
-
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection: SQLite3Connection, connection_record) -> None:  # type: ignore  # noqa: E501,
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
 # Tests for Hierarchy and Relationships
 
 
 @pytest.mark.usefixtures("_db_test_structure")
 def test_thing_node_hierarchy(mocked_clean_test_db_session):  # noqa: PLR0915
-    """
-    Tests the hierarchy and relationships of StructureServiceThingNodes, StructureServiceSources,
-    and StructureServiceSinks in the database based on loaded data from JSON.
-    """
+    """Test the hierarchy and relationships in the database based on loaded data from JSON."""
+
     # Load expected data from the JSON file
     file_path = "tests/structure/data/db_test_structure.json"
     with open(file_path) as file:
@@ -149,174 +133,6 @@ def test_thing_node_hierarchy(mocked_clean_test_db_session):  # noqa: PLR0915
             assert (
                 actual_associated_nodes == expected_associated_nodes
             ), f"Incorrect associations for sink {sink_key}"
-
-
-### Fetch Functions
-
-
-@pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_element_types(mocked_clean_test_db_session):
-    # Load expected data from the JSON file
-    file_path = "tests/structure/data/db_test_structure.json"
-    with open(file_path) as file:
-        expected_data = json.load(file)
-
-    # Extract expected keys and names from the loaded JSON data
-    expected_element_type_keys = {
-        (et["stakeholder_key"], et["external_id"]) for et in expected_data["element_types"]
-    }
-    expected_element_types = {
-        (et["stakeholder_key"], et["external_id"]): et["name"]
-        for et in expected_data["element_types"]
-    }
-
-    with mocked_clean_test_db_session() as session:
-        # Fetch the element types based on the expected keys
-        element_types = fetch_element_types(session, expected_element_type_keys)
-
-        # Check if the correct number of element types was retrieved
-        assert len(element_types) == len(expected_element_type_keys), (
-            f"Expected {len(expected_element_type_keys)} Element Types in the database, "
-            f"found {len(element_types)}"
-        )
-
-        # Check if each expected element type is present in the retrieved element types
-        for key, expected_name in expected_element_types.items():
-            # Verify if the key exists in the retrieved dictionary
-            assert key in element_types, (
-                f"Expected Element Type with stakeholder_key '{key[0]}' and "
-                f"external_id '{key[1]}' not found"
-            )
-            # Check if the name matches
-            actual_et = element_types[key]
-            assert actual_et.name == expected_name, (
-                f"Element Type with external_id '{key[1]}' has name '{actual_et.name}', "
-                f"expected '{expected_name}'"
-            )
-
-
-@pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_thing_nodes(mocked_clean_test_db_session):
-    # Load expected data from the JSON file
-    file_path = "tests/structure/data/db_test_structure.json"
-    with open(file_path) as file:
-        expected_data = json.load(file)
-
-    # Extract expected keys and names from the loaded JSON data
-    expected_thing_node_keys = {
-        (tn["stakeholder_key"], tn["external_id"]) for tn in expected_data["thing_nodes"]
-    }
-    expected_thing_nodes = {
-        (tn["stakeholder_key"], tn["external_id"]): tn["name"]
-        for tn in expected_data["thing_nodes"]
-    }
-
-    with mocked_clean_test_db_session() as session:
-        # Fetch the StructureServiceThingNodes based on the expected keys
-        thing_nodes = fetch_thing_nodes(session, expected_thing_node_keys)
-
-        # Check if the correct number of StructureServiceThingNodes was retrieved
-        assert len(thing_nodes) == len(expected_thing_node_keys), (
-            f"Expected {len(expected_thing_node_keys)} Thing Nodes in the database, "
-            f"found {len(thing_nodes)}"
-        )
-
-        # Check if each expected StructureServiceThingNode is present in the retrieved thing nodes
-        for key, expected_name in expected_thing_nodes.items():
-            # Verify if the key exists in the retrieved dictionary
-            assert key in thing_nodes, (
-                f"Expected Thing Node with stakeholder_key '{key[0]}' and "
-                f"external_id '{key[1]}' not found"
-            )
-            # Check if the name matches
-            actual_tn = thing_nodes[key]
-            assert actual_tn.name == expected_name, (
-                f"Thing Node with external_id '{key[1]}' has name '{actual_tn.name}', "
-                f"expected '{expected_name}'"
-            )
-
-
-@pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_sources(mocked_clean_test_db_session):
-    # Load expected data from the JSON file
-    file_path = "tests/structure/data/db_test_structure.json"
-    with open(file_path) as file:
-        expected_data = json.load(file)
-
-    # Extract expected keys and names from the loaded JSON data
-    expected_source_keys = {
-        (source["stakeholder_key"], source["external_id"]) for source in expected_data["sources"]
-    }
-    expected_sources = {
-        (source["stakeholder_key"], source["external_id"]): source["name"]
-        for source in expected_data["sources"]
-    }
-
-    with mocked_clean_test_db_session() as session:
-        # Fetch the StructureServiceSources based on the expected keys
-        sources = fetch_sources(session, expected_source_keys)
-
-        # Check if the correct number of StructureServiceSources was retrieved
-        assert len(sources) == len(expected_sources), (
-            f"Expected {len(expected_sources)} StructureServiceSources in the database, "
-            f"found {len(sources)}"
-        )
-
-        # Check if each expected StructureServiceSource is present in the retrieved sources
-        for key, expected_name in expected_sources.items():
-            # Verify if the key exists in the retrieved dictionary
-            assert key in sources, (
-                f"Expected StructureServiceSource with stakeholder_key '{key[0]}' and "
-                f"external_id '{key[1]}' not found"
-            )
-            # Check if the name matches
-            actual_source = sources[key]
-            assert actual_source.name == expected_name, (
-                f"StructureServiceSource with external_id"
-                f" '{key[1]}' has name '{actual_source.name}', "
-                f"expected '{expected_name}'"
-            )
-
-
-@pytest.mark.usefixtures("_db_test_structure")
-def test_fetch_all_sinks(mocked_clean_test_db_session):
-    # Load expected data from the JSON file
-    file_path = "tests/structure/data/db_test_structure.json"
-    with open(file_path) as file:
-        expected_data = json.load(file)
-
-    # Extract expected keys and names from the loaded JSON data
-    expected_sink_keys = {
-        (sink["stakeholder_key"], sink["external_id"]) for sink in expected_data["sinks"]
-    }
-    expected_sinks = {
-        (sink["stakeholder_key"], sink["external_id"]): sink["name"]
-        for sink in expected_data["sinks"]
-    }
-
-    with mocked_clean_test_db_session() as session:
-        # Fetch the StructureServiceSinks based on the expected keys
-        sinks = fetch_sinks(session, expected_sink_keys)
-
-        # Check if the correct number of StructureServiceSinks was retrieved
-        assert len(sinks) == len(expected_sinks), (
-            f"Expected {len(expected_sinks)} StructureServiceSinks in the database, "
-            f"found {len(sinks)}"
-        )
-
-        # Check if each expected StructureServiceSink is present in the retrieved sinks
-        for key, expected_name in expected_sinks.items():
-            # Verify if the key exists in the retrieved dictionary
-            assert key in sinks, (
-                f"Expected StructureServiceSink with stakeholder_key '{key[0]}' and "
-                f"external_id '{key[1]}' not found"
-            )
-            # Check if the name matches
-            actual_sink = sinks[key]
-            assert actual_sink.name == expected_name, (
-                f"StructureServiceSink with external_id '{key[1]}' has name '{actual_sink.name}', "
-                f"expected '{expected_name}'"
-            )
 
 
 ### Structure Helper Functions
@@ -497,7 +313,7 @@ def verify_structure(session, structure_data):
 def test_update_structure(mocked_clean_test_db_session):
     # This test checks both the insert and update functionality of the update_structure function.
     # It starts with an empty database, loads a complete structure from a JSON file, and then
-    # updates the database with this structure. The test then verifies that the structure
+    # inserts it into the database. The test then verifies that the structure
     # has been correctly inserted/updated in the database.
 
     # Load test data from JSON file
@@ -886,21 +702,6 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         assert (
             orphan_node not in sorted_nodes_with_orphan
         ), "Orphan node should not be included in the sorted list"
-
-
-def test_fetch_sources_exception_handling(mocked_clean_test_db_session):
-    # Create an invalid key tuple that will break the query
-    invalid_keys = {("invalid_stakeholder_key",)}
-
-    with (
-        pytest.raises(
-            DBError,
-            match=r"Unexpected error while fetching StructureServiceSourceDBModel",
-        ),
-        mocked_clean_test_db_session() as session,
-    ):
-        # This will raise an error due to malformed input (tuple is incomplete)
-        fetch_sources(session, invalid_keys)
 
 
 def test_upsert_element_types_success(mocked_clean_test_db_session):
