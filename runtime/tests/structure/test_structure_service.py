@@ -16,7 +16,6 @@ from hetdesrun.persistence.structure_service_dbmodels import (
     thingnode_source_association,
 )
 from hetdesrun.structure.db.element_type_service import (
-    fetch_element_types,
     upsert_element_types,
 )
 from hetdesrun.structure.db.exceptions import (
@@ -36,7 +35,6 @@ from hetdesrun.structure.db.structure_service import (
     update_structure,
 )
 from hetdesrun.structure.db.thing_node_service import (
-    fetch_thing_nodes,
     upsert_thing_nodes,
 )
 from hetdesrun.structure.models import (
@@ -48,8 +46,10 @@ from hetdesrun.structure.models import (
     StructureServiceThingNode,
 )
 from tests.structure.utils import (
+    fetch_element_types,
     fetch_sinks,
     fetch_sources,
+    fetch_thing_nodes,
 )
 
 # Enable Foreign Key Constraints for SQLite Connections

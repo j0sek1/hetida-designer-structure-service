@@ -1,8 +1,6 @@
 import logging
-from itertools import batched
-from math import ceil
 
-from sqlalchemy import Connection, Engine, tuple_
+from sqlalchemy import Connection, Engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.postgresql.dml import Insert as pg_insert_typing
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -16,43 +14,6 @@ from hetdesrun.structure.models import StructureServiceElementType
 from hetdesrun.structure.utils import is_postgresql, is_sqlite
 
 logger = logging.getLogger(__name__)
-
-
-def fetch_element_types(
-    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
-) -> dict[tuple[str, str], StructureServiceElementTypeDBModel]:
-    """Fetch element types by stakeholder_key and external_id.
-
-    Retrieves records matching stakeholder_key and external_id, returns as a dictionary.
-    """
-    existing_ets_mapping: dict[tuple[str, str], StructureServiceElementTypeDBModel] = {}
-    if not keys:
-        return existing_ets_mapping
-    try:
-        # Loop through keys in batches of size <batch_size> or less
-        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
-            batch_query = session.query(StructureServiceElementTypeDBModel).filter(
-                tuple_(
-                    StructureServiceElementTypeDBModel.stakeholder_key,
-                    StructureServiceElementTypeDBModel.external_id,
-                ).in_(key_batch)
-            )
-            batch_results = batch_query.all()
-            for et in batch_results:
-                key = (et.stakeholder_key, et.external_id)
-                existing_ets_mapping[key] = et
-        logger.debug(
-            "Fetched %d StructureServiceElementTypeDBModel items from the database for %d keys.",
-            len(existing_ets_mapping),
-            len(keys),
-        )
-        return existing_ets_mapping
-    except IntegrityError as e:
-        logger.error("Integrity Error while fetching StructureServiceElementTypes: %s", e)
-        raise DBIntegrityError("Integrity Error while fetching StructureServiceElementTypes") from e
-    except Exception as e:
-        logger.error("Unexpected error while fetching StructureServiceElementTypes: %s", e)
-        raise DBError("Unexpected error while fetching StructureServiceElementTypes") from e
 
 
 def upsert_element_types(
