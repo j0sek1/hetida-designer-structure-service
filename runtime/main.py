@@ -107,6 +107,7 @@ consumption_mode_variable = os.environ.get("HETIDA_DESIGNER_KAFKA_CONSUMPTION_MO
 kafka_consumption_modus = (
     consumption_mode_variable is not None and len(consumption_mode_variable) > 0
 )
+prepopulate_vst_structure = os.environ.get("PREPOPULATE_VST_ADAPTER_AT_HD_STARTUP", False)
 
 if in_memory_db:
     logger.info("Detected in-memory db usage: Running migrations during importing of main.py.")
@@ -119,6 +120,13 @@ if in_memory_db:
             "during importing of main.py."
         )
         run_trafo_rev_deployment()
+
+        if prepopulate_vst_structure:
+            from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import (
+                prepopulate_structure,
+            )
+
+            prepopulate_structure()
 
 
 if __name__ == "__main__":
