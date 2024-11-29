@@ -32,7 +32,7 @@ from hetdesrun.structure.db.structure_service import (
     delete_structure,
     get_children,
     load_structure_from_json_file,
-    set_parent_ids_and_sort_nodes,
+    sort_thing_nodes,
     update_structure,
 )
 from hetdesrun.structure.db.thing_node_service import (
@@ -835,7 +835,7 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db = list(thing_nodes_in_db.values())
 
         # Run the sort function using the new sort_thing_nodes method
-        sorted_nodes = set_parent_ids_and_sort_nodes(thing_nodes_in_db)
+        sorted_nodes = sort_thing_nodes(thing_nodes_in_db)
 
         # Verify that the sorted_nodes is a list
         assert isinstance(sorted_nodes, list), "sorted_nodes should be a list"
@@ -880,7 +880,7 @@ def test_sort_thing_nodes(mocked_clean_test_db_session):
         thing_nodes_in_db.append(orphan_node)
 
         # Re-run the sort function with the orphan node added
-        sorted_nodes_with_orphan = set_parent_ids_and_sort_nodes(thing_nodes_in_db)
+        sorted_nodes_with_orphan = sort_thing_nodes(thing_nodes_in_db)
 
         # Verify that the orphan node is not placed in the list
         assert (

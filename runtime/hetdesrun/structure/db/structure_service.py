@@ -92,27 +92,21 @@ def load_structure_from_json_file(file_path: str) -> CompleteStructure:
         ) from e
 
 
-def set_parent_ids_and_sort_nodes(
+def set_parent_ids(
     thing_nodes: list[StructureServiceThingNode],
-) -> list[StructureServiceThingNode]:
-    """Sort and flatten StructureServiceThingNodes by hierarchical levels.
+) -> dict[UUID, list[StructureServiceThingNode]]:
+    """Set parent IDs for thing nodes and return child mapping by parent node ID."""
 
-    Returns a list of sorted nodes, excluding orphan nodes.
-    """
-    logger.debug("Sorting and flattening StructureServiceThingNodes, excluding orphan nodes.")
-
-    # Create a mapping for quick parent lookup
+    # Create a mapping for quick parent lookup by external_id
     thing_node_map = {(tn.stakeholder_key, tn.external_id): tn for tn in thing_nodes}
 
-    # Build child lists per node ID and handle root nodes
+    # Collect child nodes under their parent's ID
     children_by_node_id: dict[UUID, list[StructureServiceThingNode]] = defaultdict(list)
-    root_nodes: list[StructureServiceThingNode] = []
 
     for tn in thing_nodes:
         if tn.parent_external_node_id:
             parent_key = (tn.stakeholder_key, tn.parent_external_node_id)
             parent_tn = thing_node_map.get(parent_key)
-
             if parent_tn:
                 children_by_node_id[parent_tn.id].append(tn)
                 logger.debug(
@@ -123,19 +117,34 @@ def set_parent_ids_and_sort_nodes(
                 # In-place modification: Setting parent_node_id directly on the node
                 tn.parent_node_id = parent_tn.id
             else:
-                # Exclude orphan nodes with missing parent
+                # Skip orphan nodes (missing parents);
+                # they won't be added to the child mapping
                 logger.warning(
-                    "Orphan node detected: Parent StructureServiceThingNode with key %s not found "
-                    "for StructureServiceThingNode %s. Excluding from sort.",
+                    "Parent node with key %s not found for node %s. Skipping.",
                     parent_key,
                     tn.name,
                 )
-        else:
-            root_nodes.append(tn)
-            logger.debug("StructureServiceThingNode %s identified as root node.", tn.name)
 
-    # Sort using BFS
+    return children_by_node_id
+
+
+def sort_thing_nodes(
+    thing_nodes: list[StructureServiceThingNode],
+) -> list[StructureServiceThingNode]:
+    """Sort thing nodes by hierarchical levels and set parent IDs."""
+
+    # Set parent IDs for thing nodes and return child mapping by parent node ID
+    children_by_node_id = set_parent_ids(thing_nodes)
+
+    # Identify root nodes (nodes without a parent)
+    root_nodes = [tn for tn in thing_nodes if tn.parent_external_node_id is None]
+
+    logger.debug("Identified %d root nodes: %s", len(root_nodes), [tn.name for tn in root_nodes])
+
+    # Sort nodes hierarchically using Breadth-First Search
     sorted_nodes_by_level = defaultdict(list)
+
+    # Initialize BFS queue with root nodes at level 0
     queue = deque([(root_nodes, 0)])
 
     while queue:
@@ -147,6 +156,7 @@ def set_parent_ids_and_sort_nodes(
         for node in current_level_nodes:
             sorted_nodes_by_level[level].append(node)
             children = children_by_node_id.get(node.id, [])
+            # Sort children alphabetically by their external_id
             children_sorted = sorted(children, key=lambda x: x.external_id)
             next_level_nodes.extend(children_sorted)
 
@@ -154,7 +164,8 @@ def set_parent_ids_and_sort_nodes(
             queue.append((next_level_nodes, level + 1))
             logger.debug("Queueing %d nodes for level %d.", len(next_level_nodes), level + 1)
 
-    # Flatten the sorted levels, excluding orphan nodes
+    # Flatten the sorted levels;
+    # Orphan nodes were excluded in set_parent_ids()
     flattened_nodes = [
         node
         for level in sorted(sorted_nodes_by_level.keys())
@@ -175,7 +186,7 @@ def update_structure(complete_structure: CompleteStructure) -> None:
         with get_session()() as session, session.begin():
             existing_element_types = upsert_element_types(session, complete_structure.element_types)
 
-            set_parent_ids_and_sort_nodes(complete_structure.thing_nodes)
+            sort_thing_nodes(complete_structure.thing_nodes)
 
             existing_thing_nodes = upsert_thing_nodes(
                 session, complete_structure.thing_nodes, existing_element_types
