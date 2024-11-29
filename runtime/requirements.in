@@ -38,7 +38,7 @@ requests
 scikit-learn
 scipy
 shapely
-sqlalchemy[mypy,asyncio]>=2.0,<3
+sqlalchemy[mypy]>=2.0,<3
 statsmodels
 tables
 typing-extensions
