@@ -601,14 +601,14 @@ def test_update_structure_modified_source_thing_node_relation():
             .first()
         )
 
-        source_relationship = source_from_db_updated.thing_nodes[0].id
+        updated_source_relationship_id = source_from_db_updated.thing_nodes[0].id
 
         # Verify that the targeted source was updated
         assert source_from_db_updated.id == source_from_db_initial.id
 
         # Verify that thing nodes relationship was updated
         assert len(source_from_db_updated.thing_nodes) == 1
-        assert source_relationship == root_node_from_db_initial.id
+        assert updated_source_relationship_id == root_node_from_db_initial.id
 
 
 @pytest.mark.skip(
