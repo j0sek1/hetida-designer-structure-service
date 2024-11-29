@@ -1,9 +1,7 @@
 import logging
-from itertools import batched
-from math import ceil
 from uuid import UUID
 
-from sqlalchemy import Connection, Engine, tuple_
+from sqlalchemy import Connection, Engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.postgresql.dml import Insert as pg_insert_typing
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -28,11 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingNode:
-    """Fetch a single thing node by its unique ID.
-
-    Looks up a StructureServiceThingNode in the database by its ID. Returns the node
-    if found; raises DBNotFoundError if no matching record is found.
-    """
     logger.debug("Fetching single StructureServiceThingNode from database with ID: %s", tn_id)
     with get_session()() as session:
         thing_node = (
@@ -46,45 +39,6 @@ def fetch_single_thing_node_from_db_by_id(tn_id: UUID) -> StructureServiceThingN
 
     logger.warning("No StructureServiceThingNode found for ID %s.", tn_id)
     raise DBNotFoundError(f"No StructureServiceThingNode found for ID {tn_id}")
-
-
-def fetch_thing_nodes(
-    session: SQLAlchemySession, keys: set[tuple[str, str]], batch_size: int = 500
-) -> dict[tuple[str, str], StructureServiceThingNodeDBModel]:
-    """Fetch thing nodes records by stakeholder_key and external_id.
-
-    Retrieves StructureServiceThingNodeDBModel records matching the provided keys
-    (stakeholder_key, external_id) and returns a dictionary mapping keys to the
-    corresponding database instances.
-    """
-    existing_tns_mapping: dict[tuple[str, str], StructureServiceThingNodeDBModel] = {}
-    if not keys:
-        return existing_tns_mapping
-    try:
-        # Loop through keys in batches of size <batch_size> or less
-        for key_batch in batched(keys, ceil(len(keys) / batch_size)):
-            batch_query = session.query(StructureServiceThingNodeDBModel).filter(
-                tuple_(
-                    StructureServiceThingNodeDBModel.stakeholder_key,
-                    StructureServiceThingNodeDBModel.external_id,
-                ).in_(key_batch)
-            )
-            batch_results = batch_query.all()
-            for tn in batch_results:
-                key = (tn.stakeholder_key, tn.external_id)
-                existing_tns_mapping[key] = tn
-        logger.debug(
-            "Fetched %d StructureServiceThingNodeDBModel items from the database for %d keys.",
-            len(existing_tns_mapping),
-            len(keys),
-        )
-        return existing_tns_mapping
-    except IntegrityError as e:
-        logger.error("Integrity Error while fetching StructureServiceThingNodes: %s", e)
-        raise DBIntegrityError("Integrity Error while fetching StructureServiceThingNodes") from e
-    except Exception as e:
-        logger.error("Unexpected error while fetching StructureServiceThingNodes: %s", e)
-        raise DBError("Unexpected error while fetching StructureServiceThingNodes") from e
 
 
 def update_parent_ids(

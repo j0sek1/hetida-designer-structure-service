@@ -120,12 +120,6 @@ if in_memory_db:
         )
         run_trafo_rev_deployment()
 
-        from hetdesrun.adapters.virtual_structure_adapter.structure_prepopulation import (
-            prepopulate_structure,
-        )
-
-        prepopulate_structure()
-
 
 if __name__ == "__main__":
     if not in_memory_db:

@@ -32,11 +32,6 @@ logger = logging.getLogger(__name__)
 
 
 def fetch_all_sources_from_db() -> list[StructureServiceSource]:
-    """Fetch all source records from the database.
-
-    Retrieves all instances of StructureServiceSource from the database and returns
-    them as a list of StructureServiceSource objects.
-    """
     logger.debug("Fetching all StructureServiceSources from the database.")
     with get_session()() as session:
         sources = session.query(StructureServiceSourceDBModel).all()
@@ -46,11 +41,6 @@ def fetch_all_sources_from_db() -> list[StructureServiceSource]:
 
 
 def fetch_all_sinks_from_db() -> list[StructureServiceSink]:
-    """Fetch all sink records from the database.
-
-    Retrieves all instances of StructureServiceSink from the database and returns
-    them as a list of StructureServiceSink objects.
-    """
     logger.debug("Fetching all StructureServiceSinks from the database.")
     with get_session()() as session:
         sinks = session.query(StructureServiceSinkDBModel).all()
@@ -60,10 +50,6 @@ def fetch_all_sinks_from_db() -> list[StructureServiceSink]:
 
 
 def fetch_single_sink_from_db_by_id(sink_id: UUID) -> StructureServiceSink:
-    """Fetch a single sink by its ID.
-
-    Looks up a StructureServiceSink object using its unique identifier.
-    """
     logger.debug("Fetching single StructureServiceSink from database with ID: %s", sink_id)
     with get_session()() as session:
         sink = (
@@ -80,10 +66,6 @@ def fetch_single_sink_from_db_by_id(sink_id: UUID) -> StructureServiceSink:
 
 
 def fetch_single_source_from_db_by_id(src_id: UUID) -> StructureServiceSource:
-    """Fetch a single source by its ID.
-
-    Looks up a StructureServiceSource object using its unique identifier.
-    """
     logger.debug("Fetching single StructureServiceSource from database with ID: %s", src_id)
     with get_session()() as session:
         source = (
