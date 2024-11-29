@@ -567,6 +567,50 @@ def test_update_structure_modify_parent_child_relationship():
         assert storage_tank_node.parent_node_id == root_node.id
 
 
+@pytest.mark.usefixtures("_db_test_structure")
+def test_update_structure_modified_source_thing_node_relation():
+    """Updates the thing node relationship of one source and verifies that the update took effect"""
+
+    # Verify structure before update
+    with get_session()() as session:
+        source_from_db_initial = (
+            session.query(StructureServiceSourceDBModel)
+            .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
+            .first()
+        )
+        print("\n---  DB structure before update:")
+        print(f"Thing node IDs in DB: {[tn.id for tn in source_from_db_initial.thing_nodes]}")
+
+        # The node to which the newly set relationship will point
+        root_node_from_db_initial = (
+            session.query(StructureServiceThingNodeDBModel)
+            .filter_by(external_id="Waterworks1")
+            .first()
+        )
+
+    # Update the structure
+    file_path = "tests/structure/data/db_test_source_relationship_update.json"
+    updated_structure = load_structure_from_json_file(file_path)
+    update_structure(updated_structure)
+
+    # Verify structure after update
+    with get_session()() as session:
+        source_from_db_updated = (
+            session.query(StructureServiceSourceDBModel)
+            .filter_by(external_id="EnergyUsage_PumpSystem_StorageTank")
+            .first()
+        )
+
+        source_relationship = source_from_db_updated.thing_nodes[0].id
+
+        # Verify that the targeted source was updated
+        assert source_from_db_updated.id == source_from_db_initial.id
+
+        # Verify that thing nodes relationship was updated
+        assert len(source_from_db_updated.thing_nodes) == 1
+        assert source_relationship == root_node_from_db_initial.id
+
+
 @pytest.mark.skip(
     reason="This tests whether a partial update is possible. Currently it is not supported"
 )
