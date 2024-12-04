@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from hetdesrun.persistence.db_engine_and_session import SQLAlchemySession
 from hetdesrun.persistence.structure_service_dbmodels import StructureServiceElementTypeDBModel
-from hetdesrun.structure.db.exceptions import DBError, DBIntegrityError, DBUpdateError
+from hetdesrun.structure.db.exceptions import DBIntegrityError, DBUpdateError
 from hetdesrun.structure.models import StructureServiceElementType
 from hetdesrun.structure.utils import is_postgresql, is_sqlite
 
@@ -83,7 +83,7 @@ def upsert_element_types(
         ) from e
     except ValueError as e:
         logger.error("Value error while upserting StructureServiceElementTypeDBModel: %s", e)
-        raise DBError("Value error while upserting StructureServiceElementTypeDBModel") from e
+        raise DBUpdateError("Value error while upserting StructureServiceElementTypeDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceElementTypeDBModel: %s", e)
         raise DBUpdateError(

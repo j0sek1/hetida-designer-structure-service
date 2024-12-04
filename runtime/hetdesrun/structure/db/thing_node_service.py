@@ -14,7 +14,6 @@ from hetdesrun.persistence.structure_service_dbmodels import (
     StructureServiceThingNodeDBModel,
 )
 from hetdesrun.structure.db.exceptions import (
-    DBError,
     DBIntegrityError,
     DBNotFoundError,
     DBUpdateError,
@@ -153,7 +152,7 @@ def upsert_thing_nodes(
         ) from e
     except ValueError as e:
         logger.error("Value error while upserting StructureServiceThingNodeDBModel: %s", e)
-        raise DBError("Value error while upserting StructureServiceThingNodeDBModel") from e
+        raise DBUpdateError("Value error while upserting StructureServiceThingNodeDBModel") from e
     except Exception as e:
         logger.error("Unexpected error while upserting StructureServiceThingNodeDBModel: %s", e)
         raise DBUpdateError(
