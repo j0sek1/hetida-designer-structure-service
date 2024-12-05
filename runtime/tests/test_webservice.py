@@ -17,6 +17,17 @@ async def test_swagger_ui_available(async_test_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_openapi_docs_available(async_test_client: AsyncClient) -> None:
+    try:
+        async with async_test_client as ac:
+            response = await ac.get("/openapi.json")
+    except TypeError:
+        pytest.fail("Fetching OpenAPI docs raised a TypeError unexpectedly.")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_access_api_endpoint(async_test_client: AsyncClient) -> None:
     async with async_test_client as ac:
         response = await ac.get("engine/info")
