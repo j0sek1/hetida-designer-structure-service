@@ -84,9 +84,6 @@ class StructureServiceElementType(StructureServiceCommonFieldsModel):
     description: str | None = Field(
         None, description="Description of the StructureServiceElementType"
     )
-    thing_nodes: list["StructureServiceThingNode"] = Field(
-        default_factory=list, description="List of associated StructureServiceThingNodes"
-    )
 
     class Config:
         orm_mode = True
@@ -98,7 +95,6 @@ class StructureServiceElementType(StructureServiceCommonFieldsModel):
             stakeholder_key=self.stakeholder_key,
             name=self.name,
             description=self.description,
-            thing_nodes=[tn.to_orm_model() for tn in self.thing_nodes],
         )
 
     @classmethod
