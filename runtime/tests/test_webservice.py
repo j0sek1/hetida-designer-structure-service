@@ -16,6 +16,13 @@ async def test_swagger_ui_available(async_test_client: AsyncClient) -> None:
     assert "swagger-ui" in response.text.lower()
 
 
+# Suppressing duplicate operation_id warnings due to FastAPI's route registration behavior.
+# The warning occurs only here because this test requests the OpenAPI schema (/openapi.json),
+# triggering duplicate operation_id validation (see https://github.com/fastapi/fastapi/issues/4740).
+@pytest.mark.filterwarnings(
+    "ignore:Duplicate Operation ID receive_execution_response__callback_url__post "
+    "for function receive_execution_response:UserWarning"
+)
 @pytest.mark.asyncio
 async def test_openapi_docs_available(async_test_client: AsyncClient) -> None:
     try:
